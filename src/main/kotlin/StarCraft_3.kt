@@ -3,6 +3,7 @@
 import javafx.application.Application
 import javafx.application.Platform
 import javafx.event.EventHandler
+import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.input.MouseEvent
@@ -25,24 +26,30 @@ import kotlin.math.sqrt
 data class EinheitenTyp(
         val schaden: Int,
         val reichweite: Int,
-        val leben: Int,
+        val leben: Double,
         val laufweite: Double,
-        val kristalle: Int
+        val kristalle: Int,
+        val kuerzel: String,
+        val panzerung: Double
+
 )
 
 data class Einheit(
+        val typ: EinheitenTyp,
         val reichweite: Int,
-        var leben: Int,
+        var leben: Double,
         val schaden: Int,
         var x: Double,
         var y: Double,
         val laufweite: Double,
         val bild: Circle = Main.einheitenBild(),
+        val kuerzel: Text,
         val lebenText: Text = Text(),
         var ziel: Einheit? = null,
         var zielPunkt: Punkt? = null,
         var zielpunktkreis: Arc? = null,
-        var zielpunktLinie: Line? = null
+        var zielpunktLinie: Line? = null,
+        var panzerung: Double
 ) {
     fun punkt() = Punkt(x = x, y = y)
 }
@@ -67,20 +74,24 @@ data class Spieler(
 @Suppress("SpellCheckingInspection")
 class Main : Application() {
 
-    val infantrie = EinheitenTyp(reichweite = 150, leben = 1000, schaden = 1, laufweite = 0.5, kristalle = 500)
-    val berserker = EinheitenTyp(reichweite = 40, leben = 2000, schaden = 4, laufweite = 1.0, kristalle = 1000)
-    val panzer = EinheitenTyp(reichweite = 500, leben = 10000, schaden = 5, laufweite = 0.25, kristalle = 2500)
+    val infantrie = EinheitenTyp(reichweite = 150, leben = 1000.0, schaden = 1, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125)
+    val berserker = EinheitenTyp(reichweite = 40, leben = 2000.0, schaden = 4, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25)
+    val panzer = EinheitenTyp(reichweite = 500, leben = 10000.0, schaden = 5, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4)
+    val basis = EinheitenTyp(reichweite = 700, leben = 30000.0, schaden = 12, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.5)
+    val jaeger = EinheitenTyp(reichweite = 120, leben = 800.0, schaden = 3, laufweite = 0.7, kristalle = 2300, kuerzel = "JAG", panzerung = 0.14)
 
     val computer = Spieler(einheiten = mutableListOf(
-            einheit(x = 1000.0, y = 10.0, einheitenTyp = infantrie),
-            einheit(x = 800.0, y = 10.0, einheitenTyp = berserker),
-            einheit(x = 900.0, y = 10.0, einheitenTyp = panzer)
+            einheit(x = 1050.0, y = 110.0, einheitenTyp = infantrie),
+            einheit(x = 750.0, y = 110.0, einheitenTyp = berserker),
+            einheit(x = 850.0, y = 110.0, einheitenTyp = panzer),
+            einheit(x = 900.0, y = 50.0, einheitenTyp = basis),
+            einheit(x = 950.0, y = 110.0, einheitenTyp = jaeger)
     ),
             kristalle = 0,
             angriffspunkte = 20,
             verteidiegungspunkte = 10,
             minen = 3,
-            startpunkt = Punkt(x = 925.0, y = 10.0),
+            startpunkt = Punkt(x = 900.0, y = 115.0),
             farbe = Color.RED,
             mensch = false
     )
@@ -90,17 +101,24 @@ class Main : Application() {
                     leben = einheitenTyp.leben,
                     schaden = einheitenTyp.schaden,
                     x = x,
-                    y = y, laufweite = einheitenTyp.laufweite)
+                    y = y,
+                    laufweite = einheitenTyp.laufweite,
+                    kuerzel = Text(einheitenTyp.kuerzel),
+                    panzerung = einheitenTyp.panzerung,
+                    typ = einheitenTyp
+            )
 
     val mensch = Spieler(einheiten = mutableListOf(
-            einheit(x = 1000.0, y = 950.0, einheitenTyp = infantrie),
-            einheit(x = 800.0, y = 950.0, einheitenTyp = berserker),
-            einheit(x = 900.0, y = 950.0, einheitenTyp = panzer)
+            einheit(x = 1050.0, y = 895.0, einheitenTyp = infantrie),
+            einheit(x = 750.0, y = 895.0, einheitenTyp = berserker),
+            einheit(x = 850.0, y = 895.0, einheitenTyp = panzer),
+            einheit(x = 900.0, y = 970.0, einheitenTyp = basis),
+            einheit(x = 950.0, y = 895.0, einheitenTyp = jaeger)
     ),
             kristalle = 0,
             angriffspunkte = 20,
             verteidiegungspunkte = 10,
-            minen = 3, startpunkt = Punkt(x = 925.0, y = 950.0),
+            minen = 3, startpunkt = Punkt(x = 900.0, y = 905.0),
             farbe = Color.BLUE,
             mensch = true)
 
@@ -222,9 +240,13 @@ class Main : Application() {
         einheit.bild.fill = spieler.farbe
         box.children.add(einheit.bild)
         box.children.add(einheit.lebenText)
+        box.children.add(einheit.kuerzel)
 
-        val imageView = einheit.bild
+        einheitMouseHandler(spieler, einheit.bild, einheit)
+        einheitMouseHandler(spieler, einheit.kuerzel, einheit)
+    }
 
+    private fun einheitMouseHandler(spieler: Spieler, imageView: Node, einheit: Einheit) {
         if (spieler.mensch) {
             imageView.onMouseClicked = EventHandler { event ->
                 if (einheit.leben > 0) {
@@ -256,17 +278,18 @@ class Main : Application() {
         schiessen(computer, mensch)
         schiessen(mensch, computer)
 
+        //man gewinnt, wenn man die Basis des Gegners zerstoert
         computer.einheiten.toList().forEach { entfernen(it, computer, mensch) }
         mensch.einheiten.toList().forEach { entfernen(it, mensch, computer) }
 
-        if (computer.einheiten.isEmpty()) {
+        if (computer.einheiten.none { it.typ == basis }) {
             box.children.add(Text("Sieg").apply {
                 x = 700.0
                 y = 500.0
                 font = Font(200.0)
             })
         }
-        if (mensch.einheiten.isEmpty()) {
+        if (mensch.einheiten.none { it.typ == basis }) {
             box.children.add(Text("Niderlage").apply {
                 x = 300.0
                 y = 500.0
@@ -351,19 +374,20 @@ class Main : Application() {
         if (gegner.mensch) {
             return NaechsteEinheit
         } else {
+            //automatisch auf Einheiten in Reichweite schiessen
             if (einheit.ziel == null && NaechsteEinheit != null) {
                 if (entfernung(NaechsteEinheit, einheit.punkt()) < einheit.reichweite) {
                     if (!bewegen) {
                         return NaechsteEinheit
                     }
                 }
-                //beschuetzerradius 150
-                if (bewegen) {
+                //beschuetzerradius: 300
+                if (bewegen && einheit.zielPunkt == null) {
                     gegner.einheiten.forEach { gEinheit ->
                         mensch.einheiten.forEach { mEinheit ->
 
                             if (entfernung(mEinheit, gEinheit.punkt()) < gEinheit.reichweite &&
-                                    entfernung(einheit, mEinheit.punkt()) < 150) {
+                                    entfernung(einheit, mEinheit.punkt()) < 300) {
                                 return gEinheit
                             }
                         }
@@ -376,7 +400,7 @@ class Main : Application() {
 
     private fun schiessen(einheit: Einheit, ziel: Einheit) {
         if (entfernung(einheit, ziel.punkt()) - einheit.reichweite < 0.0) {
-            ziel.leben -= einheit.schaden
+            ziel.leben -= einheit.schaden - ziel.panzerung
         }
     }
 
@@ -395,6 +419,7 @@ class Main : Application() {
             }
             box.children.remove(einheit.bild)
             box.children.remove(einheit.lebenText)
+            box.children.remove(einheit.kuerzel)
             einheit.zielpunktLinie?.let { box.children.remove(it) }
             einheit.zielpunktkreis?.let { box.children.remove(it) }
         }
@@ -428,7 +453,10 @@ class Main : Application() {
         val lebenText = einheit.lebenText
         lebenText.x = einheit.x - 10
         lebenText.y = einheit.y - 30
-        lebenText.text = einheit.leben.toString()
+        lebenText.text = einheit.leben.toInt().toString()
+
+        einheit.kuerzel.x = einheit.x - 12
+        einheit.kuerzel.y = einheit.y
 
         einheit.zielpunktLinie?.apply {
             startX = einheit.x
@@ -455,11 +483,15 @@ class Main : Application() {
         }
     }
 }
-//einheitenkuerzel sehen
-//Basis -> wegpunkt fuer Einheiten
 //fliegende Einheiten
 //Sanitaeter
 //Minen
 //Tech gebeude
 //K.I.
 //Upgrates
+//einheiten nicht ineinander
+//einheiten zusammen auswaehlen
+//keine Sicht auf der karte
+//Sichtweite fuer Einheiten
+//Spetialressourcen
+
