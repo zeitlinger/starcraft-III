@@ -23,6 +23,15 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 
+enum class KannAngreifen {
+    alles,
+    boden
+}
+
+enum class LuftBoden {
+    luft, boden
+}
+
 data class EinheitenTyp(
         val schaden: Int,
         val reichweite: Int,
@@ -30,8 +39,9 @@ data class EinheitenTyp(
         val laufweite: Double,
         val kristalle: Int,
         val kuerzel: String,
-        val panzerung: Double
-
+        val panzerung: Double,
+        val kannAngreifen: KannAngreifen,
+        val luftBoden: LuftBoden = LuftBoden.boden
 )
 
 data class Einheit(
@@ -74,11 +84,16 @@ data class Spieler(
 @Suppress("SpellCheckingInspection")
 class Main : Application() {
 
-    val infantrie = EinheitenTyp(reichweite = 150, leben = 1000.0, schaden = 1, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125)
-    val berserker = EinheitenTyp(reichweite = 40, leben = 2000.0, schaden = 4, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25)
-    val panzer = EinheitenTyp(reichweite = 500, leben = 10000.0, schaden = 5, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4)
-    val basis = EinheitenTyp(reichweite = 700, leben = 30000.0, schaden = 12, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.5)
-    val jaeger = EinheitenTyp(reichweite = 120, leben = 800.0, schaden = 3, laufweite = 0.7, kristalle = 2300, kuerzel = "JAG", panzerung = 0.14)
+    val infantrie = EinheitenTyp(reichweite = 150, leben = 1000.0, schaden = 1, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125,
+            kannAngreifen = KannAngreifen.alles)
+    val berserker = EinheitenTyp(reichweite = 40, leben = 2000.0, schaden = 4, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
+            kannAngreifen = KannAngreifen.boden)
+    val panzer = EinheitenTyp(reichweite = 500, leben = 10000.0, schaden = 5, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
+            kannAngreifen = KannAngreifen.boden)
+    val basis = EinheitenTyp(reichweite = 500, leben = 30000.0, schaden = 12, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.5,
+            kannAngreifen = KannAngreifen.alles)
+    val jaeger = EinheitenTyp(reichweite = 120, leben = 800.0, schaden = 3, laufweite = 0.8, kristalle = 2300, kuerzel = "JÄG", panzerung = 0.14,
+            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft)
 
     val computer = Spieler(einheiten = mutableListOf(
             einheit(x = 1050.0, y = 110.0, einheitenTyp = infantrie),
@@ -175,6 +190,11 @@ class Main : Application() {
         hBox.children.add(Button("infantrie").apply {
             onMouseClicked = EventHandler {
                 produzieren(spieler = mensch, einheitenTyp = infantrie)
+            }
+        })
+        hBox.children.add(Button("Jäger").apply {
+            onMouseClicked = EventHandler {
+                produzieren(spieler = mensch, einheitenTyp = jaeger)
             }
         })
 
@@ -370,13 +390,13 @@ class Main : Application() {
     }
 
     private fun zielauswaehlen(gegner: Spieler, einheit: Einheit, bewegen: Boolean = true): Einheit? {
-        val NaechsteEinheit = gegner.einheiten.minBy { entfernung(einheit, it.punkt()) }
+        val NaechsteEinheit = gegner.einheiten.minBy { entfernung(einheit, it) }
         if (gegner.mensch) {
             return NaechsteEinheit
         } else {
             //automatisch auf Einheiten in Reichweite schiessen
             if (einheit.ziel == null && NaechsteEinheit != null) {
-                if (entfernung(NaechsteEinheit, einheit.punkt()) < einheit.reichweite) {
+                if (entfernung(NaechsteEinheit, einheit) < einheit.reichweite) {
                     if (!bewegen) {
                         return NaechsteEinheit
                     }
@@ -386,8 +406,8 @@ class Main : Application() {
                     gegner.einheiten.forEach { gEinheit ->
                         mensch.einheiten.forEach { mEinheit ->
 
-                            if (entfernung(mEinheit, gEinheit.punkt()) < gEinheit.reichweite &&
-                                    entfernung(einheit, mEinheit.punkt()) < 300) {
+                            if (entfernung(mEinheit, gEinheit) < gEinheit.reichweite &&
+                                    entfernung(einheit, mEinheit) < 300) {
                                 return gEinheit
                             }
                         }
@@ -399,7 +419,7 @@ class Main : Application() {
     }
 
     private fun schiessen(einheit: Einheit, ziel: Einheit) {
-        if (entfernung(einheit, ziel.punkt()) - einheit.reichweite < 0.0) {
+        if (entfernung(einheit, ziel) - einheit.reichweite < 0.0) {
             ziel.leben -= einheit.schaden - ziel.panzerung
         }
     }
@@ -412,9 +432,9 @@ class Main : Application() {
                 auswahlKreis.centerX = -100.0
                 auswahlKreis.centerY = -100.0
             }
-            gegner.einheiten.forEach {
-                if (it.ziel == einheit) {
-                    it.ziel = null
+            gegner.einheiten.forEach { g ->
+                if (g.ziel == einheit) {
+                    zielEntfernen(g)
                 }
             }
             box.children.remove(einheit.bild)
@@ -423,6 +443,14 @@ class Main : Application() {
             einheit.zielpunktLinie?.let { box.children.remove(it) }
             einheit.zielpunktkreis?.let { box.children.remove(it) }
         }
+    }
+
+    fun entfernung(einheit: Einheit, ziel: Einheit): Double {
+        if (ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden) {
+            return 7000000000000000000.0
+        }
+
+        return entfernung(einheit, ziel.punkt())
     }
 
     fun entfernung(einheit: Einheit, ziel: Punkt): Double {
@@ -483,7 +511,6 @@ class Main : Application() {
         }
     }
 }
-//fliegende Einheiten
 //Sanitaeter
 //Minen
 //Tech gebeude
