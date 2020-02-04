@@ -66,19 +66,21 @@ data class Einheit(
 
 data class Punkt(
         var x: Double,
+
         var y: Double
 )
 
 data class Spieler(
         val einheiten: MutableList<Einheit>,
-        var kristalle: Int,
+        var kristalle: Double,
         var angriffspunkte: Int,
         var verteidiegungspunkte: Int,
         var minen: Int,
         var startpunkt: Punkt,
         val farbe: Color,
         val mensch: Boolean,
-        val kristalleText: Text = Text()
+        val kristalleText: Text = Text(),
+        val minenText: Text = Text()
 )
 
 @Suppress("SpellCheckingInspection")
@@ -102,10 +104,10 @@ class Main : Application() {
             einheit(x = 900.0, y = 50.0, einheitenTyp = basis),
             einheit(x = 950.0, y = 110.0, einheitenTyp = jaeger)
     ),
-            kristalle = 0,
+            kristalle = 0.0,
             angriffspunkte = 20,
             verteidiegungspunkte = 10,
-            minen = 3,
+            minen = 0,
             startpunkt = Punkt(x = 900.0, y = 115.0),
             farbe = Color.RED,
             mensch = false
@@ -130,10 +132,11 @@ class Main : Application() {
             einheit(x = 900.0, y = 970.0, einheitenTyp = basis),
             einheit(x = 950.0, y = 895.0, einheitenTyp = jaeger)
     ),
-            kristalle = 0,
+            kristalle = 0.0,
             angriffspunkte = 20,
             verteidiegungspunkte = 10,
-            minen = 3, startpunkt = Punkt(x = 900.0, y = 905.0),
+            minen = 0,
+            startpunkt = Punkt(x = 900.0, y = 905.0),
             farbe = Color.BLUE,
             mensch = true)
 
@@ -168,6 +171,9 @@ class Main : Application() {
         mensch.kristalleText.x = 10.0
         mensch.kristalleText.y = 950.0
 
+        mensch.minenText.x = 160.0
+        mensch.minenText.y = 950.0
+
         val vBox = VBox(10.0)
 
         val scene = Scene(vBox, 1850.0, 1000.0)
@@ -195,6 +201,15 @@ class Main : Application() {
         hBox.children.add(Button("Jäger").apply {
             onMouseClicked = EventHandler {
                 produzieren(spieler = mensch, einheitenTyp = jaeger)
+            }
+        })
+        hBox.children.add(Button("Mine").apply {
+            onMouseClicked = EventHandler {
+                if (mensch.kristalle > 1999) {
+                    mensch.minen += 1
+                    mensch.kristalle -= 2000
+                }
+
             }
         })
 
@@ -254,6 +269,7 @@ class Main : Application() {
             bildHinzufuegen(spieler, it)
         }
         box.children.add(spieler.kristalleText)
+        box.children.add(spieler.minenText)
     }
 
     private fun bildHinzufuegen(spieler: Spieler, einheit: Einheit) {
@@ -289,9 +305,9 @@ class Main : Application() {
     }
 
     private fun runde() {
-        computer.kristalle += 1
-        mensch.kristalle += 1
-        produzieren(spieler = computer, einheitenTyp = panzer)
+        computer.kristalle += 1.0 + 0.2 * computer.minen
+        mensch.kristalle += 1.0 + 0.2 * mensch.minen
+        produzieren(spieler = computer, einheitenTyp = infantrie)
         bewegeSpieler(computer, mensch)
         bewegeSpieler(mensch, computer)
 
@@ -396,7 +412,7 @@ class Main : Application() {
         } else {
             //automatisch auf Einheiten in Reichweite schiessen
             if (einheit.ziel == null && NaechsteEinheit != null) {
-                if (entfernung(NaechsteEinheit, einheit) < einheit.reichweite) {
+                if (kannErreichen(einheit, NaechsteEinheit)) {
                     if (!bewegen) {
                         return NaechsteEinheit
                     }
@@ -406,8 +422,9 @@ class Main : Application() {
                     gegner.einheiten.forEach { gEinheit ->
                         mensch.einheiten.forEach { mEinheit ->
 
-                            if (entfernung(mEinheit, gEinheit) < gEinheit.reichweite &&
-                                    entfernung(einheit, mEinheit) < 300) {
+                            if (kannErreichen(gEinheit, mEinheit) &&
+                                    entfernung(einheit, mEinheit.punkt()) < 300 &&
+                                    kannAngreifen(einheit, gEinheit)) {
                                 return gEinheit
                             }
                         }
@@ -420,7 +437,7 @@ class Main : Application() {
 
     private fun schiessen(einheit: Einheit, ziel: Einheit) {
         if (entfernung(einheit, ziel) - einheit.reichweite < 0.0) {
-            ziel.leben -= einheit.schaden - ziel.panzerung
+            ziel.leben -= (einheit.schaden - ziel.panzerung)
         }
     }
 
@@ -445,13 +462,20 @@ class Main : Application() {
         }
     }
 
+    fun kannErreichen(einheit: Einheit, ziel: Einheit): Boolean {
+        return entfernung(einheit, ziel) < einheit.reichweite
+    }
+
     fun entfernung(einheit: Einheit, ziel: Einheit): Double {
-        if (ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden) {
+        if (!kannAngreifen(einheit, ziel)) {
             return 7000000000000000000.0
         }
 
         return entfernung(einheit, ziel.punkt())
     }
+
+    private fun kannAngreifen(einheit: Einheit, ziel: Einheit) =
+            !(ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden)
 
     fun entfernung(einheit: Einheit, ziel: Punkt): Double {
         val a = ziel.y - einheit.y
@@ -464,8 +488,8 @@ class Main : Application() {
     fun male() {
         computer.einheiten.toList().forEach { maleEinheit(it) }
         mensch.einheiten.toList().forEach { maleEinheit(it) }
-        mensch.kristalleText.text = "Kristalle: " + mensch.kristalle.toString()
-
+        mensch.kristalleText.text = "Kristalle: " + mensch.kristalle.toInt().toString()
+        mensch.minenText.text = "Minen: " + mensch.minen.toString()
         ausgewaehlt?.let {
             auswahlKreis.centerX = it.bild.layoutX
             auswahlKreis.centerY = it.bild.layoutY
@@ -512,13 +536,15 @@ class Main : Application() {
     }
 }
 //Sanitaeter
-//Minen
 //Tech gebeude
 //K.I.
 //Upgrates
 //einheiten nicht ineinander
 //einheiten zusammen auswaehlen
+//groessere Karte
 //keine Sicht auf der karte
 //Sichtweite fuer Einheiten
 //Spetialressourcen
-
+//einheitenfaehikkeiten
+//produktionszeit
+//mit Tastatur prodozieren
