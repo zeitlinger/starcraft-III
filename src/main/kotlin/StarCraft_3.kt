@@ -19,13 +19,15 @@ import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.stage.Stage
 import kotlin.math.absoluteValue
+import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.sqrt
 
 
 enum class KannAngreifen {
     alles,
-    boden
+    boden,
+    heilen
 }
 
 enum class LuftBoden {
@@ -33,7 +35,7 @@ enum class LuftBoden {
 }
 
 data class EinheitenTyp(
-        val schaden: Int,
+        val schaden: Double,
         val reichweite: Int,
         val leben: Double,
         val laufweite: Double,
@@ -48,7 +50,7 @@ data class Einheit(
         val typ: EinheitenTyp,
         val reichweite: Int,
         var leben: Double,
-        val schaden: Int,
+        val schaden: Double,
         var x: Double,
         var y: Double,
         val laufweite: Double,
@@ -70,6 +72,7 @@ data class Punkt(
         var y: Double
 )
 
+
 data class Spieler(
         val einheiten: MutableList<Einheit>,
         var kristalle: Double,
@@ -80,21 +83,27 @@ data class Spieler(
         val farbe: Color,
         val mensch: Boolean,
         val kristalleText: Text = Text(),
-        val minenText: Text = Text()
+        val minenText: Text = Text(),
+        var schadenUpgrade: Int,
+        var panzerungUprade: Int
 )
 
 @Suppress("SpellCheckingInspection")
 class Main : Application() {
 
-    val infantrie = EinheitenTyp(reichweite = 150, leben = 1000.0, schaden = 1, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125,
+    val infantrie = EinheitenTyp(reichweite = 150, leben = 1000.0, schaden = 1.0, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125,
             kannAngreifen = KannAngreifen.alles)
-    val berserker = EinheitenTyp(reichweite = 40, leben = 2000.0, schaden = 4, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
+    val berserker = EinheitenTyp(reichweite = 40, leben = 2000.0, schaden = 4.0, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
             kannAngreifen = KannAngreifen.boden)
-    val panzer = EinheitenTyp(reichweite = 500, leben = 10000.0, schaden = 5, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
+    val panzer = EinheitenTyp(reichweite = 500, leben = 10000.0, schaden = 5.0, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
             kannAngreifen = KannAngreifen.boden)
-    val basis = EinheitenTyp(reichweite = 500, leben = 30000.0, schaden = 12, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.5,
+    val basis = EinheitenTyp(reichweite = 500, leben = 30000.0, schaden = 12.0, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.5,
             kannAngreifen = KannAngreifen.alles)
-    val jaeger = EinheitenTyp(reichweite = 120, leben = 800.0, schaden = 3, laufweite = 0.8, kristalle = 2300, kuerzel = "JÄG", panzerung = 0.14,
+    val jäger = EinheitenTyp(reichweite = 120, leben = 800.0, schaden = 3.0, laufweite = 0.8, kristalle = 2300, kuerzel = "JÄG", panzerung = 0.14,
+            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft)
+    val sanitäter = EinheitenTyp(reichweite = 40, leben = 800.0, schaden = -2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
+            kannAngreifen = KannAngreifen.heilen)
+    val kampfschiff = EinheitenTyp(reichweite = 250, leben = 20000.0, schaden = 9.0, laufweite = 0.2, kristalle = 3500, kuerzel = "KSF", panzerung = 0.5,
             kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft)
 
     val computer = Spieler(einheiten = mutableListOf(
@@ -102,7 +111,7 @@ class Main : Application() {
             einheit(x = 750.0, y = 110.0, einheitenTyp = berserker),
             einheit(x = 850.0, y = 110.0, einheitenTyp = panzer),
             einheit(x = 900.0, y = 50.0, einheitenTyp = basis),
-            einheit(x = 950.0, y = 110.0, einheitenTyp = jaeger)
+            einheit(x = 950.0, y = 110.0, einheitenTyp = jäger)
     ),
             kristalle = 0.0,
             angriffspunkte = 20,
@@ -110,7 +119,9 @@ class Main : Application() {
             minen = 0,
             startpunkt = Punkt(x = 900.0, y = 115.0),
             farbe = Color.RED,
-            mensch = false
+            mensch = false,
+            schadenUpgrade = 0,
+            panzerungUprade = 0
     )
 
     private fun einheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) =
@@ -130,7 +141,7 @@ class Main : Application() {
             einheit(x = 750.0, y = 895.0, einheitenTyp = berserker),
             einheit(x = 850.0, y = 895.0, einheitenTyp = panzer),
             einheit(x = 900.0, y = 970.0, einheitenTyp = basis),
-            einheit(x = 950.0, y = 895.0, einheitenTyp = jaeger)
+            einheit(x = 950.0, y = 895.0, einheitenTyp = jäger)
     ),
             kristalle = 0.0,
             angriffspunkte = 20,
@@ -138,7 +149,10 @@ class Main : Application() {
             minen = 0,
             startpunkt = Punkt(x = 900.0, y = 905.0),
             farbe = Color.BLUE,
-            mensch = true)
+            mensch = true,
+            schadenUpgrade = 0,
+            panzerungUprade = 0
+    )
 
     val box: Pane = Pane().apply {
         prefWidth = 1850.0
@@ -183,31 +197,40 @@ class Main : Application() {
         stage.show()
 
         val hBox = HBox()
-        hBox.children.add(Button("Panzer").apply {
-            onMouseClicked = EventHandler {
-                produzieren(spieler = mensch, einheitenTyp = panzer)
-            }
-        })
-        hBox.children.add(Button("berserker").apply {
-            onMouseClicked = EventHandler {
-                produzieren(spieler = mensch, einheitenTyp = berserker)
-            }
-        })
-        hBox.children.add(Button("infantrie").apply {
-            onMouseClicked = EventHandler {
-                produzieren(spieler = mensch, einheitenTyp = infantrie)
-            }
-        })
-        hBox.children.add(Button("Jäger").apply {
-            onMouseClicked = EventHandler {
-                produzieren(spieler = mensch, einheitenTyp = jaeger)
-            }
-        })
+        kaufButton(hBox, "Panzer", panzer)
+        kaufButton(hBox, "Berserker", berserker)
+        kaufButton(hBox, "Infantrie", infantrie)
+        kaufButton(hBox, "Jäger", jäger)
+        kaufButton(hBox, "Sanitäter", sanitäter)
+        kaufButton(hBox, "Kampfschiff", kampfschiff)
         hBox.children.add(Button("Mine").apply {
             onMouseClicked = EventHandler {
-                if (mensch.kristalle > 1999) {
+                if (mensch.kristalle >= 2000) {
                     mensch.minen += 1
                     mensch.kristalle -= 2000
+                }
+
+            }
+        })
+        hBox.children.add(Button("LV " + (mensch.schadenUpgrade + 1) + "Schaden").apply {
+            onMouseClicked = EventHandler {
+                if (mensch.kristalle >= 3000) {
+                    mensch.schadenUpgrade += 1
+                    mensch.kristalle -= 3000
+                    this.text = "LV " + (mensch.schadenUpgrade + 1) + "Schaden"
+                }
+            }
+        })
+        hBox.children.add(Button("LV " + (mensch.panzerungUprade + 1) + "Panzerug").apply {
+            onMouseClicked = EventHandler {
+                if (mensch.kristalle >= 3000) {
+                    mensch.panzerungUprade += 1
+                    mensch.kristalle -= 3000
+                    this.text = "LV " + (mensch.panzerungUprade + 1) + "Panzerug"
+
+                    if (mensch.panzerungUprade >= 3) {
+                        this.isDisable = true
+                    }
                 }
 
             }
@@ -234,6 +257,14 @@ class Main : Application() {
                 Thread.sleep(15)
             }
         }).start()
+    }
+
+    private fun kaufButton(hBox: HBox, text: String, einheitenTyp: EinheitenTyp) {
+        hBox.children.add(Button(text).apply {
+            onMouseClicked = EventHandler {
+                produzieren(spieler = mensch, einheitenTyp = einheitenTyp)
+            }
+        })
     }
 
     private fun laufBefehl(einheit: Einheit, event: MouseEvent) {
@@ -338,7 +369,7 @@ class Main : Application() {
         spieler.einheiten.forEach {
             val ziel = zielauswaehlen(gegner, it, false)
             if (ziel != null) {
-                schiessen(it, ziel)
+                schiessen(it, ziel, spieler)
             }
         }
     }
@@ -406,15 +437,19 @@ class Main : Application() {
     }
 
     private fun zielauswaehlen(gegner: Spieler, einheit: Einheit, bewegen: Boolean = true): Einheit? {
-        val NaechsteEinheit = gegner.einheiten.minBy { entfernung(einheit, it) }
+        val naechsteEinheit = if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
+            gegner(gegner).einheiten.filter { it.leben < it.typ.leben }.minBy { it.leben }
+        } else {
+            gegner.einheiten.minBy { entfernung(einheit, it) }
+        }
         if (gegner.mensch) {
-            return NaechsteEinheit
+            return naechsteEinheit
         } else {
             //automatisch auf Einheiten in Reichweite schiessen
-            if (einheit.ziel == null && NaechsteEinheit != null) {
-                if (kannErreichen(einheit, NaechsteEinheit)) {
+            if (einheit.ziel == null && naechsteEinheit != null) {
+                if (kannErreichen(einheit, naechsteEinheit)) {
                     if (!bewegen) {
-                        return NaechsteEinheit
+                        return naechsteEinheit
                     }
                 }
                 //beschuetzerradius: 300
@@ -435,9 +470,16 @@ class Main : Application() {
         }
     }
 
-    private fun schiessen(einheit: Einheit, ziel: Einheit) {
+    fun gegner(spieler: Spieler): Spieler {
+        if (spieler == mensch) {
+            return computer
+        }
+        return mensch
+    }
+
+    private fun schiessen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
         if (entfernung(einheit, ziel) - einheit.reichweite < 0.0) {
-            ziel.leben -= (einheit.schaden - ziel.panzerung)
+            ziel.leben -= max(0.0, (einheit.schaden + spieler.schadenUpgrade / 10 - ziel.panzerung - gegner(spieler).panzerungUprade / 10))
         }
     }
 
@@ -535,6 +577,7 @@ class Main : Application() {
         }
     }
 }
+//minen werden teurer
 //Sanitaeter
 //Tech gebeude
 //K.I.
@@ -542,9 +585,13 @@ class Main : Application() {
 //einheiten nicht ineinander
 //einheiten zusammen auswaehlen
 //groessere Karte
+//Minnimap
 //keine Sicht auf der karte
 //Sichtweite fuer Einheiten
-//Spetialressourcen
+//Spetialressourcenquellen auf der Karte
 //einheitenfaehikkeiten
 //produktionszeit
 //mit Tastatur prodozieren
+//lebensanzeige
+//rassen
+//Heimatplantendeck
