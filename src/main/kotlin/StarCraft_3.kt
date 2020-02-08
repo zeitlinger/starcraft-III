@@ -11,17 +11,11 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
-import javafx.scene.shape.Arc
-import javafx.scene.shape.ArcType
-import javafx.scene.shape.Circle
-import javafx.scene.shape.Line
+import javafx.scene.shape.*
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.stage.Stage
-import kotlin.math.absoluteValue
-import kotlin.math.max
-import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.math.*
 
 
 enum class KannAngreifen {
@@ -159,9 +153,7 @@ class Main : Application() {
         prefHeight = 950.0
     }
 
-    var ausgewaehlt: Einheit? = null
-
-    var auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
+    var ausgewaehlt: MutableMap<Einheit, Arc> = mutableMapOf()
 
     private fun kreis(x: Double, y: Double, radius: Double): Arc {
         return Arc().apply {
@@ -177,7 +169,7 @@ class Main : Application() {
     }
 
     override fun start(stage: Stage) {
-        box.children.add(auswahlKreis)
+
 
         initSpieler(computer)
         initSpieler(mensch)
@@ -240,12 +232,57 @@ class Main : Application() {
         vBox.children.add(hBox)
 
         box.onMouseClicked = EventHandler { event ->
-            ausgewaehlt?.let { einheit ->
-                if (einheit.leben >= 1) {
-                    laufBefehl(einheit, event)
-                }
+            ausgewaehlt.keys.forEach { einheit ->
+                laufBefehl(einheit, event)
             }
 
+        }
+
+        var auswahlStart: Punkt? = null
+        var auswahlRechteck: Rectangle? = null
+
+        box.onMousePressed = EventHandler {
+            println("pressed")
+            auswahlStart = Punkt(it.x, it.y)
+        }
+        box.onMouseDragged = EventHandler {
+            println("moved")
+            auswahlStart?.let { s ->
+                val x = min(s.x, it.x)
+                val y = min(s.y, it.y)
+                val mx = max(s.x, it.x)
+                val my = max(s.y, it.y)
+
+                val r = auswahlRechteck ?: Rectangle().apply {
+                    fill = Color.TRANSPARENT
+                    stroke = Color.BLACK
+                    strokeWidth = 2.0
+                }
+                r.x = x
+                r.y = y
+                r.width = mx - x
+                r.height = my - y
+
+                if (auswahlRechteck == null) {
+                    auswahlRechteck = r
+                    box.children.add(auswahlRechteck)
+                }
+            }
+        }
+        box.onMouseReleased = EventHandler {
+            println("released")
+
+            auswahlRechteck?.let { r ->
+                mensch.einheiten.forEach {
+                    if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
+                        it.bild.fill = Color.PINK
+                    }
+                }
+
+                box.children.remove(r)
+            }
+            auswahlStart = null
+            auswahlRechteck = null
         }
 
         Thread(Runnable {
@@ -317,19 +354,18 @@ class Main : Application() {
         if (spieler.mensch) {
             imageView.onMouseClicked = EventHandler { event ->
                 if (einheit.leben > 0) {
-                    ausgewaehlt = einheit
+                    var auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
+                    ausgewaehlt.put(einheit, auswahlKreis)
                     event.consume()
                 }
             }
         } else {
             imageView.onMouseClicked = EventHandler { event ->
-                ausgewaehlt?.let {
-                    if (einheit.leben > 0) {
-                        it.ziel = einheit
-                        it.zielPunkt = null
-                        maleZiel(it, einheit.x, einheit.y)
-                        event.consume()
-                    }
+                ausgewaehlt.keys.forEach {
+                    it.ziel = einheit
+                    it.zielPunkt = null
+                    maleZiel(it, einheit.x, einheit.y)
+                    event.consume()
                 }
             }
         }
@@ -486,11 +522,13 @@ class Main : Application() {
     private fun entfernen(einheit: Einheit, spieler: Spieler, gegner: Spieler) {
         if (einheit.leben < 1) {
             spieler.einheiten.remove(einheit)
-            if (ausgewaehlt == einheit) {
-                ausgewaehlt = null
-                auswahlKreis.centerX = -100.0
-                auswahlKreis.centerY = -100.0
+
+            if (ausgewaehlt.containsKey(einheit)) {
+                val kreis = ausgewaehlt.getValue(einheit)
+                ausgewaehlt.remove(einheit)
+                box.children.remove(kreis)
             }
+
             gegner.einheiten.forEach { g ->
                 if (g.ziel == einheit) {
                     zielEntfernen(g)
@@ -532,9 +570,10 @@ class Main : Application() {
         mensch.einheiten.toList().forEach { maleEinheit(it) }
         mensch.kristalleText.text = "Kristalle: " + mensch.kristalle.toInt().toString()
         mensch.minenText.text = "Minen: " + mensch.minen.toString()
-        ausgewaehlt?.let {
-            auswahlKreis.centerX = it.bild.layoutX
-            auswahlKreis.centerY = it.bild.layoutY
+
+        ausgewaehlt.forEach { (einheit, auswahlKreis) ->
+            auswahlKreis.centerX = einheit.bild.layoutX
+            auswahlKreis.centerY = einheit.bild.layoutY
         }
     }
 
