@@ -11,17 +11,11 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
-import javafx.scene.shape.Arc
-import javafx.scene.shape.ArcType
-import javafx.scene.shape.Circle
-import javafx.scene.shape.Line
+import javafx.scene.shape.*
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.stage.Stage
-import kotlin.math.absoluteValue
-import kotlin.math.max
-import kotlin.math.pow
-import kotlin.math.sqrt
+import kotlin.math.*
 
 
 enum class KannAngreifen {
@@ -246,6 +240,53 @@ class Main : Application() {
                 }
             }
 
+        }
+
+        var auswahlStart: Punkt? = null
+        var auswahlRechteck: Rectangle? = null
+
+        box.onMousePressed = EventHandler {
+            println("pressed")
+            auswahlStart = Punkt(it.x, it.y)
+        }
+        box.onMouseDragged = EventHandler {
+            println("moved")
+            auswahlStart?.let { s ->
+                val x = min(s.x, it.x)
+                val y = min(s.y, it.y)
+                val mx = max(s.x, it.x)
+                val my = max(s.y, it.y)
+
+                val r = auswahlRechteck ?: Rectangle().apply {
+                    fill = Color.TRANSPARENT
+                    stroke = Color.BLACK
+                    strokeWidth = 2.0
+                }
+                r.x = x
+                r.y = y
+                r.width = mx - x
+                r.height = my - y
+
+                if (auswahlRechteck == null) {
+                    auswahlRechteck = r
+                    box.children.add(auswahlRechteck)
+                }
+            }
+        }
+        box.onMouseReleased = EventHandler {
+            println("released")
+
+            auswahlRechteck?.let { r ->
+                mensch.einheiten.forEach {
+                    if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
+                        it.bild.fill = Color.PINK
+                    }
+                }
+
+                box.children.remove(r)
+            }
+            auswahlStart = null
+            auswahlRechteck = null
         }
 
         Thread(Runnable {
