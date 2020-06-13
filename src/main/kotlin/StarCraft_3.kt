@@ -16,7 +16,6 @@ import javafx.scene.shape.*
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.stage.Stage
-import java.util.*
 import kotlin.math.*
 
 
@@ -28,12 +27,10 @@ data class Gebäude(
 val kaserne = Gebäude(name = "Kaserne", kristalle = 1500)
 val fabrik = Gebäude(name = "Fabrik", kristalle = 2000)
 val raumhafen = Gebäude(name = "Raumhafen", kristalle = 2500)
-val labor = Gebäude(name = "Labor", kristalle = 2800)
 val prodoktionsgebäude = listOf(
         kaserne,
         fabrik,
-        raumhafen,
-        labor
+        raumhafen
 )
 
 
@@ -272,37 +269,48 @@ class Main : Application() {
 
             }
         })
-        hBox.children.add(Button("LV " + (mensch.schadenUpgrade + 1) + " Schaden").apply {
+        hBox.children.add(Button("Labor").apply {
             onMouseClicked = EventHandler {
                 if (it.button == MouseButton.PRIMARY) {
-                    kaufen(2000) {
-                        mensch.schadenUpgrade += 1
-                        this.text = "LV " + (mensch.schadenUpgrade + 1) + " Schaden"
+                    kaufen(2800) {
+                        hBox.children.add(Button("LV " + (mensch.schadenUpgrade + 1) + " Schaden").apply {
+                            onMouseClicked = EventHandler {
+                                if (it.button == MouseButton.PRIMARY) {
+                                    kaufen(2000) {
+                                        mensch.schadenUpgrade += 1
+                                        this.text = "LV " + (mensch.schadenUpgrade + 1) + " Schaden"
 
-                        if (mensch.schadenUpgrade >= 3) {
-                            this.isDisable = true
-                        }
+                                        if (mensch.schadenUpgrade >= 3) {
+                                            hBox.children.remove(this)
+                                        }
+                                    }
+                                }
+
+                            }
+                        })
+                        hBox.children.add(Button("LV " + (mensch.panzerungUprade + 1) + " Panzerug").apply {
+                            onMouseClicked = EventHandler {
+                                if (it.button == MouseButton.PRIMARY) {
+                                    kaufen(2000) {
+                                        mensch.panzerungUprade += 1
+                                        this.text = "LV " + (mensch.panzerungUprade + 1) + " Panzerug"
+
+                                        if (mensch.panzerungUprade >= 3) {
+                                            hBox.children.remove(this)
+                                        }
+                                    }
+                                }
+
+
+                            }
+                        })
+                        hBox.children.remove(this)
                     }
                 }
-
             }
         })
-        hBox.children.add(Button("LV " + (mensch.panzerungUprade + 1) + " Panzerug").apply {
-            onMouseClicked = EventHandler {
-                if (it.button == MouseButton.PRIMARY) {
-                    kaufen(2000) {
-                        mensch.panzerungUprade += 1
-                        this.text = "LV " + (mensch.panzerungUprade + 1) + " Panzerug"
-
-                        if (mensch.panzerungUprade >= 3) {
-                            this.isDisable = true
-                        }
-                    }
-                }
 
 
-            }
-        })
 
         vBox.children.add(box)
         vBox.children.add(hBox)
@@ -467,12 +475,12 @@ class Main : Application() {
         } else {
             imageView.onMouseClicked = EventHandler { event ->
                 if (event.button == MouseButton.SECONDARY)
-                ausgewaehlt.forEach {
-                    it.ziel = einheit
-                    it.zielPunkt = null
-                    maleZiel(it, einheit.x, einheit.y)
-                    event.consume()
-                }
+                    ausgewaehlt.forEach {
+                        it.ziel = einheit
+                        it.zielPunkt = null
+                        maleZiel(it, einheit.x, einheit.y)
+                        event.consume()
+                    }
             }
         }
     }
@@ -518,7 +526,7 @@ class Main : Application() {
 
     private fun schiessen(spieler: Spieler, gegner: Spieler) {
         spieler.einheiten.forEach {
-            val ziel = zielauswaehlen(gegner, it, false)
+            val ziel = zielauswaehlenSchießen(gegner, it)
             if (ziel != null) {
                 schiessen(it, ziel, spieler)
             }
@@ -537,7 +545,7 @@ class Main : Application() {
     }
 
     fun bewegeSpieler(spieler: Spieler, gegner: Spieler) {
-        spieler.einheiten.forEach { bewege(it, gegner) }
+        spieler.einheiten.forEach { einheit -> bewege(einheit, gegner) }
     }
 
     fun bewege(einheit: Einheit, gegner: Spieler) {
@@ -550,7 +558,7 @@ class Main : Application() {
         val b = ziel.x - einheit.x
         val e = entfernung(einheit, ziel)
 
-        val reichweite = if (zielauswaehlen(gegner, einheit) != null) einheit.reichweite else 0
+        val reichweite = if (zielauswaehlenBewegen(gegner, einheit) != null) einheit.reichweite else 0
         if (e - reichweite >= 0) {
             einheit.x += smaller(b, b * einheit.laufweite / e)
             einheit.y += smaller(a, a * einheit.laufweite / e)
@@ -578,7 +586,7 @@ class Main : Application() {
     }
 
     private fun zielpunktAuswaehlen(gegner: Spieler, einheit: Einheit): Punkt? {
-        val ziel = zielauswaehlen(gegner, einheit)
+        val ziel = zielauswaehlenBewegen(gegner, einheit)
         if (ziel != null) {
             return ziel.punkt()
         } else {
@@ -586,39 +594,92 @@ class Main : Application() {
         }
     }
 
-    private fun zielauswaehlen(gegner: Spieler, einheit: Einheit, bewegen: Boolean = true): Einheit? {
-        val naechsteEinheit = if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
-            gegner(gegner).einheiten.filter { it.leben < it.typ.leben }.minBy { it.leben }
-        } else {
-            gegner.einheiten.minBy { entfernung(einheit, it) }
-        }
-        if (gegner.mensch) {
-            return naechsteEinheit
-        } else {
-            //automatisch auf Einheiten in Reichweite schiessen
-            if (einheit.ziel == null && naechsteEinheit != null) {
-                if (kannErreichen(einheit, naechsteEinheit)) {
-                    if (!bewegen) {
-                        return naechsteEinheit
-                    }
-                }
-                //beschuetzerradius: 300
-                if (bewegen && einheit.zielPunkt == null) {
-                    gegner.einheiten.forEach { gEinheit ->
-                        mensch.einheiten.forEach { mEinheit ->
-
-                            if (kannErreichen(gEinheit, mEinheit) &&
-                                    entfernung(einheit, mEinheit.punkt()) < 300 &&
-                                    kannAngreifen(einheit, gEinheit)) {
-                                return gEinheit
-                            }
-                        }
-                    }
-                }
-            }
+    private fun zielauswaehlenSchießen(gegner: Spieler, einheit: Einheit): Einheit? {
+        if (einheit.ziel != null) {
             return einheit.ziel
         }
+
+        if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
+            return heilen(gegner, einheit)
+        }
+
+        val naechsteEinheit =
+                gegner.einheiten.minBy { entfernung(einheit, it) }
+        val naechsteBedrohlichEinheit =
+                gegner.einheiten
+                        .filter { entfernung(einheit, it) <= 300 && kannAngreifen(it, einheit) }
+                        .minBy { entfernung(einheit, it) }
+        if (naechsteBedrohlichEinheit != null) {
+            return naechsteBedrohlichEinheit
+        }
+
+        //automatisch auf Einheiten in Reichweite schiessen
+        if (naechsteEinheit != null) {
+            if (`ist in Reichweite`(einheit, naechsteEinheit)) {
+                return naechsteEinheit
+            }
+        }
+        return einheit.ziel
     }
+
+    private fun heilen(gegner: Spieler, einheit: Einheit): Einheit? {
+        val naechsteEinheit = `nächste Einheit zum Heilen`(gegner, einheit)
+
+        if (naechsteEinheit != null) {
+            if (`ist in Reichweite`(einheit, naechsteEinheit)) {
+                return naechsteEinheit
+            }
+        }
+
+        return null
+    }
+
+    private fun zielauswaehlenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
+        val naechsteEinheit = if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
+            `nächste Einheit zum Heilen`(gegner, einheit)
+        } else {
+            gegner.einheiten
+                    .filter { kannAngreifen(einheit,it) }
+                    .minBy { entfernung(einheit, it) }
+        }
+
+        //automatisch auf Einheiten in Reichweite schiessen
+        if (einheit.ziel == null && naechsteEinheit != null) {
+            if (einheit.zielPunkt == null) {
+                val verbündeter = `verbündetem helfen`(gegner, einheit)
+                if (verbündeter != null) {
+                    return verbündeter
+                }
+            }
+
+            if (gegner.mensch) {
+                return naechsteEinheit
+            }
+        }
+        return einheit.ziel
+    }
+
+    private fun `verbündetem helfen`(gegner: Spieler, einheit: Einheit): Einheit? {
+        gegner.einheiten.forEach { gEinheit ->
+            val spieler = gegner(gegner)
+            spieler.einheiten.forEach { verbündeter ->
+
+                if (`ist Verbündeter bedroht`(gEinheit, verbündeter, einheit)) {
+                    return gEinheit
+                }
+            }
+        }
+        return null
+    }
+
+    private fun `ist Verbündeter bedroht`(gegner: Einheit, verbündeter: Einheit, einheit: Einheit): Boolean {
+        return `ist in Reichweite`(gegner, verbündeter) &&
+                entfernung(einheit, verbündeter.punkt()) < 300 &&
+                kannAngreifen(einheit, gegner)
+    }
+
+    private fun `nächste Einheit zum Heilen`(gegner: Spieler, einheit: Einheit) =
+            gegner(gegner).einheiten.filter { it.leben < it.typ.leben }.minBy { entfernung(einheit, it) }
 
     fun gegner(spieler: Spieler): Spieler {
         if (spieler == mensch) {
@@ -656,7 +717,7 @@ class Main : Application() {
         }
     }
 
-    fun kannErreichen(einheit: Einheit, ziel: Einheit): Boolean {
+    fun `ist in Reichweite`(einheit: Einheit, ziel: Einheit): Boolean {
         return entfernung(einheit, ziel) < einheit.reichweite
     }
 
@@ -729,17 +790,15 @@ class Main : Application() {
         }
     }
 }
-//lufteinheiten greifen automatisch gegnerische einheiten im Umkreis von 300 an. Lufteinheiten greifen keine Einheiten an von denen sie nicht angegriffen werden können.
-//Upgrades im Labor herrstellen
-//Sanitaeter: heilung wird nicht von der Panzerung verringert, nicht gegnerische einheten angreifen, weil sie verbündete einheiten angreifen
-//Tech gebeude
-//K.I.
+//Sanitaeter: heilung wird nicht von der Panzerung verringert; nicht gegnerische einheten angreifen, sonern verbündete
+//Tech gebeude werden benötigt um bestimmte einheiten herstellen zu können.
+//K.I. sammelt erst die Truppen und greift dann an.
 //Upgrades(nur für eine bestimmte Einheit)
 //einheiten nicht übereinander
 //groessere Karte
 //Minnimap
 //keine Sicht auf der karte
-//Sichtweite fuer Einheiten
+//Sichtweite für Einheiten
 //Spetialressourcenquellen auf der Karte
 //einheitenfaehikkeiten
 //produktionszeit
@@ -747,3 +806,5 @@ class Main : Application() {
 //lebensanzeige(lebensbalken)
 //rassen
 //bessere Grafik
+//Gebäude platzieren
+//attackmove
