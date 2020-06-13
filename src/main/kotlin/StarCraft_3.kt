@@ -1,4 +1,4 @@
-@file:Suppress("MemberVisibilityCanBePrivate", "FoldInitializerAndIfToElvis", "LiftReturnOrAssignment")
+@file:Suppress("MemberVisibilityCanBePrivate", "FoldInitializerAndIfToElvis", "LiftReturnOrAssignment", "NonAsciiCharacters", "PropertyName", "EnumEntryName", "SpellCheckingInspection")
 
 import javafx.application.Application
 import javafx.application.Platform
@@ -6,6 +6,7 @@ import javafx.event.EventHandler
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.Button
+import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
@@ -15,8 +16,42 @@ import javafx.scene.shape.*
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.stage.Stage
+import java.util.*
 import kotlin.math.*
 
+
+data class Gebäude(
+        val name: String,
+        val kristalle: Int
+)
+
+val kaserne = Gebäude(name = "Kaserne", kristalle = 1500)
+val fabrik = Gebäude(name = "Fabrik", kristalle = 2000)
+val raumhafen = Gebäude(name = "Raumhafen", kristalle = 2500)
+val labor = Gebäude(name = "Labor", kristalle = 2800)
+val prodoktionsgebäude = listOf(
+        kaserne,
+        fabrik,
+        raumhafen,
+        labor
+)
+
+
+data class TechGebäude(
+        val name: String,
+        val kristalle: Int
+)
+
+val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000)
+val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000)
+val akademie = TechGebäude(name = "Akademie", kristalle = 2500)
+val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000)
+val techgebäude = listOf(
+        schmiede,
+        fusionskern,
+        akademie,
+        reaktor
+)
 
 enum class KannAngreifen {
     alles,
@@ -37,7 +72,11 @@ data class EinheitenTyp(
         val kuerzel: String,
         val panzerung: Double,
         val kannAngreifen: KannAngreifen,
-        val luftBoden: LuftBoden = LuftBoden.boden
+        val luftBoden: LuftBoden = LuftBoden.boden,
+        val gebäude: Gebäude?,
+        val techGebäude: TechGebäude? = null,
+        val name: String,
+        val hotkey: String?
 )
 
 data class Einheit(
@@ -55,7 +94,8 @@ data class Einheit(
         var zielPunkt: Punkt? = null,
         var zielpunktkreis: Arc? = null,
         var zielpunktLinie: Line? = null,
-        var panzerung: Double
+        var panzerung: Double,
+        var auswahlkreis: Arc? = null
 ) {
     fun punkt() = Punkt(x = x, y = y)
 }
@@ -82,23 +122,27 @@ data class Spieler(
         var panzerungUprade: Int
 )
 
+
 @Suppress("SpellCheckingInspection")
 class Main : Application() {
 
-    val infantrie = EinheitenTyp(reichweite = 150, leben = 1000.0, schaden = 1.0, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125,
-            kannAngreifen = KannAngreifen.alles)
-    val berserker = EinheitenTyp(reichweite = 40, leben = 2000.0, schaden = 4.0, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
-            kannAngreifen = KannAngreifen.boden)
-    val panzer = EinheitenTyp(reichweite = 500, leben = 10000.0, schaden = 5.0, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
-            kannAngreifen = KannAngreifen.boden)
-    val basis = EinheitenTyp(reichweite = 500, leben = 30000.0, schaden = 12.0, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.5,
-            kannAngreifen = KannAngreifen.alles)
-    val jäger = EinheitenTyp(reichweite = 120, leben = 800.0, schaden = 3.0, laufweite = 0.8, kristalle = 2300, kuerzel = "JÄG", panzerung = 0.14,
-            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft)
-    val sanitäter = EinheitenTyp(reichweite = 40, leben = 800.0, schaden = -2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
-            kannAngreifen = KannAngreifen.heilen)
-    val kampfschiff = EinheitenTyp(reichweite = 250, leben = 20000.0, schaden = 9.0, laufweite = 0.2, kristalle = 3500, kuerzel = "KSF", panzerung = 0.5,
-            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft)
+    val infantrie = EinheitenTyp(name = "Infantrie", reichweite = 150, leben = 1000.0, schaden = 1.0, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125,
+            kannAngreifen = KannAngreifen.alles, gebäude = kaserne, hotkey = "q")
+    val berserker = EinheitenTyp(name = "Berserker", reichweite = 40, leben = 2000.0, schaden = 4.0, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
+            kannAngreifen = KannAngreifen.boden, gebäude = kaserne, techGebäude = schmiede, hotkey = "w")
+    val flammenwerfer = EinheitenTyp(name = "Flammenwerfer", reichweite = 100, leben = 2600.0, schaden = 6.0, laufweite = 1.2, kristalle = 2200, kuerzel = "FLA", panzerung = 0.3,
+            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, hotkey = "r")
+    val panzer = EinheitenTyp(name = "Panzer", reichweite = 500, leben = 10000.0, schaden = 5.0, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
+            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, techGebäude = reaktor, hotkey = "t")
+    val basis = EinheitenTyp(name = "Basis", reichweite = 500, leben = 30000.0, schaden = 12.0, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.5,
+            kannAngreifen = KannAngreifen.alles, gebäude = null, hotkey = null)
+    val jäger = EinheitenTyp(name = "Jäger", reichweite = 120, leben = 800.0, schaden = 3.0, laufweite = 0.8, kristalle = 1800, kuerzel = "JÄG", panzerung = 0.14,
+            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, hotkey = "a")
+    val sanitäter = EinheitenTyp(name = "Sanitäter", reichweite = 40, leben = 800.0, schaden = -2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
+            kannAngreifen = KannAngreifen.heilen, gebäude = kaserne, techGebäude = akademie, hotkey = "e")
+    val kampfschiff = EinheitenTyp(name = "Kampfschiff", reichweite = 250, leben = 20000.0, schaden = 9.0, laufweite = 0.2, kristalle = 3500, kuerzel = "KSF", panzerung = 0.5,
+            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, techGebäude = fusionskern, hotkey = "s")
+    val kaufbareEinheiten = listOf(infantrie, berserker, panzer, jäger, sanitäter, kampfschiff, flammenwerfer)
 
     val computer = Spieler(einheiten = mutableListOf(
             einheit(x = 1050.0, y = 110.0, einheitenTyp = infantrie),
@@ -148,12 +192,20 @@ class Main : Application() {
             panzerungUprade = 0
     )
 
+
+    fun kaufen(kristalle: Int, spieler: Spieler = mensch, aktion: () -> Unit) {
+        if (spieler.kristalle >= kristalle) {
+            aktion()
+            spieler.kristalle -= kristalle
+        }
+    }
+
     val box: Pane = Pane().apply {
         prefWidth = 1850.0
         prefHeight = 950.0
     }
 
-    var ausgewaehlt: MutableMap<Einheit, Arc> = mutableMapOf()
+    var ausgewaehlt: MutableList<Einheit> = mutableListOf()
 
     private fun kreis(x: Double, y: Double, radius: Double): Arc {
         return Arc().apply {
@@ -189,41 +241,65 @@ class Main : Application() {
         stage.show()
 
         val hBox = HBox()
-        kaufButton(hBox, "Panzer", panzer)
-        kaufButton(hBox, "Berserker", berserker)
-        kaufButton(hBox, "Infantrie", infantrie)
-        kaufButton(hBox, "Jäger", jäger)
-        kaufButton(hBox, "Sanitäter", sanitäter)
-        kaufButton(hBox, "Kampfschiff", kampfschiff)
+
+
+
+        prodoktionsgebäude.forEach { gebäude ->
+            hBox.children.add(Button(gebäude.name).apply {
+                onMouseClicked = EventHandler {
+                    if (it.button == MouseButton.PRIMARY) {
+                        kaufen(gebäude.kristalle) {
+                            hBox.children.remove(this)
+                            kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach {
+                                kaufButton(hBox, it.name, it)
+                            }
+                        }
+                    }
+
+                }
+            })
+        }
+
+
         hBox.children.add(Button("Mine").apply {
             onMouseClicked = EventHandler {
-                if (mensch.kristalle >= 2000) {
-                    mensch.minen += 1
-                    mensch.kristalle -= 2000
-                }
-
-            }
-        })
-        hBox.children.add(Button("LV " + (mensch.schadenUpgrade + 1) + "Schaden").apply {
-            onMouseClicked = EventHandler {
-                if (mensch.kristalle >= 3000) {
-                    mensch.schadenUpgrade += 1
-                    mensch.kristalle -= 3000
-                    this.text = "LV " + (mensch.schadenUpgrade + 1) + "Schaden"
-                }
-            }
-        })
-        hBox.children.add(Button("LV " + (mensch.panzerungUprade + 1) + "Panzerug").apply {
-            onMouseClicked = EventHandler {
-                if (mensch.kristalle >= 3000) {
-                    mensch.panzerungUprade += 1
-                    mensch.kristalle -= 3000
-                    this.text = "LV " + (mensch.panzerungUprade + 1) + "Panzerug"
-
-                    if (mensch.panzerungUprade >= 3) {
-                        this.isDisable = true
+                if (it.button == MouseButton.PRIMARY) {
+                    kaufen(2000 + 400 * mensch.minen) {
+                        mensch.minen += 1
                     }
                 }
+
+
+            }
+        })
+        hBox.children.add(Button("LV " + (mensch.schadenUpgrade + 1) + " Schaden").apply {
+            onMouseClicked = EventHandler {
+                if (it.button == MouseButton.PRIMARY) {
+                    kaufen(2000) {
+                        mensch.schadenUpgrade += 1
+                        this.text = "LV " + (mensch.schadenUpgrade + 1) + " Schaden"
+
+                        if (mensch.schadenUpgrade >= 3) {
+                            this.isDisable = true
+                        }
+                    }
+                }
+
+            }
+        })
+        hBox.children.add(Button("LV " + (mensch.panzerungUprade + 1) + " Panzerug").apply {
+            onMouseClicked = EventHandler {
+                if (it.button == MouseButton.PRIMARY) {
+                    kaufen(2000) {
+                        mensch.panzerungUprade += 1
+                        this.text = "LV " + (mensch.panzerungUprade + 1) + " Panzerug"
+
+                        if (mensch.panzerungUprade >= 3) {
+                            this.isDisable = true
+                        }
+                    }
+                }
+
 
             }
         })
@@ -232,57 +308,68 @@ class Main : Application() {
         vBox.children.add(hBox)
 
         box.onMouseClicked = EventHandler { event ->
-            ausgewaehlt.keys.forEach { einheit ->
-                laufBefehl(einheit, event)
+            if (event.button == MouseButton.SECONDARY) {
+                ausgewaehlt.forEach { einheit ->
+                    laufBefehl(einheit, event)
+                }
             }
-
         }
 
         var auswahlStart: Punkt? = null
         var auswahlRechteck: Rectangle? = null
 
         box.onMousePressed = EventHandler {
-            println("pressed")
-            auswahlStart = Punkt(it.x, it.y)
+            if (it.button == MouseButton.PRIMARY) {
+                println("pressed")
+                auswahlStart = Punkt(it.x, it.y)
+            }
+
         }
         box.onMouseDragged = EventHandler {
-            println("moved")
-            auswahlStart?.let { s ->
-                val x = min(s.x, it.x)
-                val y = min(s.y, it.y)
-                val mx = max(s.x, it.x)
-                val my = max(s.y, it.y)
+            if (it.button == MouseButton.PRIMARY) {
+                println("moved")
+                auswahlStart?.let { s ->
+                    val x = min(s.x, it.x)
+                    val y = min(s.y, it.y)
+                    val mx = max(s.x, it.x)
+                    val my = max(s.y, it.y)
 
-                val r = auswahlRechteck ?: Rectangle().apply {
-                    fill = Color.TRANSPARENT
-                    stroke = Color.BLACK
-                    strokeWidth = 2.0
-                }
-                r.x = x
-                r.y = y
-                r.width = mx - x
-                r.height = my - y
+                    val r = auswahlRechteck ?: Rectangle().apply {
+                        fill = Color.TRANSPARENT
+                        stroke = Color.BLACK
+                        strokeWidth = 2.0
+                    }
+                    r.x = x
+                    r.y = y
+                    r.width = mx - x
+                    r.height = my - y
 
-                if (auswahlRechteck == null) {
-                    auswahlRechteck = r
-                    box.children.add(auswahlRechteck)
-                }
-            }
-        }
-        box.onMouseReleased = EventHandler {
-            println("released")
-
-            auswahlRechteck?.let { r ->
-                mensch.einheiten.forEach {
-                    if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
-                        it.bild.fill = Color.PINK
+                    if (auswahlRechteck == null) {
+                        auswahlRechteck = r
+                        box.children.add(auswahlRechteck)
                     }
                 }
-
-                box.children.remove(r)
             }
-            auswahlStart = null
-            auswahlRechteck = null
+
+        }
+        box.onMouseReleased = EventHandler { event ->
+            if (event.button == MouseButton.PRIMARY) {
+                println("released")
+
+                auswahlRechteck?.let { r ->
+                    mensch.einheiten.forEach {
+                        if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
+                            auswählen(it)
+                        }
+                    }
+
+                    box.children.remove(r)
+                }
+                auswahlStart = null
+                auswahlRechteck = null
+                event.consume()
+            }
+
         }
 
         Thread(Runnable {
@@ -299,7 +386,10 @@ class Main : Application() {
     private fun kaufButton(hBox: HBox, text: String, einheitenTyp: EinheitenTyp) {
         hBox.children.add(Button(text).apply {
             onMouseClicked = EventHandler {
-                produzieren(spieler = mensch, einheitenTyp = einheitenTyp)
+                if (it.button == MouseButton.PRIMARY) {
+                    produzieren(spieler = mensch, einheitenTyp = einheitenTyp)
+                }
+
             }
         })
     }
@@ -353,15 +443,16 @@ class Main : Application() {
     private fun einheitMouseHandler(spieler: Spieler, imageView: Node, einheit: Einheit) {
         if (spieler.mensch) {
             imageView.onMouseClicked = EventHandler { event ->
-                if (einheit.leben > 0) {
-                    var auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
-                    ausgewaehlt.put(einheit, auswahlKreis)
+                if (event.button == MouseButton.PRIMARY) {
+                    auswählen(einheit)
                     event.consume()
                 }
+
             }
         } else {
             imageView.onMouseClicked = EventHandler { event ->
-                ausgewaehlt.keys.forEach {
+                if (event.button == MouseButton.SECONDARY)
+                ausgewaehlt.forEach {
                     it.ziel = einheit
                     it.zielPunkt = null
                     maleZiel(it, einheit.x, einheit.y)
@@ -371,10 +462,19 @@ class Main : Application() {
         }
     }
 
+    private fun auswählen(einheit: Einheit) {
+        if (einheit.leben > 0 && einheit.auswahlkreis == null) {
+            var auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
+            box.children.add(auswahlKreis)
+            einheit.auswahlkreis = auswahlKreis
+            ausgewaehlt.add(einheit)
+        }
+    }
+
     private fun runde() {
         computer.kristalle += 1.0 + 0.2 * computer.minen
         mensch.kristalle += 1.0 + 0.2 * mensch.minen
-        produzieren(spieler = computer, einheitenTyp = infantrie)
+        produzieren(spieler = computer, einheitenTyp = panzer)
         bewegeSpieler(computer, mensch)
         bewegeSpieler(mensch, computer)
 
@@ -411,13 +511,12 @@ class Main : Application() {
     }
 
     fun produzieren(spieler: Spieler, einheitenTyp: EinheitenTyp) {
-        if (spieler.kristalle >= einheitenTyp.kristalle) {
+        kaufen(einheitenTyp.kristalle, spieler) {
             val einheit = einheit(
                     x = spieler.startpunkt.x,
                     y = spieler.startpunkt.y,
                     einheitenTyp = einheitenTyp)
             spieler.einheiten.add(einheit)
-            spieler.kristalle -= einheitenTyp.kristalle
             bildHinzufuegen(spieler, einheit)
         }
     }
@@ -434,12 +533,12 @@ class Main : Application() {
 
         val a = ziel.y - einheit.y
         val b = ziel.x - einheit.x
-        val A = entfernung(einheit, ziel)
+        val e = entfernung(einheit, ziel)
 
         val reichweite = if (zielauswaehlen(gegner, einheit) != null) einheit.reichweite else 0
-        if (A - reichweite >= 0) {
-            einheit.x += smaller(b, b * einheit.laufweite / A)
-            einheit.y += smaller(a, a * einheit.laufweite / A)
+        if (e - reichweite >= 0) {
+            einheit.x += smaller(b, b * einheit.laufweite / e)
+            einheit.y += smaller(a, a * einheit.laufweite / e)
         }
 
         if (einheit.zielPunkt != null && einheit.zielPunkt == einheit.punkt()) {
@@ -523,8 +622,8 @@ class Main : Application() {
         if (einheit.leben < 1) {
             spieler.einheiten.remove(einheit)
 
-            if (ausgewaehlt.containsKey(einheit)) {
-                val kreis = ausgewaehlt.getValue(einheit)
+            if (ausgewaehlt.contains(einheit)) {
+                val kreis = einheit.auswahlkreis
                 ausgewaehlt.remove(einheit)
                 box.children.remove(kreis)
             }
@@ -560,9 +659,8 @@ class Main : Application() {
     fun entfernung(einheit: Einheit, ziel: Punkt): Double {
         val a = ziel.y - einheit.y
         val b = ziel.x - einheit.x
-        val A = sqrt(a.pow(2) + b.pow(2))
 
-        return A
+        return sqrt(a.pow(2) + b.pow(2))
     }
 
     fun male() {
@@ -571,9 +669,9 @@ class Main : Application() {
         mensch.kristalleText.text = "Kristalle: " + mensch.kristalle.toInt().toString()
         mensch.minenText.text = "Minen: " + mensch.minen.toString()
 
-        ausgewaehlt.forEach { (einheit, auswahlKreis) ->
-            auswahlKreis.centerX = einheit.bild.layoutX
-            auswahlKreis.centerY = einheit.bild.layoutY
+        ausgewaehlt.forEach { einheit ->
+            einheit.auswahlkreis!!.centerX = einheit.bild.layoutX
+            einheit.auswahlkreis!!.centerY = einheit.bild.layoutY
         }
     }
 
@@ -616,13 +714,13 @@ class Main : Application() {
         }
     }
 }
-//minen werden teurer
-//Sanitaeter
+//lufteinheiten greifen automatisch gegnerische einheiten im Umkreis von 300 an
+//Upgrades im Labor herrstellen
+//Sanitaeter: heilung wird nicht von der Panzerung verringert, nicht gegnerische einheten angreifen, weil sie verbündete einheiten angreifen
 //Tech gebeude
 //K.I.
-//Upgrates
-//einheiten nicht ineinander
-//einheiten zusammen auswaehlen
+//Upgrades(nur für eine bestimmte Einheit)
+//einheiten nicht übereinander
 //groessere Karte
 //Minnimap
 //keine Sicht auf der karte
@@ -631,6 +729,6 @@ class Main : Application() {
 //einheitenfaehikkeiten
 //produktionszeit
 //mit Tastatur prodozieren
-//lebensanzeige
+//lebensanzeige(lebensbalken)
 //rassen
-//Heimatplantendeck
+//bessere Grafik
