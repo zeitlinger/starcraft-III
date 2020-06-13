@@ -359,9 +359,15 @@ class Main : Application() {
                 auswahlRechteck?.let { r ->
                     mensch.einheiten.forEach {
                         if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
+                            `auswahl löschen`()
+                        }
+                    }
+                    mensch.einheiten.forEach {
+                        if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
                             auswählen(it)
                         }
                     }
+
 
                     box.children.remove(r)
                 }
@@ -381,6 +387,14 @@ class Main : Application() {
                 Thread.sleep(15)
             }
         }).start()
+    }
+
+    private fun `auswahl löschen`() {
+        ausgewaehlt.forEach {
+            box.children.remove(it.auswahlkreis)
+            it.auswahlkreis = null
+        }
+        ausgewaehlt.clear()
     }
 
     private fun kaufButton(hBox: HBox, text: String, einheitenTyp: EinheitenTyp) {
@@ -444,6 +458,7 @@ class Main : Application() {
         if (spieler.mensch) {
             imageView.onMouseClicked = EventHandler { event ->
                 if (event.button == MouseButton.PRIMARY) {
+                    `auswahl löschen`()
                     auswählen(einheit)
                     event.consume()
                 }
@@ -714,7 +729,7 @@ class Main : Application() {
         }
     }
 }
-//lufteinheiten greifen automatisch gegnerische einheiten im Umkreis von 300 an
+//lufteinheiten greifen automatisch gegnerische einheiten im Umkreis von 300 an. Lufteinheiten greifen keine Einheiten an von denen sie nicht angegriffen werden können.
 //Upgrades im Labor herrstellen
 //Sanitaeter: heilung wird nicht von der Panzerung verringert, nicht gegnerische einheten angreifen, weil sie verbündete einheiten angreifen
 //Tech gebeude
