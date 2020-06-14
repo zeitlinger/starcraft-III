@@ -135,7 +135,7 @@ class Main : Application() {
             kannAngreifen = KannAngreifen.alles, gebäude = null, hotkey = null)
     val jäger = EinheitenTyp(name = "Jäger", reichweite = 120, leben = 800.0, schaden = 3.0, laufweite = 0.8, kristalle = 1800, kuerzel = "JÄG", panzerung = 0.14,
             kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, hotkey = "a")
-    val sanitäter = EinheitenTyp(name = "Sanitäter", reichweite = 40, leben = 800.0, schaden = -2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
+    val sanitäter = EinheitenTyp(name = "Sanitäter", reichweite = 40, leben = 800.0, schaden = 2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
             kannAngreifen = KannAngreifen.heilen, gebäude = kaserne, techGebäude = akademie, hotkey = "e")
     val kampfschiff = EinheitenTyp(name = "Kampfschiff", reichweite = 250, leben = 20000.0, schaden = 9.0, laufweite = 0.2, kristalle = 3500, kuerzel = "KSF", panzerung = 0.5,
             kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, techGebäude = fusionskern, hotkey = "s")
@@ -328,14 +328,12 @@ class Main : Application() {
 
         box.onMousePressed = EventHandler {
             if (it.button == MouseButton.PRIMARY) {
-                println("pressed")
                 auswahlStart = Punkt(it.x, it.y)
             }
 
         }
         box.onMouseDragged = EventHandler {
             if (it.button == MouseButton.PRIMARY) {
-                println("moved")
                 auswahlStart?.let { s ->
                     val x = min(s.x, it.x)
                     val y = min(s.y, it.y)
@@ -362,7 +360,6 @@ class Main : Application() {
         }
         box.onMouseReleased = EventHandler { event ->
             if (event.button == MouseButton.PRIMARY) {
-                println("released")
 
                 auswahlRechteck?.let { r ->
                     mensch.einheiten.forEach {
@@ -635,28 +632,31 @@ class Main : Application() {
     }
 
     private fun zielauswaehlenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
-        val naechsteEinheit = if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
-            `nächste Einheit zum Heilen`(gegner, einheit)
-        } else {
-            gegner.einheiten
-                    .filter { kannAngreifen(einheit,it) }
+        if (einheit.ziel != null) {
+            return einheit.ziel
+        }
+        if (einheit.zielPunkt != null) {
+            return null
+        }
+
+        if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
+            return `nächste Einheit zum Heilen`(gegner, einheit)
+        }
+
+        val verbündeter = `verbündetem helfen`(gegner, einheit)
+        if (verbündeter != null) {
+            return verbündeter
+        }
+
+        if (gegner.mensch) {
+            val naechsteEinheit = gegner.einheiten
+                    .filter { kannAngreifen(einheit, it) }
                     .minBy { entfernung(einheit, it) }
+
+            return naechsteEinheit
         }
 
-        //automatisch auf Einheiten in Reichweite schiessen
-        if (einheit.ziel == null && naechsteEinheit != null) {
-            if (einheit.zielPunkt == null) {
-                val verbündeter = `verbündetem helfen`(gegner, einheit)
-                if (verbündeter != null) {
-                    return verbündeter
-                }
-            }
-
-            if (gegner.mensch) {
-                return naechsteEinheit
-            }
-        }
-        return einheit.ziel
+        return null
     }
 
     private fun `verbündetem helfen`(gegner: Spieler, einheit: Einheit): Einheit? {
@@ -690,7 +690,11 @@ class Main : Application() {
 
     private fun schiessen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
         if (entfernung(einheit, ziel) - einheit.reichweite < 0.0) {
-            ziel.leben -= max(0.0, (einheit.schaden + spieler.schadenUpgrade / 10 - ziel.panzerung - gegner(spieler).panzerungUprade / 10))
+            if (einheit.typ.kannAngreifen != KannAngreifen.heilen) {
+                ziel.leben -= max(0.0, (einheit.schaden + spieler.schadenUpgrade / 10 - ziel.panzerung - gegner(spieler).panzerungUprade / 10))
+            } else {
+                ziel.leben += max(0.0, einheit.schaden)
+            }
         }
     }
 
@@ -790,12 +794,12 @@ class Main : Application() {
         }
     }
 }
-//Sanitaeter: heilung wird nicht von der Panzerung verringert; nicht gegnerische einheten angreifen, sonern verbündete
+//Sanitaeter: heilen sich nicht selbst; Einheiten können nurvon einem Sanitäter gleichzeitig geheilt werden.
 //Tech gebeude werden benötigt um bestimmte einheiten herstellen zu können.
-//K.I. sammelt erst die Truppen und greift dann an.
-//Upgrades(nur für eine bestimmte Einheit)
+//K.I. :Sammelt erst die Truppen und greift dann an; baut verschiedene Einheiten, Minen, Upgrates und Gebäude
+//Upgrades nur für eine bestimmte Einheit
 //einheiten nicht übereinander
-//groessere Karte
+//größere Karte
 //Minnimap
 //keine Sicht auf der karte
 //Sichtweite für Einheiten
