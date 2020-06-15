@@ -125,28 +125,30 @@ class Main : Application() {
 
     val infantrie = EinheitenTyp(name = "Infantrie", reichweite = 150, leben = 1000.0, schaden = 1.0, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125,
             kannAngreifen = KannAngreifen.alles, gebäude = kaserne, hotkey = "q")
+    val eliteinfantrie = EinheitenTyp(name = "Elite-Infantrie", reichweite = 250, leben = 1200.0, schaden = 1.8, laufweite = 0.8, kristalle = 1400, kuerzel = "ELI", panzerung = 0.1,
+            kannAngreifen = KannAngreifen.alles, gebäude = kaserne, techGebäude = akademie, hotkey = "w")
     val berserker = EinheitenTyp(name = "Berserker", reichweite = 40, leben = 2000.0, schaden = 4.0, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
-            kannAngreifen = KannAngreifen.boden, gebäude = kaserne, techGebäude = schmiede, hotkey = "w")
-    val flammenwerfer = EinheitenTyp(name = "Flammenwerfer", reichweite = 100, leben = 2600.0, schaden = 6.0, laufweite = 1.2, kristalle = 2200, kuerzel = "FLA", panzerung = 0.3,
-            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, hotkey = "r")
+            kannAngreifen = KannAngreifen.boden, gebäude = kaserne, techGebäude = schmiede, hotkey = "e")
+    val flammenwerfer = EinheitenTyp(name = "Flammenwerfer", reichweite = 100, leben = 2600.0, schaden = 2.0, laufweite = 1.2, kristalle = 2200, kuerzel = "FLA", panzerung = 0.3,
+            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, hotkey = "a")
     val panzer = EinheitenTyp(name = "Panzer", reichweite = 500, leben = 10000.0, schaden = 5.0, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
-            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, techGebäude = reaktor, hotkey = "t")
-    val basis = EinheitenTyp(name = "Basis", reichweite = 500, leben = 30000.0, schaden = 12.0, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.5,
+            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, techGebäude = reaktor, hotkey = "s")
+    val basis = EinheitenTyp(name = "Basis", reichweite = 500, leben = 30000.0, schaden = 12.0, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.45,
             kannAngreifen = KannAngreifen.alles, gebäude = null, hotkey = null)
     val jäger = EinheitenTyp(name = "Jäger", reichweite = 120, leben = 800.0, schaden = 3.0, laufweite = 0.8, kristalle = 1800, kuerzel = "JÄG", panzerung = 0.14,
-            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, hotkey = "a")
+            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, hotkey = "d")
     val sanitäter = EinheitenTyp(name = "Sanitäter", reichweite = 40, leben = 800.0, schaden = 2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
-            kannAngreifen = KannAngreifen.heilen, gebäude = kaserne, techGebäude = akademie, hotkey = "e")
+            kannAngreifen = KannAngreifen.heilen, gebäude = kaserne, techGebäude = akademie, hotkey = "r")
     val kampfschiff = EinheitenTyp(name = "Kampfschiff", reichweite = 250, leben = 20000.0, schaden = 9.0, laufweite = 0.2, kristalle = 3500, kuerzel = "KSF", panzerung = 0.5,
-            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, techGebäude = fusionskern, hotkey = "s")
-    val kaufbareEinheiten = listOf(infantrie, berserker, panzer, jäger, sanitäter, kampfschiff, flammenwerfer)
+            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, techGebäude = fusionskern, hotkey = "f")
+    val kaufbareEinheiten = listOf(infantrie, eliteinfantrie, berserker, panzer, jäger, sanitäter, kampfschiff, flammenwerfer)
 
     val computer = Spieler(einheiten = mutableListOf(
             einheit(x = 1050.0, y = 110.0, einheitenTyp = infantrie),
             einheit(x = 750.0, y = 110.0, einheitenTyp = berserker),
-            einheit(x = 850.0, y = 110.0, einheitenTyp = panzer),
+            einheit(x = 850.0, y = 110.0, einheitenTyp = eliteinfantrie),
             einheit(x = 900.0, y = 50.0, einheitenTyp = basis),
-            einheit(x = 950.0, y = 110.0, einheitenTyp = jäger)
+            einheit(x = 950.0, y = 110.0, einheitenTyp = sanitäter)
     ),
             kristalle = 0.0,
             angriffspunkte = 20,
@@ -174,11 +176,11 @@ class Main : Application() {
     val mensch = Spieler(einheiten = mutableListOf(
             einheit(x = 1050.0, y = 895.0, einheitenTyp = infantrie),
             einheit(x = 750.0, y = 895.0, einheitenTyp = berserker),
-            einheit(x = 850.0, y = 895.0, einheitenTyp = panzer),
+            einheit(x = 850.0, y = 895.0, einheitenTyp = eliteinfantrie),
             einheit(x = 900.0, y = 970.0, einheitenTyp = basis),
-            einheit(x = 950.0, y = 895.0, einheitenTyp = jäger)
+            einheit(x = 950.0, y = 895.0, einheitenTyp = sanitäter)
     ),
-            kristalle = 0.0,
+            kristalle = 10000000000000000000.0,
             angriffspunkte = 20,
             verteidiegungspunkte = 10,
             minen = 0,
@@ -241,6 +243,17 @@ class Main : Application() {
 
 
 
+        hBox.children.add(Button("Mine").apply {
+            onMouseClicked = EventHandler {
+                if (it.button == MouseButton.PRIMARY) {
+                    kaufen(2000 + 400 * mensch.minen) {
+                        mensch.minen += 1
+                    }
+                }
+
+
+            }
+        })
         prodoktionsgebäude.forEach { gebäude ->
             hBox.children.add(Button(gebäude.name).apply {
                 onMouseClicked = EventHandler {
@@ -256,19 +269,21 @@ class Main : Application() {
                 }
             })
         }
-
-
-        hBox.children.add(Button("Mine").apply {
-            onMouseClicked = EventHandler {
-                if (it.button == MouseButton.PRIMARY) {
-                    kaufen(2000 + 400 * mensch.minen) {
-                        mensch.minen += 1
+        techgebäude.forEach { gebäude ->
+            hBox.children.add(Button(gebäude.name).apply {
+                onMouseClicked = EventHandler {
+                    if (it.button == MouseButton.PRIMARY) {
+                        kaufen(gebäude.kristalle) {
+                            hBox.children.remove(this)
+                        }
                     }
+
                 }
+            })
+        }
 
 
-            }
-        })
+
         hBox.children.add(Button("Labor").apply {
             onMouseClicked = EventHandler {
                 if (it.button == MouseButton.PRIMARY) {
@@ -276,11 +291,11 @@ class Main : Application() {
                         hBox.children.add(Button("LV " + (mensch.schadenUpgrade + 1) + " Schaden").apply {
                             onMouseClicked = EventHandler {
                                 if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(2000) {
+                                    kaufen(2000 + 400 * mensch.schadenUpgrade) {
                                         mensch.schadenUpgrade += 1
                                         this.text = "LV " + (mensch.schadenUpgrade + 1) + " Schaden"
 
-                                        if (mensch.schadenUpgrade >= 3) {
+                                        if (mensch.schadenUpgrade >= 5) {
                                             hBox.children.remove(this)
                                         }
                                     }
@@ -291,11 +306,11 @@ class Main : Application() {
                         hBox.children.add(Button("LV " + (mensch.panzerungUprade + 1) + " Panzerug").apply {
                             onMouseClicked = EventHandler {
                                 if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(2000) {
+                                    kaufen(2000 + 400 * mensch.panzerungUprade) {
                                         mensch.panzerungUprade += 1
                                         this.text = "LV " + (mensch.panzerungUprade + 1) + " Panzerug"
 
-                                        if (mensch.panzerungUprade >= 3) {
+                                        if (mensch.panzerungUprade >= 5) {
                                             hBox.children.remove(this)
                                         }
                                     }
@@ -679,7 +694,11 @@ class Main : Application() {
     }
 
     private fun `nächste Einheit zum Heilen`(gegner: Spieler, einheit: Einheit) =
-            gegner(gegner).einheiten.filter { it.leben < it.typ.leben }.minBy { entfernung(einheit, it) }
+            gegner(gegner).einheiten
+                    .filter { it.leben < it.typ.leben &&
+                            entfernung(einheit, it) < 300 &&
+                            einheit != it}
+                    .minBy { entfernung(einheit, it) }
 
     fun gegner(spieler: Spieler): Spieler {
         if (spieler == mensch) {
@@ -690,10 +709,10 @@ class Main : Application() {
 
     private fun schiessen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
         if (entfernung(einheit, ziel) - einheit.reichweite < 0.0) {
-            if (einheit.typ.kannAngreifen != KannAngreifen.heilen) {
-                ziel.leben -= max(0.0, (einheit.schaden + spieler.schadenUpgrade / 10 - ziel.panzerung - gegner(spieler).panzerungUprade / 10))
+            if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
+                ziel.leben = min(ziel.leben + einheit.schaden, ziel.typ.leben)
             } else {
-                ziel.leben += max(0.0, einheit.schaden)
+                ziel.leben -= einheit.schaden + spieler.schadenUpgrade / 10 - ziel.panzerung - gegner(spieler).panzerungUprade / 10
             }
         }
     }
@@ -794,7 +813,7 @@ class Main : Application() {
         }
     }
 }
-//Sanitaeter: heilen sich nicht selbst; Einheiten können nurvon einem Sanitäter gleichzeitig geheilt werden.
+//Einheiten können nurvon einem Sanitäter gleichzeitig geheilt werden.
 //Tech gebeude werden benötigt um bestimmte einheiten herstellen zu können.
 //K.I. :Sammelt erst die Truppen und greift dann an; baut verschiedene Einheiten, Minen, Upgrates und Gebäude
 //Upgrades nur für eine bestimmte Einheit
@@ -812,3 +831,4 @@ class Main : Application() {
 //bessere Grafik
 //Gebäude platzieren
 //attackmove
+//shiftbefehl
