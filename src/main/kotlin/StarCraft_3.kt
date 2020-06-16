@@ -36,13 +36,14 @@ val prodoktionsgebäude = listOf(
 
 data class TechGebäude(
         val name: String,
-        val kristalle: Int
-)
+        val kristalle: Int,
+        val gebäude: Gebäude
+        )
 
-val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000)
-val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000)
-val akademie = TechGebäude(name = "Akademie", kristalle = 2500)
-val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000)
+val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, gebäude = kaserne)
+val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, gebäude = raumhafen)
+val akademie = TechGebäude(name = "Akademie", kristalle = 2500, gebäude = kaserne)
+val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000, gebäude = fabrik)
 val techgebäude = listOf(
         schmiede,
         fusionskern,
@@ -73,7 +74,8 @@ data class EinheitenTyp(
         val gebäude: Gebäude?,
         val techGebäude: TechGebäude? = null,
         val name: String,
-        val hotkey: String?
+        val hotkey: String?,
+        var button: Button? = null
 )
 
 data class Einheit(
@@ -255,32 +257,9 @@ class Main : Application() {
             }
         })
         prodoktionsgebäude.forEach { gebäude ->
-            hBox.children.add(Button(gebäude.name).apply {
-                onMouseClicked = EventHandler {
-                    if (it.button == MouseButton.PRIMARY) {
-                        kaufen(gebäude.kristalle) {
-                            hBox.children.remove(this)
-                            kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach {
-                                kaufButton(hBox, it.name, it)
-                            }
-                        }
-                    }
-
-                }
-            })
+            produktionsgebäude(hBox, gebäude)
         }
-        techgebäude.forEach { gebäude ->
-            hBox.children.add(Button(gebäude.name).apply {
-                onMouseClicked = EventHandler {
-                    if (it.button == MouseButton.PRIMARY) {
-                        kaufen(gebäude.kristalle) {
-                            hBox.children.remove(this)
-                        }
-                    }
 
-                }
-            })
-        }
 
 
 
@@ -409,6 +388,38 @@ class Main : Application() {
         }).start()
     }
 
+    private fun produktionsgebäude(hBox: HBox, gebäude: Gebäude) {
+        hBox.children.add(Button(gebäude.name).apply {
+            onMouseClicked = EventHandler {
+                if (it.button == MouseButton.PRIMARY) {
+                    kaufen(gebäude.kristalle) {
+                        hBox.children.remove(this)
+                        techgebäude.filter { it.gebäude == gebäude }.forEach { gebäude ->
+                            techgebäude(hBox, gebäude)
+                        }
+                        kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach {
+                            kaufButton(hBox, it.name, it)
+                        }
+                    }
+                }
+
+            }
+        })
+    }
+
+    private fun techgebäude(hBox: HBox, gebäude: TechGebäude) {
+        hBox.children.add(Button(gebäude.name).apply {
+            onMouseClicked = EventHandler {
+                if (it.button == MouseButton.PRIMARY) {
+                    kaufen(gebäude.kristalle) {
+                        kaufbareEinheiten.filter { it.techGebäude == gebäude }.forEach { it.button!!.isDisable = false }
+                        hBox.children.remove(this)
+                    }
+                }
+            }
+        })
+    }
+
     private fun `auswahl löschen`() {
         ausgewaehlt.forEach {
             box.children.remove(it.auswahlkreis)
@@ -418,14 +429,19 @@ class Main : Application() {
     }
 
     private fun kaufButton(hBox: HBox, text: String, einheitenTyp: EinheitenTyp) {
-        hBox.children.add(Button(text).apply {
+        val button = Button(text).apply {
+            if (einheitenTyp.techGebäude != null) {
+                isDisable = true
+            }
             onMouseClicked = EventHandler {
                 if (it.button == MouseButton.PRIMARY) {
                     produzieren(spieler = mensch, einheitenTyp = einheitenTyp)
                 }
 
             }
-        })
+        }
+        hBox.children.add(button)
+        einheitenTyp.button = button
     }
 
     private fun laufBefehl(einheit: Einheit, event: MouseEvent) {
@@ -814,7 +830,6 @@ class Main : Application() {
     }
 }
 //Einheiten können nurvon einem Sanitäter gleichzeitig geheilt werden.
-//Tech gebeude werden benötigt um bestimmte einheiten herstellen zu können.
 //K.I. :Sammelt erst die Truppen und greift dann an; baut verschiedene Einheiten, Minen, Upgrates und Gebäude
 //Upgrades nur für eine bestimmte Einheit
 //einheiten nicht übereinander
