@@ -2,10 +2,12 @@
 
 import javafx.application.Application
 import javafx.application.Platform
+import javafx.event.ActionEvent
 import javafx.event.EventHandler
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.Button
+import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.HBox
@@ -38,7 +40,7 @@ data class TechGebäude(
         val name: String,
         val kristalle: Int,
         val gebäude: Gebäude
-        )
+)
 
 val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, gebäude = kaserne)
 val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, gebäude = raumhafen)
@@ -132,17 +134,17 @@ class Main : Application() {
     val berserker = EinheitenTyp(name = "Berserker", reichweite = 40, leben = 2000.0, schaden = 4.0, laufweite = 1.0, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
             kannAngreifen = KannAngreifen.boden, gebäude = kaserne, techGebäude = schmiede, hotkey = "e")
     val flammenwerfer = EinheitenTyp(name = "Flammenwerfer", reichweite = 100, leben = 2600.0, schaden = 2.0, laufweite = 1.2, kristalle = 2200, kuerzel = "FLA", panzerung = 0.3,
-            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, hotkey = "a")
+            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, hotkey = "s")
     val panzer = EinheitenTyp(name = "Panzer", reichweite = 500, leben = 10000.0, schaden = 5.0, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
-            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, techGebäude = reaktor, hotkey = "s")
+            kannAngreifen = KannAngreifen.boden, gebäude = fabrik, techGebäude = reaktor, hotkey = "d")
     val basis = EinheitenTyp(name = "Basis", reichweite = 500, leben = 30000.0, schaden = 12.0, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.45,
             kannAngreifen = KannAngreifen.alles, gebäude = null, hotkey = null)
     val jäger = EinheitenTyp(name = "Jäger", reichweite = 120, leben = 800.0, schaden = 3.0, laufweite = 0.8, kristalle = 1800, kuerzel = "JÄG", panzerung = 0.14,
-            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, hotkey = "d")
+            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, hotkey = "f")
     val sanitäter = EinheitenTyp(name = "Sanitäter", reichweite = 40, leben = 800.0, schaden = 2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
             kannAngreifen = KannAngreifen.heilen, gebäude = kaserne, techGebäude = akademie, hotkey = "r")
     val kampfschiff = EinheitenTyp(name = "Kampfschiff", reichweite = 250, leben = 20000.0, schaden = 9.0, laufweite = 0.2, kristalle = 3500, kuerzel = "KSF", panzerung = 0.5,
-            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, techGebäude = fusionskern, hotkey = "f")
+            kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, techGebäude = fusionskern, hotkey = "g")
     val kaufbareEinheiten = listOf(infantrie, eliteinfantrie, berserker, panzer, jäger, sanitäter, kampfschiff, flammenwerfer)
 
     val computer = Spieler(einheiten = mutableListOf(
@@ -260,8 +262,9 @@ class Main : Application() {
             produktionsgebäude(hBox, gebäude)
         }
 
-
-
+        hBox.onKeyPressed = EventHandler<KeyEvent> { event ->
+            kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
+        }
 
         hBox.children.add(Button("Labor").apply {
             onMouseClicked = EventHandler {
@@ -398,7 +401,7 @@ class Main : Application() {
                             techgebäude(hBox, gebäude)
                         }
                         kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach {
-                            kaufButton(hBox, it.name, it)
+                            einheitKaufenButton(hBox, it.name, it)
                         }
                     }
                 }
@@ -428,18 +431,16 @@ class Main : Application() {
         ausgewaehlt.clear()
     }
 
-    private fun kaufButton(hBox: HBox, text: String, einheitenTyp: EinheitenTyp) {
+    private fun einheitKaufenButton(hBox: HBox, text: String, einheitenTyp: EinheitenTyp) {
         val button = Button(text).apply {
             if (einheitenTyp.techGebäude != null) {
                 isDisable = true
             }
-            onMouseClicked = EventHandler {
-                if (it.button == MouseButton.PRIMARY) {
-                    produzieren(spieler = mensch, einheitenTyp = einheitenTyp)
-                }
-
+            onAction = EventHandler {
+                produzieren(spieler = mensch, einheitenTyp = einheitenTyp)
             }
         }
+
         hBox.children.add(button)
         einheitenTyp.button = button
     }
@@ -711,9 +712,11 @@ class Main : Application() {
 
     private fun `nächste Einheit zum Heilen`(gegner: Spieler, einheit: Einheit) =
             gegner(gegner).einheiten
-                    .filter { it.leben < it.typ.leben &&
-                            entfernung(einheit, it) < 300 &&
-                            einheit != it}
+                    .filter {
+                        it.leben < it.typ.leben &&
+                                entfernung(einheit, it) < 300 &&
+                                einheit != it
+                    }
                     .minBy { entfernung(einheit, it) }
 
     fun gegner(spieler: Spieler): Spieler {
@@ -831,19 +834,20 @@ class Main : Application() {
 }
 //Einheiten können nurvon einem Sanitäter gleichzeitig geheilt werden.
 //K.I. :Sammelt erst die Truppen und greift dann an; baut verschiedene Einheiten, Minen, Upgrates und Gebäude
-//Upgrades nur für eine bestimmte Einheit
+//Upgrades nur für eine bestimmte Einheiten
 //einheiten nicht übereinander
 //größere Karte
 //Minnimap
 //keine Sicht auf der karte
 //Sichtweite für Einheiten
 //Spetialressourcenquellen auf der Karte
-//einheitenfaehikkeiten
 //produktionszeit
-//mit Tastatur prodozieren
 //lebensanzeige(lebensbalken)
 //rassen
 //bessere Grafik
 //Gebäude platzieren
 //attackmove
 //shiftbefehl
+//gebäude auswählen
+//fähigkeiten
+//kontrollgruppen
