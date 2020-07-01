@@ -31,7 +31,7 @@ class SpielTest {
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[2].punkt() shouldBe Punkt(x=299.5524884615276, y=0.22300991667206946)
+        spiel.mensch.einheiten[2].punkt() shouldBe Punkt(x=299.55278640450007, y=0.22360679774997896)
     }
 
     @Test
@@ -97,6 +97,11 @@ class SpielTest {
     }
     @Test
     fun `zum Zielpunkt laufen`() {
+        data class TestFall(val start: Double, val ziel: Double)
+        val parameter = listOf(
+                TestFall(start = 140.0, ziel = 40.0),
+                TestFall(start = 141.0, ziel = 140.5)
+        )
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply { zielPunkt = Punkt(3415.0, 21434.0) }
@@ -106,6 +111,47 @@ class SpielTest {
 
         spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x=0.0786708845494479, y=0.49377210525120535)
     }
+    @Test
+    fun `computer greift nächste einheit an`() {
+        val spiel = neuesSpiel()
+        spiel.mensch.apply {
+            einheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
+        }
+        spiel.computer.apply {
+            einheit(x = 0.0, y = 200.0, einheitenTyp = infantrie)
+        }
+
+        spielen(spiel)
+
+        spiel.computer.einheiten[1].punkt() shouldBe Punkt(x=0.0, y= 199.5)
+    }
+    @Test
+    fun `springen`() {
+        data class TestFall(val start: Double, val ziel: Double, val leben: Double, val `alter cooldown`: Int, val `neuer cooldown`: Int)
+        val parameter = listOf(
+                TestFall(start = 140.0, ziel = 40.0, leben = 936.125, `alter cooldown` = 0, `neuer cooldown` = 99),
+                TestFall(start = 141.0, ziel = 140.5, leben = 1000.0, `alter cooldown` = 0, `neuer cooldown` = 0),
+                TestFall(start = 139.0, ziel = 40.0, leben = 936.125, `alter cooldown` = 0, `neuer cooldown` = 99),
+                TestFall(start = 140.0, ziel = 139.5, leben = 1000.0, `alter cooldown` = 34, `neuer cooldown` = 33)
+        )
+        parameter.forEach { testFall ->
+            val spiel = neuesSpiel()
+
+            spiel.computer.apply {
+                einheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
+            }
+            spiel.mensch.apply {
+                einheit(x = 0.0, y = testFall.start, einheitenTyp = berserker).apply { typ.springen = 100
+                `springen cooldown` = testFall.`alter cooldown`}
+            }
+            spielen(spiel)
+
+            spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x=0.0, y=testFall.ziel)
+            spiel.computer.einheiten[1].leben shouldBe testFall.leben
+            spiel.mensch.einheiten[1].`springen cooldown` shouldBe testFall.`neuer cooldown`
+        }
+    }
+
     @Test
     fun `zu ziel laufen`() {
         val spiel = neuesSpiel()

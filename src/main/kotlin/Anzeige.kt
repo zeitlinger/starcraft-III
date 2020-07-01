@@ -80,6 +80,13 @@ class App() : Application() {
                 }
             }
         })
+        hBox.children.add(Button("Arbeiter").apply {
+            onMouseClicked = EventHandler {
+                if (it.button == MouseButton.PRIMARY) {
+                        spiel.produzieren(mensch, arbeiter)
+                    }
+            }
+        })
         prodoktionsgebäude.forEach { gebäude ->
             produktionsgebäude(hBox, gebäude)
         }
@@ -427,15 +434,15 @@ class App() : Application() {
                     schadensUpgrade = 0,
                     panzerungsUprade = 0
             ).apply {
-                einheit(x = 1050.0, y = 110.0, einheitenTyp = infantrie)
-                einheit(x = 750.0, y = 110.0, einheitenTyp = berserker)
-                einheit(x = 850.0, y = 110.0, einheitenTyp = eliteinfantrie)
+                einheit(x = 1050.0, y = 110.0, einheitenTyp = späher)
+                einheit(x = 750.0, y = 110.0, einheitenTyp = arbeiter)
+                einheit(x = 850.0, y = 110.0, einheitenTyp = infantrie)
                 einheit(x = 900.0, y = 50.0, einheitenTyp = basis)
-                einheit(x = 950.0, y = 110.0, einheitenTyp = sanitäter)
+                einheit(x = 950.0, y = 110.0, einheitenTyp = infantrie)
             }
 
             val mensch = Spieler(
-                    kristalle = 10000000000000000000.0,
+                    kristalle = 10000000000.0,
                     angriffspunkte = 20,
                     verteidiegungspunkte = 10,
                     minen = 0,
@@ -445,11 +452,11 @@ class App() : Application() {
                     schadensUpgrade = 0,
                     panzerungsUprade = 0
             ).apply {
-                einheit(x = 1050.0, y = 895.0, einheitenTyp = infantrie)
-                einheit(x = 750.0, y = 895.0, einheitenTyp = berserker)
-                einheit(x = 850.0, y = 895.0, einheitenTyp = eliteinfantrie)
+                einheit(x = 1050.0, y = 895.0, einheitenTyp = späher)
+                einheit(x = 750.0, y = 895.0, einheitenTyp = arbeiter)
+                einheit(x = 850.0, y = 895.0, einheitenTyp = infantrie)
                 einheit(x = 900.0, y = 970.0, einheitenTyp = basis)
-                einheit(x = 950.0, y = 895.0, einheitenTyp = sanitäter)
+                einheit(x = 950.0, y = 895.0, einheitenTyp = infantrie)
             }
 
             spiel = Spiel(mensch, computer)
@@ -466,22 +473,29 @@ fun einheitenBild(): Circle {
 
 //Einheiten können nurvon einem Sanitäter gleichzeitig geheilt werden.
 //K.I. :Sammelt erst die Truppen und greift dann an; baut verschiedene Einheiten, Minen, Upgrates und Gebäude
-//Upgrades für eine bestimmte Einheiten
-// - Ansturm
+//Upgrades für eine bestimmte Einheiten:
+// berserker: Marine,
+// Elitemarine: stim,
+// Sanitäter: alle Einheiten heilen, schneller heilen,
+// Flammenwerfer: flächenschaden,
+// panzer: reichweite,
+// jäger: schneller,
+// kampfschiff: yamatokanone
 //einheiten nicht übereinander
 //größere Karte
 //Minnimap
 //keine Sicht auf der karte
 //Sichtweite für Einheiten
 //Spetialressourcenquellen auf der Karte
+//arbeiter und wissenschafter kann ressoursen einsammeln
 //produktionszeit
 //lebensanzeige(lebensbalken)
-//rassen
+//rassen - silikoiden: neue rasse
 //bessere Grafik
 //Gebäude platzieren
 //attackmove
 //shiftbefehl
 //gebäude auswählen
-//fähigkeiten
 //kontrollgruppen
 //kampagne
+//nicht schiesssen beim laufen

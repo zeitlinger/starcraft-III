@@ -57,7 +57,7 @@ enum class LuftBoden {
 
 data class EinheitenTyp(
         val schaden: Double,
-        val reichweite: Int,
+        val reichweite: Double,
         val leben: Double,
         var laufweite: Double,
         val kristalle: Int,
@@ -76,7 +76,7 @@ data class EinheitenTyp(
 data class Einheit(
         val spieler: Spieler,
         val typ: EinheitenTyp,
-        val reichweite: Int,
+        val reichweite: Double,
         var leben: Double,
         var x: Double,
         var y: Double,
@@ -88,9 +88,15 @@ data class Einheit(
         var zielpunktkreis: Arc? = null,
         var zielpunktLinie: Line? = null,
         var panzerung: Double,
-        var auswahlkreis: Arc? = null
+        var auswahlkreis: Arc? = null,
+        var `springen cooldown`: Int = 0
 ) {
     fun punkt() = Punkt(x = x, y = y)
+    override fun toString(): String {
+        return "Einheit(spieler=$spieler, typ=${typ.kuerzel}, x=$x, y=$y)"
+    }
+
+
 }
 
 data class Punkt(
@@ -112,28 +118,36 @@ data class Spieler(
         val minenText: Text = Text(),
         var schadensUpgrade: Int,
         var panzerungsUprade: Int
-)
+){
+    override fun toString(): String {
+        return "Spieler(mensch=$mensch)"
+    }
+}
 
 
-val infantrie = EinheitenTyp(name = "Infantrie", reichweite = 150, leben = 1000.0, schaden = 1.0, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125,
+val infantrie = EinheitenTyp(name = "Infantrie", reichweite = 150.0, leben = 1000.0, schaden = 1.0, laufweite = 0.5, kristalle = 500, kuerzel = "INF", panzerung = 0.125,
         kannAngreifen = KannAngreifen.alles, gebäude = kaserne, hotkey = "q")
-val eliteinfantrie = EinheitenTyp(name = "Elite-Infantrie", reichweite = 250, leben = 1200.0, schaden = 1.8, laufweite = 0.8, kristalle = 1400, kuerzel = "ELI", panzerung = 0.1,
+val eliteinfantrie = EinheitenTyp(name = "Elite-Infantrie", reichweite = 250.0, leben = 1200.0, schaden = 1.8, laufweite = 0.8, kristalle = 1400, kuerzel = "ELI", panzerung = 0.1,
         kannAngreifen = KannAngreifen.alles, gebäude = kaserne, techGebäude = akademie, hotkey = "w")
-val berserker = EinheitenTyp(name = "Berserker", reichweite = 40, leben = 2000.0, schaden = 4.0, laufweite = 0.5, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
+val berserker = EinheitenTyp(name = "Berserker", reichweite = 40.01, leben = 2000.0, schaden = 4.0, laufweite = 0.5, kristalle = 1000, kuerzel = "BER", panzerung = 0.25,
         kannAngreifen = KannAngreifen.boden, gebäude = kaserne, techGebäude = schmiede, hotkey = "e")
-val flammenwerfer = EinheitenTyp(name = "Flammenwerfer", reichweite = 100, leben = 2600.0, schaden = 2.0, laufweite = 1.2, kristalle = 2200, kuerzel = "FLA", panzerung = 0.3,
+val flammenwerfer = EinheitenTyp(name = "Flammenwerfer", reichweite = 100.0, leben = 2600.0, schaden = 2.0, laufweite = 1.2, kristalle = 2200, kuerzel = "FLA", panzerung = 0.3,
         kannAngreifen = KannAngreifen.boden, gebäude = fabrik, hotkey = "s")
-val panzer = EinheitenTyp(name = "Panzer", reichweite = 500, leben = 10000.0, schaden = 5.0, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
+val panzer = EinheitenTyp(name = "Panzer", reichweite = 500.0, leben = 10000.0, schaden = 5.0, laufweite = 0.25, kristalle = 2500, kuerzel = "PAN", panzerung = 0.4,
         kannAngreifen = KannAngreifen.boden, gebäude = fabrik, techGebäude = reaktor, hotkey = "d")
-val basis = EinheitenTyp(name = "Basis", reichweite = 500, leben = 30000.0, schaden = 12.0, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.45,
+val basis = EinheitenTyp(name = "Basis", reichweite = 500.0, leben = 30000.0, schaden = 12.0, laufweite = 0.0, kristalle = 0, kuerzel = "BAS", panzerung = 0.45,
         kannAngreifen = KannAngreifen.alles, gebäude = null, hotkey = null)
-val jäger = EinheitenTyp(name = "Jäger", reichweite = 120, leben = 800.0, schaden = 3.0, laufweite = 0.8, kristalle = 1800, kuerzel = "JÄG", panzerung = 0.14,
+val jäger = EinheitenTyp(name = "Jäger", reichweite = 120.0, leben = 800.0, schaden = 3.0, laufweite = 0.8, kristalle = 1800, kuerzel = "JÄG", panzerung = 0.14,
         kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, hotkey = "f")
-val sanitäter = EinheitenTyp(name = "Sanitäter", reichweite = 40, leben = 800.0, schaden = 2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
+val sanitäter = EinheitenTyp(name = "Sanitäter", reichweite = 40.01, leben = 800.0, schaden = 2.0, laufweite = 0.7, kristalle = 1100, kuerzel = "SAN", panzerung = 0.0,
         kannAngreifen = KannAngreifen.heilen, gebäude = kaserne, techGebäude = akademie, hotkey = "r")
-val kampfschiff = EinheitenTyp(name = "Kampfschiff", reichweite = 250, leben = 20000.0, schaden = 9.0, laufweite = 0.2, kristalle = 3500, kuerzel = "KSF", panzerung = 0.5,
+val kampfschiff = EinheitenTyp(name = "Kampfschiff", reichweite = 250.0, leben = 20000.0, schaden = 9.0, laufweite = 0.2, kristalle = 3500, kuerzel = "KSF", panzerung = 0.5,
         kannAngreifen = KannAngreifen.alles, luftBoden = LuftBoden.luft, gebäude = raumhafen, techGebäude = fusionskern, hotkey = "g")
-val kaufbareEinheiten = listOf(infantrie, eliteinfantrie, berserker, panzer, jäger, sanitäter, kampfschiff, flammenwerfer)
+val arbeiter = EinheitenTyp(name = "Arbeiter", reichweite = 0.0, leben = 800.0, schaden = 0.0, laufweite = 0.7, kristalle = 1000, kuerzel = "ARB", panzerung = 0.0,
+        kannAngreifen = KannAngreifen.alles, gebäude = null, hotkey = "y")
+val späher = EinheitenTyp(name = "Späher", reichweite = 0.0, leben = 800.0, schaden = 0.0, laufweite = 0.7, kristalle = 200, kuerzel = "SPÄ", panzerung = 0.0,
+        kannAngreifen = KannAngreifen.alles, gebäude = kaserne, hotkey = "x")
+val kaufbareEinheiten = listOf(infantrie, eliteinfantrie, berserker, panzer, jäger, sanitäter, kampfschiff, flammenwerfer, arbeiter, späher)
 
 
 class Spiel(
@@ -172,6 +186,16 @@ class Spiel(
                 font = Font(200.0)
             })
         }
+        mensch.einheiten.forEach{
+            if (it.`springen cooldown` > 0) {
+                it.`springen cooldown`--
+            }
+        }
+        computer.einheiten.forEach{
+            if (it.`springen cooldown` > 0) {
+                it.`springen cooldown`--
+            }
+        }
     }
 
     private fun schiessen(spieler: Spieler, gegner: Spieler) {
@@ -208,15 +232,17 @@ class Spiel(
         val e = entfernung(einheit, zielPunkt)
 
         val ziel = zielauswaehlenBewegen(gegner, einheit)
-        val reichweite = if (ziel != null && !ziel.spieler.mensch) einheit.reichweite else 0
-        if (e > reichweite) {
+        if (e > einheit.reichweite) {
             val springen = einheit.typ.springen
-            val laufweite = min(e - if (einheit.zielPunkt == null) 40 else 0,
-                    if (einheit.zielPunkt == null && springen != null && e < springen) {
-                        springen.toDouble()
-                    } else {
-                        einheit.typ.laufweite
-                    })
+            val mindestabstand = e - if (einheit.zielPunkt == null) 40 else 0
+            val `max laufweite` = if (einheit.`springen cooldown` == 0 && einheit.zielPunkt == null && springen != null && e <= springen + 40) {
+                ziel!!.leben -= einheit.typ.schaden * 15
+                einheit.`springen cooldown` = 100
+                springen.toDouble()
+            } else {
+                einheit.typ.laufweite
+            }
+            val laufweite = min(mindestabstand, `max laufweite`)
 
             einheit.x += smaller(b, b * laufweite / e)
             einheit.y += smaller(a, a * laufweite / e)
