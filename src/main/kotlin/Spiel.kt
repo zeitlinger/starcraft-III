@@ -141,6 +141,9 @@ class Spiel(
         if (ziel == null) {
             if (kommando is Kommando.Attackmove) {
                 bewege(einheit, kommando.zielPunkt, laufweite)
+                if (kommando.zielPunkt == einheit.punkt()) {
+                    kommandoEntfernen(einheit, kommando)
+                }
             }
             return
         }
@@ -183,23 +186,6 @@ class Spiel(
         einheit.x += smaller(x, x * laufweite / entfernung)
         einheit.y += smaller(y, y * laufweite / entfernung)
         einheit.hatSichBewegt = true
-    }
-
-    fun kommandoEntfernen(einheit: Einheit, kommando: Kommando) {
-        if (kommando.zielpunktkreis != null) {
-            box.children.remove(kommando.zielpunktkreis)
-        }
-        if (kommando.zielpunktLinie != null) {
-            box.children.remove(kommando.zielpunktLinie)
-        }
-        einheit.kommandoQueue.remove(kommando)
-    }
-
-    fun smaller(a: Double, b: Double): Double {
-        if (a.absoluteValue <= b.absoluteValue) {
-            return a
-        }
-        return b
     }
 
     private fun zielauswaehlenSchießen(gegner: Spieler, einheit: Einheit): Einheit? {
@@ -467,10 +453,24 @@ fun Spieler.einheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) =
         typ = einheitenTyp
     ).also { einheiten.add(it) }
 
+fun kommandoEntfernen(einheit: Einheit, kommando: Kommando) {
+    if (kommando.zielpunktkreis != null) {
+        box.children.remove(kommando.zielpunktkreis)
+    }
+    if (kommando.zielpunktLinie != null) {
+        box.children.remove(kommando.zielpunktLinie)
+    }
+    einheit.kommandoQueue.remove(kommando)
+}
+
+fun smaller(a: Double, b: Double): Double {
+    if (a.absoluteValue <= b.absoluteValue) {
+        return a
+    }
+    return b
+}
 
 //Bugs:
-//ZielpunktKreis und Zielpunktlinie wird nicht gelöscht wenn die KommandoQueue gelöscht wird
-//wenn ein Kommando durchgefürt wird wird die Kommandoqueue nicht gelöscht (auch wenn man nicht Shift gedrückt hat)
 
 //Features:
 //KI

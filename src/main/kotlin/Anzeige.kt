@@ -26,6 +26,7 @@ import javafx.scene.shape.*
 import javafx.scene.text.Text
 import javafx.stage.Stage
 import sun.awt.util.IdentityArrayList
+import java.awt.Point
 import kotlin.math.*
 
 
@@ -432,20 +433,22 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
         val kommando =
             if (angriffsZielpunkt) Kommando.Attackmove(zielPunkt = Punkt(x, y)) else Kommando.Bewegen(Punkt(x, y))
-        zielpunktKreisUndLinieHinzufügen(kommando, einheit)
         neuesKommando(einheit, kommando, schiftcommand)
+        zielpunktKreisUndLinieHinzufügen(kommando, einheit)
     }
 
     private fun neuesKommando(einheit: Einheit, kommando: Kommando, schiftcommand: Boolean) {
-        if (!schiftcommand) {
-            einheit.kommandoQueue.clear()
+        einheit.kommandoQueue.toList().forEach {
+            if (!schiftcommand || it is Kommando.HoldPosition) {
+                kommandoEntfernen(einheit, it)
+            }
         }
-        einheit.kommandoQueue.removeAll { it is Kommando.HoldPosition }
         einheit.kommandoQueue.add(kommando)
     }
 
     private fun zielpunktKreisUndLinieHinzufügen(kommando: Kommando, einheit: Einheit) {
-        val letztesKommando = einheit.kommandoQueue.lastOrNull()
+        val queue = einheit.kommandoQueue
+        val letztesKommando = queue.getOrNull(queue.size - 2)
         zielpunktUndKreisHinzufügen(einheit, kommando, letztesKommando)
     }
 
@@ -455,8 +458,20 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             box.children.add(this)
         }
 
+        if (einheit.kommandoQueue.size < 2) {
+            return
+        }
+
         val startPunkt = kommandoPosition(letztesKommando, einheit)
 
+        if (einheit.kommandoQueue.size == 2) {
+            linieHinzufügen(einheit.kommandoQueue.first(), einheit.punkt(), startPunkt)
+        }
+
+        linieHinzufügen(kommando, startPunkt, zielPunkt)
+    }
+
+    private fun linieHinzufügen(kommando: Kommando, startPunkt: Punkt, zielPunkt: Punkt) {
         kommando.zielpunktLinie = Line().apply {
             startX = startPunkt.x
             startY = startPunkt.y
@@ -533,8 +548,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     private fun `ziel auswählen`(einheit: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
             val kommando = Kommando.Angriff(ziel = einheit)
-            zielpunktKreisUndLinieHinzufügen(kommando, einheit)
             neuesKommando(einheit = it, kommando = kommando, schiftcommand = schiftcommand)
+            zielpunktKreisUndLinieHinzufügen(kommando, einheit)
         }
     }
 
