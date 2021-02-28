@@ -1,8 +1,17 @@
-@file:Suppress("MemberVisibilityCanBePrivate", "FoldInitializerAndIfToElvis", "LiftReturnOrAssignment", "NonAsciiCharacters", "PropertyName", "EnumEntryName", "SpellCheckingInspection")
+@file:Suppress(
+    "MemberVisibilityCanBePrivate",
+    "FoldInitializerAndIfToElvis",
+    "LiftReturnOrAssignment",
+    "NonAsciiCharacters",
+    "PropertyName",
+    "EnumEntryName",
+    "SpellCheckingInspection"
+)
 
 import javafx.application.Application
 import javafx.application.Platform
 import javafx.event.EventHandler
+import javafx.scene.Cursor
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.Button
@@ -18,8 +27,6 @@ import javafx.scene.text.Text
 import javafx.stage.Stage
 import sun.awt.util.IdentityArrayList
 import kotlin.math.*
-
-
 
 
 lateinit var spiel: Spiel
@@ -44,8 +51,15 @@ private fun kreis(x: Double, y: Double, radius: Double): Arc {
     }
 }
 
+enum class KommandoWählen {
+    Bewegen,
+    Attackmove,
+    Patrolieren,
+    HoldPosition
+}
+
 @Suppress("SpellCheckingInspection")
-class App() : Application() {
+class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     val computer = spiel.computer
     val mensch = spiel.mensch
 
@@ -83,8 +97,8 @@ class App() : Application() {
         hBox.children.add(Button("Arbeiter").apply {
             onMouseClicked = EventHandler {
                 if (it.button == MouseButton.PRIMARY) {
-                        spiel.produzieren(mensch, arbeiter)
-                    }
+                    spiel.produzieren(mensch, mArbeiter)
+                }
             }
         })
         prodoktionsgebäude.forEach { gebäude ->
@@ -92,7 +106,41 @@ class App() : Application() {
         }
 
         hBox.onKeyPressed = EventHandler<KeyEvent> { event ->
-            kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
+            if (ausgewaehlt.size == 1 && ausgewaehlt[0].typ == mBasis) {
+                kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
+            } else {
+                if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ == mBasis }) {
+                    when (event.text) {
+                        "a" -> {
+                            kommandoWählen = KommandoWählen.Attackmove
+                            scene.setCursor(Cursor.CROSSHAIR);
+                        }
+                        "s" -> {
+                            if (!event.isShiftDown) {
+                                ausgewaehlt.forEach {
+                                    it.kommandoQueue.clear()
+                                    it.holdPosition = false
+                                }
+                            }
+                        }
+                        "b" -> {
+                            kommandoWählen = KommandoWählen.Bewegen
+                            scene.setCursor(Cursor.CROSSHAIR);
+                        }
+                        "h" -> {
+                            kommandoWählen = KommandoWählen.HoldPosition
+                            val schiftcommand = event.isShiftDown
+                            ausgewaehlt.forEach {
+                                neuesKommando(
+                                    einheit = it,
+                                    kommando = Kommando.HoldPosition(),
+                                    schiftcommand = schiftcommand
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         hBox.children.add(Button("Labor").apply {
@@ -106,7 +154,7 @@ class App() : Application() {
                                         mensch.schadensUpgrade += 1
                                         this.text = "LV " + (mensch.schadensUpgrade + 1) + " Schaden"
 
-                                        if (mensch.schadensUpgrade >= 5) {
+                                        if (mensch.schadensUpgrade == 5) {
                                             hBox.children.remove(this)
                                         }
                                     }
@@ -120,7 +168,7 @@ class App() : Application() {
                                         mensch.panzerungsUprade += 1
                                         this.text = "LV " + (mensch.panzerungsUprade + 1) + " Panzerug"
 
-                                        if (mensch.panzerungsUprade >= 5) {
+                                        if (mensch.panzerungsUprade == 5) {
                                             hBox.children.remove(this)
                                         }
                                     }
@@ -130,9 +178,68 @@ class App() : Application() {
                         hBox.children.add(Button("Ansturm").apply {
                             onMouseClicked = EventHandler {
                                 if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(1500,mensch) {
-                                        berserker.laufweite = 1.0
-                                        berserker.springen = 150
+                                    kaufen(1500, mensch) {
+                                        mBerserker.laufweite = 1.0
+                                        mBerserker.springen = 150
+                                        hBox.children.remove(this)
+                                    }
+                                }
+                            }
+                        })
+                        hBox.children.remove(this)
+                        hBox.children.add(Button("Verbesserte Zielsysteme").apply {
+                            onMouseClicked = EventHandler {
+                                if (it.button == MouseButton.PRIMARY) {
+                                    kaufen(1500, mensch) {
+                                        mPanzer.reichweite = 500.0
+                                        hBox.children.remove(this)
+                                    }
+                                }
+                            }
+                        })
+                        hBox.children.remove(this)
+                        hBox.children.add(Button("Fusionsantrieb").apply {
+                            onMouseClicked = EventHandler {
+                                if (it.button == MouseButton.PRIMARY) {
+                                    kaufen(1500, mensch) {
+                                        mJäger.laufweite = 1.2
+                                        mKampfschiff.laufweite = 0.3
+                                        hBox.children.remove(this)
+                                    }
+                                }
+                            }
+                        })
+                        hBox.children.remove(this)
+                        hBox.children.add(Button("Verstärkte Heilmittel").apply {
+                            onMouseClicked = EventHandler {
+                                if (it.button == MouseButton.PRIMARY) {
+                                    kaufen(1500, mensch) {
+                                        mSanitäter.schaden = 3.0
+                                        mensch.vertärkteHeilmittel = true
+                                        hBox.children.remove(this)
+                                    }
+                                }
+                            }
+                        })
+                        hBox.children.remove(this)
+                        hBox.children.add(Button("Strahlungsheilung").apply {
+                            onMouseClicked = EventHandler {
+                                if (it.button == MouseButton.PRIMARY) {
+                                    kaufen(1500, mensch) {
+                                        mSanitäter.reichweite = 140.01
+                                        mensch.strahlungsheilung = true
+                                        hBox.children.remove(this)
+                                    }
+                                }
+                            }
+                        })
+                        hBox.children.remove(this)
+                        hBox.children.add(Button("Flammenwurf").apply {
+                            onMouseClicked = EventHandler {
+                                if (it.button == MouseButton.PRIMARY) {
+                                    kaufen(1500, mensch) {
+                                        mFlammenwerfer.flächenschaden = 40
+                                        mFlammenwerfer.schaden = 2.5
                                         hBox.children.remove(this)
                                     }
                                 }
@@ -151,8 +258,13 @@ class App() : Application() {
 
         box.onMouseClicked = EventHandler { event ->
             if (event.button == MouseButton.SECONDARY) {
-                ausgewaehlt.forEach { einheit ->
-                    laufBefehl(einheit, event)
+                if (kommandoWählen != null) {
+                    scene.setCursor(Cursor.DEFAULT);
+                    kommandoWählen = null
+                } else {
+                    ausgewaehlt.forEach { einheit ->
+                        laufBefehl(einheit, event, angriffsZielpunkt = false, schiftcommand = event.isShiftDown)
+                    }
                 }
             }
             event.consume()
@@ -163,9 +275,32 @@ class App() : Application() {
 
         box.onMousePressed = EventHandler {
             if (it.button == MouseButton.PRIMARY) {
-                auswahlStart = Punkt(it.x, it.y)
+                when (kommandoWählen) {
+                    KommandoWählen.Attackmove -> {
+                        ausgewaehlt.forEach { einheit ->
+                            laufBefehl(
+                                einheit = einheit,
+                                event = it,
+                                angriffsZielpunkt = true,
+                                schiftcommand = it.isShiftDown
+                            )
+                        }
+                    }
+                    KommandoWählen.Bewegen -> ausgewaehlt.forEach { einheit ->
+                        laufBefehl(
+                            einheit = einheit,
+                            event = it,
+                            angriffsZielpunkt = false,
+                            schiftcommand = it.isShiftDown
+                        )
+                    }
+                    else -> {
+                        auswahlStart = Punkt(it.x, it.y)
+                    }
+                }
+                scene.setCursor(Cursor.DEFAULT);
+                kommandoWählen = null
             }
-
         }
         box.onMouseDragged = EventHandler {
             if (it.button == MouseButton.PRIMARY) {
@@ -218,7 +353,7 @@ class App() : Application() {
 
         }
 
-        Thread(Runnable {
+        Thread({
             while (true) {
 
                 if (spiel.rundenLimit != null && spiel.runde == spiel.rundenLimit) {
@@ -291,32 +426,53 @@ class App() : Application() {
         einheitenTyp.button = button
     }
 
-    private fun laufBefehl(einheit: Einheit, event: MouseEvent) {
+    private fun laufBefehl(einheit: Einheit, event: MouseEvent, angriffsZielpunkt: Boolean, schiftcommand: Boolean) {
         val x = event.x
         val y = event.y
-        einheit.zielPunkt = Punkt(x = x, y = y)
-        einheit.ziel = null
 
-        maleZiel(einheit, x, y)
+        val kommando =
+            if (angriffsZielpunkt) Kommando.Attackmove(zielPunkt = Punkt(x, y)) else Kommando.Bewegen(Punkt(x, y))
+        zielpunktKreisUndLinieHinzufügen(kommando, einheit)
+        neuesKommando(einheit, kommando, schiftcommand)
     }
 
-    private fun maleZiel(einheit: Einheit, x: Double, y: Double) {
-        val z = einheit.zielpunktkreis
-        if (z != null) {
-            box.children.remove(z)
+    private fun neuesKommando(einheit: Einheit, kommando: Kommando, schiftcommand: Boolean) {
+        if (!schiftcommand) {
+            einheit.kommandoQueue.clear()
         }
-        einheit.zielpunktLinie?.let { box.children.remove(it) }
+        einheit.kommandoQueue.removeAll { it is Kommando.HoldPosition }
+        einheit.kommandoQueue.add(kommando)
+    }
 
-        einheit.zielpunktkreis = kreis(x = x, y = y, radius = 5.0).apply {
+    private fun zielpunktKreisUndLinieHinzufügen(kommando: Kommando, einheit: Einheit) {
+        val letztesKommando = einheit.kommandoQueue.lastOrNull()
+        zielpunktUndKreisHinzufügen(einheit, kommando, letztesKommando)
+    }
+
+    private fun zielpunktUndKreisHinzufügen(einheit: Einheit, kommando: Kommando, letztesKommando: Kommando?) {
+        val zielPunkt = kommandoPosition(kommando, einheit)
+        kommando.zielpunktkreis = kreis(x = zielPunkt.x, y = zielPunkt.y, radius = 5.0).apply {
             box.children.add(this)
         }
-        einheit.zielpunktLinie = Line().apply {
-            startX = einheit.x
-            startY = einheit.y
-            endX = x
-            endY = y
+
+        val startPunkt = kommandoPosition(letztesKommando, einheit)
+
+        kommando.zielpunktLinie = Line().apply {
+            startX = startPunkt.x
+            startY = startPunkt.y
+            endX = zielPunkt.x
+            endY = zielPunkt.y
             box.children.add(this)
         }
+    }
+
+    private fun kommandoPosition(letztesKommando: Kommando?, einheit: Einheit) = when (letztesKommando) {
+        null -> Punkt(einheit.x, einheit.y)
+        is Kommando.Angriff -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
+        is Kommando.Bewegen -> letztesKommando.zielPunkt
+        is Kommando.Attackmove -> letztesKommando.zielPunkt
+        is Kommando.Patrolieren -> letztesKommando.punkt2
+        is Kommando.HoldPosition -> throw AssertionError("kann nicht passieren")
     }
 
     private fun initSpieler(spieler: Spieler) {
@@ -344,30 +500,41 @@ class App() : Application() {
     private fun einheitMouseHandler(spieler: Spieler, imageView: Node, einheit: Einheit) {
         if (spieler.mensch) {
             imageView.onMouseClicked = EventHandler { event ->
+                if (kommandoWählen != null) {
+                    if (kommandoWählen == KommandoWählen.Attackmove && event.button == MouseButton.PRIMARY) {
+                        `ziel auswählen`(einheit, schiftcommand = event.isShiftDown)
+                    }
+                    return@EventHandler
+                }
                 if (event.button == MouseButton.PRIMARY) {
                     `auswahl löschen`()
                     auswählen(einheit)
-
                 } else if (event.button == MouseButton.SECONDARY) {
-                    `ziel auswählen`(einheit)
+                    `ziel auswählen`(einheit, schiftcommand = event.isShiftDown)
                 }
                 event.consume()
             }
         } else {
             imageView.onMouseClicked = EventHandler { event ->
+                if (kommandoWählen != null) {
+                    if (kommandoWählen == KommandoWählen.Attackmove && event.button == MouseButton.PRIMARY) {
+                        `ziel auswählen`(einheit, schiftcommand = event.isShiftDown)
+                    }
+                    return@EventHandler
+                }
                 if (event.button == MouseButton.SECONDARY) {
-                    `ziel auswählen`(einheit)
+                    `ziel auswählen`(einheit, schiftcommand = event.isShiftDown)
                 }
                 event.consume()
             }
         }
     }
 
-    private fun `ziel auswählen`(einheit: Einheit) {
+    private fun `ziel auswählen`(einheit: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
-            it.ziel = einheit
-            it.zielPunkt = null
-            maleZiel(it, einheit.x, einheit.y)
+            val kommando = Kommando.Angriff(ziel = einheit)
+            zielpunktKreisUndLinieHinzufügen(kommando, einheit)
+            neuesKommando(einheit = it, kommando = kommando, schiftcommand = schiftcommand)
         }
     }
 
@@ -377,6 +544,10 @@ class App() : Application() {
             box.children.add(auswahlKreis)
             einheit.auswahlkreis = auswahlKreis
             ausgewaehlt.add(einheit)
+            //kommandos anzeigen
+            einheit.kommandoQueue.forEach {
+
+            }
         }
     }
 
@@ -406,57 +577,66 @@ class App() : Application() {
         einheit.kuerzel!!.x = einheit.x - 12
         einheit.kuerzel!!.y = einheit.y
 
-        einheit.zielpunktLinie?.apply {
-            startX = einheit.x
-            startY = einheit.y
-            val ziel = einheit.ziel
-            if (ziel != null) {
+
+        if (einheit.kommandoQueue.size > 1) {
+            einheit.kommandoQueue[0].zielpunktLinie?.apply {
+                startX = einheit.x
+                startY = einheit.y
+            }
+        }
+
+        val kommando = einheit.kommandoQueue.getOrNull(0)
+        if (kommando != null && kommando is Kommando.Angriff) {
+            val ziel = kommando.ziel
+
+            kommando.zielpunktLinie!!.apply {
                 endX = ziel.x
                 endY = ziel.y
-                einheit.zielpunktkreis!!.centerX = ziel.x
-                einheit.zielpunktkreis!!.centerY = ziel.y
+            }
+            kommando.zielpunktkreis!!.apply {
+                centerX = ziel.x
+                centerY = ziel.y
             }
         }
     }
-
 
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
             val computer = Spieler(
-                    kristalle = 0.0,
-                    angriffspunkte = 20,
-                    verteidiegungspunkte = 10,
-                    minen = 0,
-                    startpunkt = Punkt(x = 900.0, y = 115.0),
-                    farbe = Color.RED,
-                    mensch = false,
-                    schadensUpgrade = 0,
-                    panzerungsUprade = 0
+                kristalle = 0.0,
+                angriffspunkte = 20,
+                verteidiegungspunkte = 10,
+                minen = 0,
+                startpunkt = Punkt(x = 900.0, y = 115.0),
+                farbe = Color.RED,
+                mensch = false,
+                schadensUpgrade = 0,
+                panzerungsUprade = 0
             ).apply {
-                einheit(x = 1050.0, y = 110.0, einheitenTyp = späher)
-                einheit(x = 750.0, y = 110.0, einheitenTyp = arbeiter)
-                einheit(x = 850.0, y = 110.0, einheitenTyp = infantrie)
-                einheit(x = 900.0, y = 50.0, einheitenTyp = basis)
-                einheit(x = 950.0, y = 110.0, einheitenTyp = infantrie)
+                einheit(x = 1050.0, y = 110.0, einheitenTyp = cSpäher)
+                einheit(x = 750.0, y = 110.0, einheitenTyp = cSonde)
+                einheit(x = 850.0, y = 110.0, einheitenTyp = cInfantrie)
+                einheit(x = 900.0, y = 50.0, einheitenTyp = cBasis)
+                einheit(x = 950.0, y = 110.0, einheitenTyp = cInfantrie)
             }
 
             val mensch = Spieler(
-                    kristalle = 10000000000.0,
-                    angriffspunkte = 20,
-                    verteidiegungspunkte = 10,
-                    minen = 0,
-                    startpunkt = Punkt(x = 900.0, y = 905.0),
-                    farbe = Color.BLUE,
-                    mensch = true,
-                    schadensUpgrade = 0,
-                    panzerungsUprade = 0
+                kristalle = 10000000000.0,
+                angriffspunkte = 20,
+                verteidiegungspunkte = 10,
+                minen = 0,
+                startpunkt = Punkt(x = 900.0, y = 905.0),
+                farbe = Color.BLUE,
+                mensch = true,
+                schadensUpgrade = 0,
+                panzerungsUprade = 0
             ).apply {
-                einheit(x = 1050.0, y = 895.0, einheitenTyp = späher)
-                einheit(x = 750.0, y = 895.0, einheitenTyp = arbeiter)
-                einheit(x = 850.0, y = 895.0, einheitenTyp = infantrie)
-                einheit(x = 900.0, y = 970.0, einheitenTyp = basis)
-                einheit(x = 950.0, y = 895.0, einheitenTyp = infantrie)
+                einheit(x = 1050.0, y = 895.0, einheitenTyp = mSpäher)
+                einheit(x = 750.0, y = 895.0, einheitenTyp = mArbeiter)
+                einheit(x = 850.0, y = 895.0, einheitenTyp = mInfantrie)
+                einheit(x = 900.0, y = 970.0, einheitenTyp = mBasis)
+                einheit(x = 950.0, y = 895.0, einheitenTyp = mInfantrie)
             }
 
             spiel = Spiel(mensch, computer)
@@ -469,33 +649,3 @@ class App() : Application() {
 fun einheitenBild(): Circle {
     return Circle(20.toDouble())
 }
-
-
-//Einheiten können nurvon einem Sanitäter gleichzeitig geheilt werden.
-//K.I. :Sammelt erst die Truppen und greift dann an; baut verschiedene Einheiten, Minen, Upgrates und Gebäude
-//Upgrades für eine bestimmte Einheiten:
-// berserker: Marine,
-// Elitemarine: stim,
-// Sanitäter: alle Einheiten heilen, schneller heilen,
-// Flammenwerfer: flächenschaden,
-// panzer: reichweite,
-// jäger: schneller,
-// kampfschiff: yamatokanone
-//einheiten nicht übereinander
-//größere Karte
-//Minnimap
-//keine Sicht auf der karte
-//Sichtweite für Einheiten
-//Spetialressourcenquellen auf der Karte
-//arbeiter und wissenschafter kann ressoursen einsammeln
-//produktionszeit
-//lebensanzeige(lebensbalken)
-//rassen - silikoiden: neue rasse
-//bessere Grafik
-//Gebäude platzieren
-//attackmove
-//shiftbefehl
-//gebäude auswählen
-//kontrollgruppen
-//kampagne
-//nicht schiesssen beim laufen
