@@ -22,11 +22,16 @@ import javafx.scene.layout.HBox
 import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
-import javafx.scene.shape.*
+import javafx.scene.shape.Arc
+import javafx.scene.shape.ArcType
+import javafx.scene.shape.Circle
+import javafx.scene.shape.Line
+import javafx.scene.shape.Rectangle
 import javafx.scene.text.Text
 import javafx.stage.Stage
 import sun.awt.util.IdentityArrayList
-import kotlin.math.*
+import kotlin.math.max
+import kotlin.math.min
 
 
 lateinit var spiel: Spiel
@@ -34,6 +39,24 @@ lateinit var spiel: Spiel
 val box: Pane = Pane().apply {
     prefWidth = 1850.0
     prefHeight = 950.0
+}
+
+fun Node.mausTaste(
+    button: MouseButton,
+    filter: () -> Boolean = { true },
+    consume: Boolean = true,
+    aktion: (MouseEvent) -> Unit
+) {
+    this.addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
+        if (filter()) {
+            if (event.button == button) {
+                aktion(event)
+            }
+            if (consume) {
+                event.consume()
+            }
+        }
+    }
 }
 
 var ausgewaehlt: MutableList<Einheit> = IdentityArrayList()
@@ -181,63 +204,58 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         vBox.children.add(box)
         vBox.children.add(hBox)
 
-        box.onMouseClicked = EventHandler { event ->
-            if (event.button == MouseButton.SECONDARY) {
-                if (kommandoWählen != null) {
-                    scene.cursor = Cursor.DEFAULT
-                    kommandoWählen = null
-                } else {
-                    ausgewaehlt.forEach { einheit ->
-                        laufBefehl(einheit, event, laufbefehl = Laufbefehl.Bewegen, schiftcommand = event.isShiftDown)
-                    }
+        box.mausTaste(MouseButton.SECONDARY) {
+            if (kommandoWählen != null) {
+                scene.cursor = Cursor.DEFAULT
+                kommandoWählen = null
+            } else {
+                ausgewaehlt.forEach { einheit ->
+                    laufBefehl(einheit, it, laufbefehl = Laufbefehl.Bewegen, schiftcommand = it.isShiftDown)
                 }
             }
-            event.consume()
         }
 
         var auswahlStart: Punkt? = null
         var auswahlRechteck: Rectangle? = null
 
-        box.onMousePressed = EventHandler {
-            if (it.button == MouseButton.PRIMARY) {
-                when (kommandoWählen) {
-                    KommandoWählen.Attackmove -> {
-                        ausgewaehlt.forEach { einheit ->
-                            laufBefehl(
-                                einheit = einheit,
-                                event = it,
-                                laufbefehl = Laufbefehl.Attackmove,
-                                schiftcommand = it.isShiftDown
-                            )
-                        }
-                    }
-                    KommandoWählen.Bewegen -> {
-                        ausgewaehlt.forEach { einheit ->
-                            laufBefehl(
-                                einheit = einheit,
-                                event = it,
-                                laufbefehl = Laufbefehl.Bewegen,
-                                schiftcommand = it.isShiftDown
-                            )
-                        }
-                    }
-                    KommandoWählen.Patrolieren -> {
-                        ausgewaehlt.forEach { einheit ->
-                            laufBefehl(
-                                einheit = einheit,
-                                event = it,
-                                laufbefehl = Laufbefehl.Patrolieren,
-                                schiftcommand = it.isShiftDown
-                            )
-                        }
-                    }
-                    else -> {
-                        auswahlStart = Punkt(it.x, it.y)
+        box.mausTaste(MouseButton.PRIMARY) {
+            when (kommandoWählen) {
+                KommandoWählen.Attackmove -> {
+                    ausgewaehlt.forEach { einheit ->
+                        laufBefehl(
+                            einheit = einheit,
+                            event = it,
+                            laufbefehl = Laufbefehl.Attackmove,
+                            schiftcommand = it.isShiftDown
+                        )
                     }
                 }
-                scene.cursor = Cursor.DEFAULT
-                kommandoWählen = null
+                KommandoWählen.Bewegen -> {
+                    ausgewaehlt.forEach { einheit ->
+                        laufBefehl(
+                            einheit = einheit,
+                            event = it,
+                            laufbefehl = Laufbefehl.Bewegen,
+                            schiftcommand = it.isShiftDown
+                        )
+                    }
+                }
+                KommandoWählen.Patrolieren -> {
+                    ausgewaehlt.forEach { einheit ->
+                        laufBefehl(
+                            einheit = einheit,
+                            event = it,
+                            laufbefehl = Laufbefehl.Patrolieren,
+                            schiftcommand = it.isShiftDown
+                        )
+                    }
+                }
+                else -> {
+                    auswahlStart = Punkt(it.x, it.y)
+                }
             }
+            scene.cursor = Cursor.DEFAULT
+            kommandoWählen = null
         }
         box.onMouseDragged = EventHandler {
             if (it.button == MouseButton.PRIMARY) {
@@ -475,35 +493,19 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     private fun einheitMouseHandler(spieler: Spieler, imageView: Node, einheit: Einheit) {
+        imageView.mausTaste(MouseButton.PRIMARY, { kommandoWählen == KommandoWählen.Attackmove }) {
+            `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
+        }
+
         if (spieler.mensch) {
-            imageView.onMouseClicked = EventHandler { event ->
-                if (kommandoWählen != null) {
-                    if (kommandoWählen == KommandoWählen.Attackmove && event.button == MouseButton.PRIMARY) {
-                        `ziel auswählen`(einheit, schiftcommand = event.isShiftDown)
-                    }
-                    return@EventHandler
-                }
-                if (event.button == MouseButton.PRIMARY) {
-                    `auswahl löschen`()
-                    auswählen(einheit)
-                } else if (event.button == MouseButton.SECONDARY) {
-                    `ziel auswählen`(einheit, schiftcommand = event.isShiftDown)
-                }
-                event.consume()
+            imageView.mausTaste(MouseButton.PRIMARY, { kommandoWählen == null }) {
+                `auswahl löschen`()
+                auswählen(einheit)
             }
-        } else {
-            imageView.onMouseClicked = EventHandler { event ->
-                if (kommandoWählen != null) {
-                    if (kommandoWählen == KommandoWählen.Attackmove && event.button == MouseButton.PRIMARY) {
-                        `ziel auswählen`(einheit, schiftcommand = event.isShiftDown)
-                    }
-                    return@EventHandler
-                }
-                if (event.button == MouseButton.SECONDARY) {
-                    `ziel auswählen`(einheit, schiftcommand = event.isShiftDown)
-                }
-                event.consume()
-            }
+        }
+
+        imageView.mausTaste(MouseButton.SECONDARY, { kommandoWählen == null }) {
+            `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
         }
     }
 
