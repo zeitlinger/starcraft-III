@@ -59,7 +59,7 @@ class Spiel(
 
     private fun rundenende(it: Einheit) {
         if (it.kommandoQueue.firstOrNull { it is Kommando.Stopp } != null) {
-            it.kommandoQueue.forEach { kommando ->
+            it.kommandoQueue.toList().forEach { kommando ->
                 kommandoEntfernen(it, kommando)
             }
         }
@@ -407,7 +407,7 @@ class Spiel(
             box.children.remove(einheit.bild)
             box.children.remove(einheit.lebenText)
             box.children.remove(einheit.kuerzel)
-            einheit.kommandoQueue.forEach {
+            einheit.kommandoQueue.toList().forEach {
                 kommandoEntfernen(einheit, it)
             }
         }

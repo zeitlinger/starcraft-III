@@ -79,10 +79,10 @@ enum class KommandoWählen(val hotkey: String) {
     Yamatokanone("y")
 }
 
-enum class Laufbefehl {
-    Bewegen,
-    Attackmove,
-    Patrolieren
+enum class Laufbefehl(val wählen: KommandoWählen) {
+    Bewegen(KommandoWählen.Bewegen),
+    Attackmove(KommandoWählen.Attackmove),
+    Patrolieren(KommandoWählen.Patrolieren)
 }
 
 @Suppress("SpellCheckingInspection")
@@ -176,40 +176,18 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         var auswahlRechteck: Rectangle? = null
 
         box.mausTaste(MouseButton.PRIMARY) {
-            when (kommandoWählen) {
-                KommandoWählen.Attackmove -> {
-                    ausgewaehlt.forEach { einheit ->
-                        laufBefehl(
-                            einheit = einheit,
-                            event = it,
-                            laufbefehl = Laufbefehl.Attackmove,
-                            schiftcommand = it.isShiftDown
-                        )
-                    }
+            val laufbefehl = Laufbefehl.values().singleOrNull { it.wählen == kommandoWählen }
+            if (laufbefehl != null) {
+                ausgewaehlt.forEach { einheit ->
+                    laufBefehl(
+                        einheit = einheit,
+                        event = it,
+                        laufbefehl = laufbefehl,
+                        schiftcommand = it.isShiftDown
+                    )
                 }
-                KommandoWählen.Bewegen -> {
-                    ausgewaehlt.forEach { einheit ->
-                        laufBefehl(
-                            einheit = einheit,
-                            event = it,
-                            laufbefehl = Laufbefehl.Bewegen,
-                            schiftcommand = it.isShiftDown
-                        )
-                    }
-                }
-                KommandoWählen.Patrolieren -> {
-                    ausgewaehlt.forEach { einheit ->
-                        laufBefehl(
-                            einheit = einheit,
-                            event = it,
-                            laufbefehl = Laufbefehl.Patrolieren,
-                            schiftcommand = it.isShiftDown
-                        )
-                    }
-                }
-                else -> {
-                    auswahlStart = Punkt(it.x, it.y)
-                }
+            } else {
+                auswahlStart = Punkt(it.x, it.y)
             }
             scene.cursor = Cursor.DEFAULT
             kommandoWählen = null
