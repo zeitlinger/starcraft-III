@@ -58,7 +58,11 @@ class Spiel(
     }
 
     private fun rundenende(it: Einheit) {
-        val kommando = it.kommandoQueue.getOrNull(0)
+        if (it.kommandoQueue.firstOrNull { it is Kommando.Stopp } != null) {
+            it.kommandoQueue.forEach { kommando ->
+                kommandoEntfernen(it, kommando)
+            }
+        }
         if (it.vergiftet > 0.0 && it.vergiftet.rem(1.0) == 0.0) {
             it.leben -= 5.0
         }
@@ -268,7 +272,7 @@ class Spiel(
         }
 
         if (gegner.mensch) {
-            return zielAuswählenKI(computer, einheit)
+            return zielAuswählenKI(mensch, einheit)
         }
         return null
     }
@@ -474,7 +478,6 @@ fun smaller(a: Double, b: Double): Double {
 
 //Features:
 //Wenn man Attackmove macht und dann auf eine Einheit klickt, soll die Einheit als Ziel ausgewählt werden
-//Attackmove
 //patrollieren
 //größere Karte
 //Kriegsnebel
@@ -482,6 +485,7 @@ fun smaller(a: Double, b: Double): Double {
 //Minnimap
 //kontrollgruppen
 //spells
+//Konsole
 //lebensanzeige(lebensbalken)
 //Gebäude platzieren
 //gebäude auswählen
@@ -497,7 +501,6 @@ fun smaller(a: Double, b: Double): Double {
 //totorial
 //multiplayer
 //kampagne
-//Konsole
 //mehr Einheiten + Upgrades
 //balance
 //KI

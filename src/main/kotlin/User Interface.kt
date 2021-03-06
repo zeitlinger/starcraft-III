@@ -55,6 +55,13 @@ enum class KommandoWählen {
     Bewegen,
     Attackmove,
     Patrolieren,
+    Yamatokanone
+}
+
+enum class Laufbefehl {
+    Bewegen,
+    Attackmove,
+    Patrolieren
 }
 
 @Suppress("SpellCheckingInspection")
@@ -129,11 +136,14 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                             scene.cursor = Cursor.CROSSHAIR
                         }
                         "s" -> {
-                            if (!event.isShiftDown) {
-                                ausgewaehlt.forEach { einheit ->
-                                    einheit.kommandoQueue.toList().forEach {
-                                        kommandoEntfernen(einheit, it)
-                                    }
+                            ausgewaehlt.forEach { einheit ->
+                                val schiftcommand = event.isShiftDown
+                                ausgewaehlt.forEach {
+                                    neuesKommando(
+                                        einheit = it,
+                                        kommando = Kommando.Stopp(),
+                                        schiftcommand = schiftcommand
+                                    )
                                 }
                             }
                         }
@@ -155,6 +165,10 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                             kommandoWählen = KommandoWählen.Patrolieren
                             scene.cursor = Cursor.CROSSHAIR
                         }
+                        "y" -> {
+                            kommandoWählen = KommandoWählen.Yamatokanone
+                            scene.setCursor(Cursor.CROSSHAIR)
+                        }
                     }
                 }
             }
@@ -174,7 +188,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     kommandoWählen = null
                 } else {
                     ausgewaehlt.forEach { einheit ->
-                        laufBefehl(einheit, event, angriffsZielpunkt = false, schiftcommand = event.isShiftDown)
+                        laufBefehl(einheit, event, laufbefehl = Laufbefehl.Bewegen, schiftcommand = event.isShiftDown)
                     }
                 }
             }
@@ -192,18 +206,30 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                             laufBefehl(
                                 einheit = einheit,
                                 event = it,
-                                angriffsZielpunkt = true,
+                                laufbefehl = Laufbefehl.Attackmove,
                                 schiftcommand = it.isShiftDown
                             )
                         }
                     }
-                    KommandoWählen.Bewegen -> ausgewaehlt.forEach { einheit ->
-                        laufBefehl(
-                            einheit = einheit,
-                            event = it,
-                            angriffsZielpunkt = false,
-                            schiftcommand = it.isShiftDown
-                        )
+                    KommandoWählen.Bewegen -> {
+                        ausgewaehlt.forEach { einheit ->
+                            laufBefehl(
+                                einheit = einheit,
+                                event = it,
+                                laufbefehl = Laufbefehl.Bewegen,
+                                schiftcommand = it.isShiftDown
+                            )
+                        }
+                    }
+                    KommandoWählen.Patrolieren -> {
+                        ausgewaehlt.forEach { einheit ->
+                            laufBefehl(
+                                einheit = einheit,
+                                event = it,
+                                laufbefehl = Laufbefehl.Patrolieren,
+                                schiftcommand = it.isShiftDown
+                            )
+                        }
                     }
                     else -> {
                         auswahlStart = Punkt(it.x, it.y)
@@ -350,12 +376,24 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         ausgewaehlt.clear()
     }
 
-    private fun laufBefehl(einheit: Einheit, event: MouseEvent, angriffsZielpunkt: Boolean, schiftcommand: Boolean) {
+    private fun laufBefehl(einheit: Einheit, event: MouseEvent, laufbefehl: Laufbefehl, schiftcommand: Boolean) {
+
         val x = event.x
         val y = event.y
+        val letzterPunkt = if (!schiftcommand || einheit.kommandoQueue.isEmpty()) {
+            einheit.punkt()
+        } else {
+            einheit.punkt()
+        }
 
         val kommando =
-            if (angriffsZielpunkt) Kommando.Attackmove(zielPunkt = Punkt(x, y)) else Kommando.Bewegen(Punkt(x, y))
+            if (laufbefehl == Laufbefehl.Attackmove) {
+                Kommando.Attackmove(zielPunkt = Punkt(x, y))
+            } else if (laufbefehl == Laufbefehl.Bewegen) {
+                Kommando.Bewegen(Punkt(x, y))
+            } else {
+                Kommando.Patrolieren(letzterPunkt, Punkt(x, y))
+            }
         neuesKommando(einheit, kommando, schiftcommand)
         zielpunktKreisUndLinieHinzufügen(kommando, einheit)
     }
@@ -411,6 +449,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         is Kommando.Attackmove -> letztesKommando.zielPunkt
         is Kommando.Patrolieren -> letztesKommando.punkt2
         is Kommando.HoldPosition -> throw AssertionError("kann nicht passieren")
+        is Kommando.Stopp -> throw AssertionError("kann nicht passieren")
     }
 
     private fun initSpieler(spieler: Spieler) {

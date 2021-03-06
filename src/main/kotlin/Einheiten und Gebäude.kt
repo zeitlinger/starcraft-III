@@ -158,6 +158,7 @@ sealed class Kommando(var zielpunktLinie: Line? = null, var zielpunktkreis: Arc?
     class Angriff(val ziel: Einheit) : Kommando()
     class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : Kommando()
     class HoldPosition : Kommando()
+    class Stopp: Kommando()
 }
 
 val mInfantrie = EinheitenTyp(
