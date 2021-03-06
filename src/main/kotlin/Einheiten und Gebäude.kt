@@ -1,9 +1,12 @@
+@file:Suppress("SpellCheckingInspection")
+
 import javafx.scene.control.Button
 import javafx.scene.paint.Color
 import javafx.scene.shape.Arc
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.scene.text.Text
+import kotlin.properties.Delegates
 
 data class Gebäude(
     val name: String,
@@ -115,9 +118,12 @@ data class Punkt(
 )
 
 
-data class Spieler(
+typealias DoubleObserver = (Double) -> Unit
+
+class Spieler(
     val einheiten: MutableList<Einheit> = mutableListOf(),
-    var kristalle: Double,
+    private val kristallObservers: MutableList<DoubleObserver> = mutableListOf(),
+    kristalle: Double,
     var angriffspunkte: Int,
     var verteidiegungspunkte: Int,
     var minen: Int,
@@ -131,6 +137,15 @@ data class Spieler(
     var vertärkteHeilmittel: Boolean = false,
     var strahlungsheilung: Boolean = false
 ) {
+    var kristalle: Double by Delegates.observable(kristalle) { _, _, new ->
+        this.kristallObservers.forEach { it(new) }
+    }
+
+    fun addKristallObserver(o: DoubleObserver) {
+        this.kristallObservers.add(o)
+        o(kristalle)
+    }
+
     override fun toString(): String {
         return "Spieler(mensch=$mensch)"
     }

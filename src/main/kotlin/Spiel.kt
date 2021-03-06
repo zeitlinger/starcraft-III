@@ -8,11 +8,6 @@
     "SpellCheckingInspection"
 )
 
-import javafx.scene.control.Button
-import javafx.scene.paint.Color
-import javafx.scene.shape.Arc
-import javafx.scene.shape.Circle
-import javafx.scene.shape.Line
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import kotlin.math.*
@@ -101,13 +96,17 @@ class Spiel(
 
     fun produzieren(spieler: Spieler, einheitenTyp: EinheitenTyp) {
         kaufen(einheitenTyp.kristalle, spieler) {
-            val einheit = spieler.einheit(
+            neueEinheit(spieler, einheitenTyp)
+        }
+    }
+
+    fun neueEinheit(spieler: Spieler, einheitenTyp: EinheitenTyp) {
+        val einheit = spieler.einheit(
                 x = spieler.startpunkt.x,
                 y = spieler.startpunkt.y,
                 einheitenTyp = einheitenTyp
-            )
-            einheitProduziert(einheit)
-        }
+        )
+        einheitProduziert(einheit)
     }
 
     fun bewegeSpieler(spieler: Spieler, gegner: Spieler) {

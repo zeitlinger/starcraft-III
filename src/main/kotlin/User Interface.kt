@@ -5,7 +5,7 @@
     "NonAsciiCharacters",
     "PropertyName",
     "EnumEntryName",
-    "SpellCheckingInspection"
+    "SpellCheckingInspection", "FunctionName", "ClassName"
 )
 
 import javafx.application.Application
@@ -26,7 +26,6 @@ import javafx.scene.shape.*
 import javafx.scene.text.Text
 import javafx.stage.Stage
 import sun.awt.util.IdentityArrayList
-import java.awt.Point
 import kotlin.math.*
 
 
@@ -56,13 +55,37 @@ enum class KommandoWählen {
     Bewegen,
     Attackmove,
     Patrolieren,
-    HoldPosition
 }
 
 @Suppress("SpellCheckingInspection")
 class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     val computer = spiel.computer
     val mensch = spiel.mensch
+    lateinit var hBox: HBox
+
+    fun button(name: String, aktion: (Button) -> Unit): Button = Button(name).apply {
+        onMouseClicked = EventHandler {
+            if (it.button == MouseButton.PRIMARY) {
+                aktion(this)
+            }
+        }
+        hBox.children.add(this)
+    }
+
+    fun kaufButton(name: String, kritalle: Int, aktion: (Button) -> Unit): Button =
+        button(name) {
+            kaufen(kritalle, mensch) {
+                aktion(it)
+            }
+        }.apply {
+            mensch.addKristallObserver { this.isDisable = it < kritalle }
+        }
+
+    fun einmalKaufen(name: String, kritalle: Int, aktion: () -> Unit): Button =
+        kaufButton(name, kritalle) {
+            aktion()
+            hBox.children.remove(it)
+        }
 
     override fun start(stage: Stage) {
         spiel.einheitProduziert = { einheitUiErstellen(it) }
@@ -84,24 +107,13 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         stage.scene = scene
         stage.show()
 
-        val hBox = HBox()
-
-        hBox.children.add(Button("Mine").apply {
-            onMouseClicked = EventHandler {
-                if (it.button == MouseButton.PRIMARY) {
-                    kaufen(2000 + 400 * mensch.minen, mensch) {
-                        mensch.minen += 1
-                    }
-                }
-            }
-        })
-        hBox.children.add(Button("Arbeiter").apply {
-            onMouseClicked = EventHandler {
-                if (it.button == MouseButton.PRIMARY) {
-                    spiel.produzieren(mensch, mArbeiter)
-                }
-            }
-        })
+        hBox = HBox()
+        kaufButton("Mine", 2000 + 400 * mensch.minen) {
+            mensch.minen += 1
+        }
+        kaufButton("Arbeiter", mArbeiter.kristalle) {
+            spiel.neueEinheit(mensch, mArbeiter)
+        }
         prodoktionsgebäude.forEach { gebäude ->
             produktionsgebäude(hBox, gebäude)
         }
@@ -114,7 +126,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     when (event.text) {
                         "a" -> {
                             kommandoWählen = KommandoWählen.Attackmove
-                            scene.setCursor(Cursor.CROSSHAIR)
+                            scene.cursor = Cursor.CROSSHAIR
                         }
                         "s" -> {
                             if (!event.isShiftDown) {
@@ -127,7 +139,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                         }
                         "b" -> {
                             kommandoWählen = KommandoWählen.Bewegen
-                            scene.setCursor(Cursor.CROSSHAIR)
+                            scene.cursor = Cursor.CROSSHAIR
                         }
                         "h" -> {
                             val schiftcommand = event.isShiftDown
@@ -141,122 +153,16 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                         }
                         "p" -> {
                             kommandoWählen = KommandoWählen.Patrolieren
-                            scene.setCursor(Cursor.CROSSHAIR)
+                            scene.cursor = Cursor.CROSSHAIR
                         }
                     }
                 }
             }
         }
 
-        hBox.children.add(Button("Labor").apply {
-            onMouseClicked = EventHandler {
-                if (it.button == MouseButton.PRIMARY) {
-                    kaufen(2800, mensch) {
-                        hBox.children.add(Button("LV " + (mensch.schadensUpgrade + 1) + " Schaden").apply {
-                            onMouseClicked = EventHandler {
-                                if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(2000 + 400 * mensch.schadensUpgrade, mensch) {
-                                        mensch.schadensUpgrade += 1
-                                        this.text = "LV " + (mensch.schadensUpgrade + 1) + " Schaden"
-
-                                        if (mensch.schadensUpgrade == 5) {
-                                            hBox.children.remove(this)
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                        hBox.children.add(Button("LV " + (mensch.panzerungsUprade + 1) + " Panzerug").apply {
-                            onMouseClicked = EventHandler {
-                                if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(2000 + 400 * mensch.panzerungsUprade, mensch) {
-                                        mensch.panzerungsUprade += 1
-                                        this.text = "LV " + (mensch.panzerungsUprade + 1) + " Panzerug"
-
-                                        if (mensch.panzerungsUprade == 5) {
-                                            hBox.children.remove(this)
-                                        }
-                                    }
-                                }
-                            }
-                        })
-                        hBox.children.add(Button("Ansturm").apply {
-                            onMouseClicked = EventHandler {
-                                if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(1500, mensch) {
-                                        mBerserker.laufweite = 1.0
-                                        mBerserker.springen = 150
-                                        hBox.children.remove(this)
-                                    }
-                                }
-                            }
-                        })
-                        hBox.children.remove(this)
-                        hBox.children.add(Button("Verbesserte Zielsysteme").apply {
-                            onMouseClicked = EventHandler {
-                                if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(1500, mensch) {
-                                        mPanzer.reichweite = 500.0
-                                        hBox.children.remove(this)
-                                    }
-                                }
-                            }
-                        })
-                        hBox.children.remove(this)
-                        hBox.children.add(Button("Fusionsantrieb").apply {
-                            onMouseClicked = EventHandler {
-                                if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(1500, mensch) {
-                                        mJäger.laufweite = 1.2
-                                        mKampfschiff.laufweite = 0.3
-                                        hBox.children.remove(this)
-                                    }
-                                }
-                            }
-                        })
-                        hBox.children.remove(this)
-                        hBox.children.add(Button("Verstärkte Heilmittel").apply {
-                            onMouseClicked = EventHandler {
-                                if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(1500, mensch) {
-                                        mSanitäter.schaden = 3.0
-                                        mensch.vertärkteHeilmittel = true
-                                        hBox.children.remove(this)
-                                    }
-                                }
-                            }
-                        })
-                        hBox.children.remove(this)
-                        hBox.children.add(Button("Strahlungsheilung").apply {
-                            onMouseClicked = EventHandler {
-                                if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(1500, mensch) {
-                                        mSanitäter.reichweite = 140.01
-                                        mensch.strahlungsheilung = true
-                                        hBox.children.remove(this)
-                                    }
-                                }
-                            }
-                        })
-                        hBox.children.remove(this)
-                        hBox.children.add(Button("Flammenwurf").apply {
-                            onMouseClicked = EventHandler {
-                                if (it.button == MouseButton.PRIMARY) {
-                                    kaufen(1500, mensch) {
-                                        mFlammenwerfer.flächenschaden = 40
-                                        mFlammenwerfer.schaden = 2.5
-                                        hBox.children.remove(this)
-                                    }
-                                }
-                            }
-                        })
-                        hBox.children.remove(this)
-                    }
-                }
-            }
-        })
-
-
+        einmalKaufen("Labor", 2800) {
+            laborGekauft()
+        }
 
         vBox.children.add(box)
         vBox.children.add(hBox)
@@ -264,7 +170,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         box.onMouseClicked = EventHandler { event ->
             if (event.button == MouseButton.SECONDARY) {
                 if (kommandoWählen != null) {
-                    scene.setCursor(Cursor.DEFAULT);
+                    scene.cursor = Cursor.DEFAULT
                     kommandoWählen = null
                 } else {
                     ausgewaehlt.forEach { einheit ->
@@ -303,7 +209,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                         auswahlStart = Punkt(it.x, it.y)
                     }
                 }
-                scene.setCursor(Cursor.DEFAULT);
+                scene.cursor = Cursor.DEFAULT
                 kommandoWählen = null
             }
         }
@@ -356,7 +262,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             }
         }
 
-        Thread({
+        Thread {
             while (true) {
 
                 if (spiel.rundenLimit != null && spiel.runde == spiel.rundenLimit) {
@@ -372,38 +278,68 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 }
                 Thread.sleep(spiel.warteZeit)
             }
-        }).start()
+        }.start()
+    }
+
+    private fun laborGekauft() {
+        kaufButton("LV " + (mensch.schadensUpgrade + 1) + " Schaden", 2000 + 400 * mensch.schadensUpgrade) {
+            mensch.schadensUpgrade += 1
+            it.text = "LV " + (mensch.schadensUpgrade + 1) + " Schaden"
+
+            if (mensch.schadensUpgrade == 5) {
+                hBox.children.remove(it)
+            }
+        }
+        kaufButton("LV " + (mensch.panzerungsUprade + 1) + " Panzerug", 2000 + 400 * mensch.panzerungsUprade) {
+            mensch.panzerungsUprade += 1
+            it.text = "LV " + (mensch.panzerungsUprade + 1) + " Panzerug"
+
+            if (mensch.panzerungsUprade == 5) {
+                hBox.children.remove(it)
+            }
+        }
+        einmalKaufen("Ansturm", 1500) {
+            mBerserker.laufweite = 1.0
+            mBerserker.springen = 150
+        }
+        einmalKaufen("Verbesserte Zielsysteme", 1500) {
+            mPanzer.reichweite = 500.0
+        }
+        einmalKaufen("Fusionsantrieb", 1500) {
+            mJäger.laufweite = 1.2
+            mKampfschiff.laufweite = 0.3
+        }
+        einmalKaufen("Verstärkte Heilmittel", 1500) {
+            mSanitäter.schaden = 3.0
+            mensch.vertärkteHeilmittel = true
+        }
+        einmalKaufen("Strahlungsheilung", 1500) {
+            mSanitäter.reichweite = 140.01
+            mensch.strahlungsheilung = true
+        }
+        einmalKaufen("Flammenwurf", 1500) {
+            mFlammenwerfer.flächenschaden = 40
+            mFlammenwerfer.schaden = 2.5
+        }
     }
 
     private fun produktionsgebäude(hBox: HBox, gebäude: Gebäude) {
-        hBox.children.add(Button(gebäude.name).apply {
-            onMouseClicked = EventHandler {
-                if (it.button == MouseButton.PRIMARY) {
-                    kaufen(gebäude.kristalle, mensch) {
-                        hBox.children.remove(this)
-                        techgebäude.filter { it.gebäude == gebäude }.forEach { gebäude ->
-                            techgebäude(hBox, gebäude)
-                        }
-                        kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach {
-                            einheitKaufenButton(hBox, it.name, it)
-                        }
-                    }
+        einmalKaufen(gebäude.name, gebäude.kristalle) {
+            techgebäude.filter { it.gebäude == gebäude }.forEach { gebäude ->
+                einmalKaufen(gebäude.name, gebäude.kristalle) {
+                    kaufbareEinheiten.filter { it.techGebäude == gebäude }.forEach { it.button!!.isDisable = false }
                 }
             }
-        })
-    }
-
-    private fun techgebäude(hBox: HBox, gebäude: TechGebäude) {
-        hBox.children.add(Button(gebäude.name).apply {
-            onMouseClicked = EventHandler {
-                if (it.button == MouseButton.PRIMARY) {
-                    kaufen(gebäude.kristalle, mensch) {
-                        kaufbareEinheiten.filter { it.techGebäude == gebäude }.forEach { it.button!!.isDisable = false }
-                        hBox.children.remove(this)
-                    }
+            kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach { typ ->
+                val button = kaufButton(typ.name, typ.kristalle) {
+                    spiel.neueEinheit(mensch, typ)
                 }
+                if (typ.techGebäude != null) {
+                    button.isDisable = true
+                }
+                typ.button = button
             }
-        })
+        }
     }
 
     private fun `auswahl löschen`() {
@@ -412,20 +348,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             it.auswahlkreis = null
         }
         ausgewaehlt.clear()
-    }
-
-    private fun einheitKaufenButton(hBox: HBox, text: String, einheitenTyp: EinheitenTyp) {
-        val button = Button(text).apply {
-            if (einheitenTyp.techGebäude != null) {
-                isDisable = true
-            }
-            onAction = EventHandler {
-                spiel.produzieren(spieler = mensch, einheitenTyp = einheitenTyp)
-            }
-        }
-
-        hBox.children.add(button)
-        einheitenTyp.button = button
     }
 
     private fun laufBefehl(einheit: Einheit, event: MouseEvent, angriffsZielpunkt: Boolean, schiftcommand: Boolean) {
@@ -556,7 +478,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun auswählen(einheit: Einheit) {
         if (einheit.leben > 0 && einheit.auswahlkreis == null) {
-            var auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
+            val auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
             box.children.add(auswahlKreis)
             einheit.auswahlkreis = auswahlKreis
             ausgewaehlt.add(einheit)
@@ -638,7 +560,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             }
 
             val mensch = Spieler(
-                kristalle = 10000000000.0,
+                kristalle = 100.0,
                 angriffspunkte = 20,
                 verteidiegungspunkte = 10,
                 minen = 0,
