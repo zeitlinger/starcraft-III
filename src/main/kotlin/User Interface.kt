@@ -10,7 +10,7 @@
 
 import javafx.application.Application
 import javafx.application.Platform
-import javafx.event.EventHandler
+import javafx.event.EventType
 import javafx.scene.Cursor
 import javafx.scene.Node
 import javafx.scene.Scene
@@ -43,18 +43,16 @@ val box: Pane = Pane().apply {
 
 fun Node.mausTaste(
     button: MouseButton,
+    type: EventType<MouseEvent> = MouseEvent.MOUSE_PRESSED,
     filter: () -> Boolean = { true },
-    consume: Boolean = true,
     aktion: (MouseEvent) -> Unit
 ) {
-    this.addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
+    this.addEventFilter(type) { event ->
         if (filter()) {
             if (event.button == button) {
                 aktion(event)
             }
-            if (consume) {
-                event.consume()
-            }
+            event.consume()
         }
     }
 }
@@ -94,10 +92,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     lateinit var hBox: HBox
 
     fun button(name: String, aktion: (Button) -> Unit): Button = Button(name).apply {
-        onMouseClicked = EventHandler {
-            if (it.button == MouseButton.PRIMARY) {
-                aktion(this)
-            }
+        this.mausTaste(MouseButton.PRIMARY) {
+            aktion(this)
         }
         hBox.children.add(this)
     }
@@ -145,10 +141,10 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             spiel.neueEinheit(mensch, mArbeiter)
         }
         prodoktionsgebäude.forEach { gebäude ->
-            produktionsgebäude(hBox, gebäude)
+            produktionsgebäude(gebäude)
         }
 
-        hBox.onKeyPressed = EventHandler<KeyEvent> { event ->
+        stage.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
             if (ausgewaehlt.size == 1 && ausgewaehlt[0].typ == mBasis) {
                 kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
             } else {
@@ -159,7 +155,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                             scene.cursor = Cursor.CROSSHAIR
                         }
                         "s" -> {
-                            ausgewaehlt.forEach { einheit ->
+                            ausgewaehlt.forEach { _ ->
                                 val schiftcommand = event.isShiftDown
                                 ausgewaehlt.forEach {
                                     neuesKommando(
@@ -190,7 +186,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                         }
                         "y" -> {
                             kommandoWählen = KommandoWählen.Yamatokanone
-                            scene.setCursor(Cursor.CROSSHAIR)
+                            scene.cursor = Cursor.CROSSHAIR
                         }
                     }
                 }
@@ -257,53 +253,47 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             scene.cursor = Cursor.DEFAULT
             kommandoWählen = null
         }
-        box.onMouseDragged = EventHandler {
-            if (it.button == MouseButton.PRIMARY) {
-                auswahlStart?.let { s ->
-                    val x = min(s.x, it.x)
-                    val y = min(s.y, it.y)
-                    val mx = max(s.x, it.x)
-                    val my = max(s.y, it.y)
+        box.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_DRAGGED) {
+            auswahlStart?.let { s ->
+                val x = min(s.x, it.x)
+                val y = min(s.y, it.y)
+                val mx = max(s.x, it.x)
+                val my = max(s.y, it.y)
 
-                    val r = auswahlRechteck ?: Rectangle().apply {
-                        fill = Color.TRANSPARENT
-                        stroke = Color.BLACK
-                        strokeWidth = 2.0
-                    }
-                    r.x = x
-                    r.y = y
-                    r.width = mx - x
-                    r.height = my - y
+                val r = auswahlRechteck ?: Rectangle().apply {
+                    fill = Color.TRANSPARENT
+                    stroke = Color.BLACK
+                    strokeWidth = 2.0
+                }
+                r.x = x
+                r.y = y
+                r.width = mx - x
+                r.height = my - y
 
-                    if (auswahlRechteck == null) {
-                        auswahlRechteck = r
-                        box.children.add(auswahlRechteck)
-                    }
+                if (auswahlRechteck == null) {
+                    auswahlRechteck = r
+                    box.children.add(auswahlRechteck)
                 }
             }
-
         }
-        box.onMouseReleased = EventHandler { event ->
-            if (event.button == MouseButton.PRIMARY) {
-                auswahlRechteck?.let { r ->
-                    mensch.einheiten.forEach {
-                        if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
-                            `auswahl löschen`()
-                        }
+        box.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_RELEASED) {
+            auswahlRechteck?.let { r ->
+                mensch.einheiten.forEach {
+                    if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
+                        `auswahl löschen`()
                     }
-
-                    mensch.einheiten.forEach {
-                        if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
-                            auswählen(it)
-                        }
-                    }
-
-                    box.children.remove(r)
                 }
-                auswahlStart = null
-                auswahlRechteck = null
-                event.consume()
+
+                mensch.einheiten.forEach {
+                    if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
+                        auswählen(it)
+                    }
+                }
+
+                box.children.remove(r)
             }
+            auswahlStart = null
+            auswahlRechteck = null
         }
 
         Thread {
@@ -367,7 +357,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
     }
 
-    private fun produktionsgebäude(hBox: HBox, gebäude: Gebäude) {
+    private fun produktionsgebäude(gebäude: Gebäude) {
         einmalKaufen(gebäude.name, gebäude.kristalle) {
             techgebäude.filter { it.gebäude == gebäude }.forEach { gebäude ->
                 einmalKaufen(gebäude.name, gebäude.kristalle) {
@@ -404,14 +394,17 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             einheit.punkt()
         }
 
-        val kommando =
-            if (laufbefehl == Laufbefehl.Attackmove) {
+        val kommando = when (laufbefehl) {
+            Laufbefehl.Attackmove -> {
                 Kommando.Attackmove(zielPunkt = Punkt(x, y))
-            } else if (laufbefehl == Laufbefehl.Bewegen) {
+            }
+            Laufbefehl.Bewegen -> {
                 Kommando.Bewegen(Punkt(x, y))
-            } else {
+            }
+            else -> {
                 Kommando.Patrolieren(letzterPunkt, Punkt(x, y))
             }
+        }
         neuesKommando(einheit, kommando, schiftcommand)
         zielpunktKreisUndLinieHinzufügen(kommando, einheit)
     }
@@ -493,18 +486,18 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     private fun einheitMouseHandler(spieler: Spieler, imageView: Node, einheit: Einheit) {
-        imageView.mausTaste(MouseButton.PRIMARY, { kommandoWählen == KommandoWählen.Attackmove }) {
+        imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Attackmove }) {
             `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
         }
 
         if (spieler.mensch) {
-            imageView.mausTaste(MouseButton.PRIMARY, { kommandoWählen == null }) {
+            imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == null }) {
                 `auswahl löschen`()
                 auswählen(einheit)
             }
         }
 
-        imageView.mausTaste(MouseButton.SECONDARY, { kommandoWählen == null }) {
+        imageView.mausTaste(MouseButton.SECONDARY, filter = { kommandoWählen == null }) {
             `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
         }
     }
@@ -523,10 +516,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             box.children.add(auswahlKreis)
             einheit.auswahlkreis = auswahlKreis
             ausgewaehlt.add(einheit)
-            //kommandos anzeigen
-            einheit.kommandoQueue.forEach {
-
-            }
         }
     }
 
