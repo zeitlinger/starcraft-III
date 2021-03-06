@@ -161,6 +161,11 @@ sealed class Kommando(var zielpunktLinie: Line? = null, var zielpunktkreis: Arc?
     class Stopp: Kommando()
 }
 
+val kommandoHotKeys = mapOf(
+    "s" to { Kommando.Stopp() },
+    "h" to { Kommando.HoldPosition() }
+)
+
 val mInfantrie = EinheitenTyp(
     name = "Infantrie",
     reichweite = 150.0,

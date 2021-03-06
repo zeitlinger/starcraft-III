@@ -5,7 +5,7 @@
     "NonAsciiCharacters",
     "PropertyName",
     "EnumEntryName",
-    "SpellCheckingInspection", "FunctionName", "ClassName"
+    "SpellCheckingInspection", "FunctionName", "ClassName", "LocalVariableName"
 )
 
 import javafx.application.Application
@@ -72,11 +72,11 @@ private fun kreis(x: Double, y: Double, radius: Double): Arc {
     }
 }
 
-enum class KommandoWählen {
-    Bewegen,
-    Attackmove,
-    Patrolieren,
-    Yamatokanone
+enum class KommandoWählen(val hotkey: String) {
+    Bewegen("b"),
+    Attackmove("a"),
+    Patrolieren("p"),
+    Yamatokanone("y")
 }
 
 enum class Laufbefehl {
@@ -149,46 +149,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
             } else {
                 if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ == mBasis }) {
-                    when (event.text) {
-                        "a" -> {
-                            kommandoWählen = KommandoWählen.Attackmove
-                            scene.cursor = Cursor.CROSSHAIR
-                        }
-                        "s" -> {
-                            ausgewaehlt.forEach { _ ->
-                                val schiftcommand = event.isShiftDown
-                                ausgewaehlt.forEach {
-                                    neuesKommando(
-                                        einheit = it,
-                                        kommando = Kommando.Stopp(),
-                                        schiftcommand = schiftcommand
-                                    )
-                                }
-                            }
-                        }
-                        "b" -> {
-                            kommandoWählen = KommandoWählen.Bewegen
-                            scene.cursor = Cursor.CROSSHAIR
-                        }
-                        "h" -> {
-                            val schiftcommand = event.isShiftDown
-                            ausgewaehlt.forEach {
-                                neuesKommando(
-                                    einheit = it,
-                                    kommando = Kommando.HoldPosition(),
-                                    schiftcommand = schiftcommand
-                                )
-                            }
-                        }
-                        "p" -> {
-                            kommandoWählen = KommandoWählen.Patrolieren
-                            scene.cursor = Cursor.CROSSHAIR
-                        }
-                        "y" -> {
-                            kommandoWählen = KommandoWählen.Yamatokanone
-                            scene.cursor = Cursor.CROSSHAIR
-                        }
-                    }
+                    auswahlHotkeys(scene, event.text, event.isShiftDown)
                 }
             }
         }
@@ -313,6 +274,26 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 Thread.sleep(spiel.warteZeit)
             }
         }.start()
+    }
+
+    private fun auswahlHotkeys(scene: Scene, text: String?, schift: Boolean) {
+        val wählen = KommandoWählen.values().singleOrNull { it.hotkey == text }
+        if (wählen != null) {
+            kommandoWählen = wählen
+            scene.cursor = Cursor.CROSSHAIR
+            return
+        } else {
+            val k = kommandoHotKeys[text]
+            if (k != null) {
+                ausgewaehlt.forEach {
+                    neuesKommando(
+                        einheit = it,
+                        kommando = k(),
+                        schiftcommand = schift
+                    )
+                }
+            }
+        }
     }
 
     private fun laborGekauft() {
