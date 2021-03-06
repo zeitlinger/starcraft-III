@@ -18,9 +18,6 @@ import javafx.scene.text.Text
 import kotlin.math.*
 
 
-
-
-
 class Spiel(
     val mensch: Spieler,
     val computer: Spieler,
@@ -67,10 +64,6 @@ class Spiel(
 
     private fun rundenende(it: Einheit) {
         val kommando = it.kommandoQueue.getOrNull(0)
-        if (kommando is Kommando.HoldPosition) {
-            it.holdPosition = true
-            kommandoEntfernen(it, kommando)
-        }
         if (it.vergiftet > 0.0 && it.vergiftet.rem(1.0) == 0.0) {
             it.leben -= 5.0
         }
@@ -122,7 +115,7 @@ class Spiel(
     }
 
     fun bewege(einheit: Einheit, gegner: Spieler) {
-        if (einheit.holdPosition) {
+        if (einheit.kommandoQueue.firstOrNull { it is Kommando.HoldPosition } != null) {
             return
         }
         val kommando = einheit.kommandoQueue.getOrNull(0)
@@ -191,7 +184,6 @@ class Spiel(
     private fun zielauswaehlenSchießen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando is Kommando.Angriff) {
-            einheit.holdPosition = false
             return kommando.ziel
         }
 
@@ -234,7 +226,10 @@ class Spiel(
             if (kannAngreifen(ziel, it) && (ziel.typ.reichweite >= entfernung(
                     it,
                     ziel
-                ) || (ziel.typ.reichweite < it.typ.reichweite && entfernung(einheit, ziel) >= einheit.typ.reichweite) && !ziel.typ.zivileEinheit)
+                ) || (ziel.typ.reichweite < it.typ.reichweite && entfernung(
+                    einheit,
+                    ziel
+                ) >= einheit.typ.reichweite) && !ziel.typ.zivileEinheit)
             ) {
                 return 2
             }
@@ -257,12 +252,15 @@ class Spiel(
     private fun zielauswaehlenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando is Kommando.Angriff) {
-            einheit.holdPosition = false
             return kommando.ziel
         }
 
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
             return `nächste Einheit zum Heilen`(gegner, einheit)
+        }
+
+        if (einheit.typ.zivileEinheit) {
+            return null
         }
 
         val gEinheiten = `verbündetem helfen`(gegner, einheit)
@@ -271,11 +269,7 @@ class Spiel(
         }
 
         if (gegner.mensch) {
-            val naechsteEinheit = gegner.einheiten
-                .filter { kannAngreifen(einheit, it) }
-                .minBy { entfernung(einheit, it) }
-
-            return naechsteEinheit
+            return zielAuswählenKI(computer, einheit)
         }
         return null
     }
@@ -290,13 +284,17 @@ class Spiel(
         val liste = mutableListOf<Einheit>()
         l.forEach {
             gegner.einheiten.forEach { gEinheit ->
-                if (`ist in Reichweite`(gEinheit, it) || it.typ.reichweite >= entfernung(it, gEinheit)) {
+                if ((`ist in Reichweite`(gEinheit, it) || `ist in Reichweite`(it, gEinheit) || (!kannAngreifen(
+                        gEinheit,
+                        it
+                    ) && entfernung(gEinheit, it) <= 300)) && kannAngreifen(einheit, gEinheit)
+                ) {
                     liste.add(gEinheit)
                 }
             }
         }
 
-        return liste.minWith(compareBy({angriffspriorität(einheit, it)}, {entfernung(einheit, it)}))
+        return liste.minWith(compareBy({ angriffspriorität(einheit, it) }, { entfernung(einheit, it) }))
 
     }
 
@@ -411,29 +409,28 @@ class Spiel(
             }
         }
     }
+}
 
-    fun `ist in Reichweite`(einheit: Einheit, ziel: Einheit): Boolean {
-        return entfernung(einheit, ziel) <= einheit.typ.reichweite
+fun `ist in Reichweite`(einheit: Einheit, ziel: Einheit): Boolean {
+    return entfernung(einheit, ziel) <= einheit.typ.reichweite
+}
+
+fun entfernung(einheit: Einheit, ziel: Einheit): Double {
+    if (!kannAngreifen(einheit, ziel)) {
+        return 7000000000000000000.0
     }
 
-    fun entfernung(einheit: Einheit, ziel: Einheit): Double {
-        if (!kannAngreifen(einheit, ziel)) {
-            return 7000000000000000000.0
-        }
+    return entfernung(einheit, ziel.punkt())
+}
 
-        return entfernung(einheit, ziel.punkt())
-    }
+fun kannAngreifen(einheit: Einheit, ziel: Einheit) =
+    !(ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden)
 
-    private fun kannAngreifen(einheit: Einheit, ziel: Einheit) =
-        !(ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden)
+fun entfernung(einheit: Einheit, ziel: Punkt): Double {
+    val a = ziel.y - einheit.y
+    val b = ziel.x - einheit.x
 
-    fun entfernung(einheit: Einheit, ziel: Punkt): Double {
-        val a = ziel.y - einheit.y
-        val b = ziel.x - einheit.x
-
-        return sqrt(a.pow(2) + b.pow(2))
-    }
-
+    return sqrt(a.pow(2) + b.pow(2))
 }
 
 fun kaufen(kristalle: Int, spieler: Spieler, aktion: () -> Unit) {
@@ -471,38 +468,47 @@ fun smaller(a: Double, b: Double): Double {
 }
 
 //Bugs:
+//rechtsclick wird beim loslassen ausgeführt
+//Wenn man eine Einheit als Ziel auswählt und dann mit Shift ein anderes Befehl gibt wird die zweite Zielpunktlinie nicht aktualisiert
+//Man kann nicht als Shiftbedfehl eine Einheit als Ziel wählen, die sich bewegt
+//wegpunkte werden auch angezeigt wenn die Einheit nicht ausgewählt ist
 
 //Features:
-//KI
-//Physik (Einheiten nicht übereinander)
+//Wenn man Attackmove macht und dann auf eine Einheit klickt, soll die Einheit als Ziel ausgewählt werden
+//Attackmove
+//patrollieren
 //größere Karte
-//Minnimap
 //Kriegsnebel
 //Sichtweite für Einheiten
-//recourssen auf der Karte (wissenschafts-und produktionsressoursen)
-//arbeiter und wissenschafter können ressoursen abbauen bzw. erforschen und zu außenposten bringen
-//produktionszeit
+//Minnimap
+//kontrollgruppen
+//spells
 //lebensanzeige(lebensbalken)
-//bessere Grafik mit 3D-Moddelen und Animationen
 //Gebäude platzieren
 //gebäude auswählen
-//kontrollgruppen
-//kampagne
-//multiplayer
+//produktionszeit
+//recourssen auf der Karte (wissenschafts-und produktionsressoursen)
+//arbeiter und wissenschafter können ressoursen abbauen bzw. erforschen und zu außenposten bringen
+//Einheitengröße
+//Physik (Einheiten nicht übereinander)
+//Wasser + Schiffe
+//bessere Grafik mit 3D-Moddelen und Animationen
 //sound
 //Hintergrundmusik
-//UI
+//totorial
+//multiplayer
+//kampagne
+//Konsole
 //mehr Einheiten + Upgrades
 //balance
-//Wasser + Schiffe
-//spells
-//patrollieren
+//KI
 //Punkte auf der Karte die von Spielern besetzt werden können (z.B. verlassene Minen die repariert werden können)
+//programm-optiemierung
 
 //Rassen:
 //Silikoiden: Eine Ressource mehr als die anderen Rassen (silizium); high tech; teure, große, schnelle Einheiten;
 //            Punkte auf der Karte die nur für eine Rasse sichtbar sind (Siliziumvorkommen) die durch eine Rafinerie abbauen können; Einheiten fusionieren; viele Upgrades
 //Terraner: Mechs, Infantrie, Panzer; “vanilla”; Heimatwelt-boni
-//Psilons: psionische Einheiten; Templer; Mana für Zaubersprüche; Archiv um Zaubersprüche um für die Templer zu erlernen; Erfahrung für Einheiten;
-//         unerfahrene Einheiten können nur einfache Zaubersprüche ausführen und haben weniger Mana; Entscheidungen über tech tree für Upgrades
+//Psilons: psionische Einheiten; Templer; Helden-Einheiten; Mana für Zaubersprüche; Archiv um Zaubersprüche um für die Templer zu erlernen; XP für Einheiten;
+//         unerfahrene Einheiten können nur einfache; Entscheidungen über tech tree für Upgrades
 //Alkari: Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen

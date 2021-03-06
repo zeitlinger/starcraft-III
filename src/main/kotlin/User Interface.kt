@@ -114,22 +114,22 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     when (event.text) {
                         "a" -> {
                             kommandoWählen = KommandoWählen.Attackmove
-                            scene.setCursor(Cursor.CROSSHAIR);
+                            scene.setCursor(Cursor.CROSSHAIR)
                         }
                         "s" -> {
                             if (!event.isShiftDown) {
-                                ausgewaehlt.forEach {
-                                    it.kommandoQueue.clear()
-                                    it.holdPosition = false
+                                ausgewaehlt.forEach { einheit ->
+                                    einheit.kommandoQueue.toList().forEach {
+                                        kommandoEntfernen(einheit, it)
+                                    }
                                 }
                             }
                         }
                         "b" -> {
                             kommandoWählen = KommandoWählen.Bewegen
-                            scene.setCursor(Cursor.CROSSHAIR);
+                            scene.setCursor(Cursor.CROSSHAIR)
                         }
                         "h" -> {
-                            kommandoWählen = KommandoWählen.HoldPosition
                             val schiftcommand = event.isShiftDown
                             ausgewaehlt.forEach {
                                 neuesKommando(
@@ -138,6 +138,10 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                                     schiftcommand = schiftcommand
                                 )
                             }
+                        }
+                        "p" -> {
+                            kommandoWählen = KommandoWählen.Patrolieren
+                            scene.setCursor(Cursor.CROSSHAIR)
                         }
                     }
                 }
@@ -331,19 +335,18 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
         box.onMouseReleased = EventHandler { event ->
             if (event.button == MouseButton.PRIMARY) {
-
                 auswahlRechteck?.let { r ->
                     mensch.einheiten.forEach {
                         if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
                             `auswahl löschen`()
                         }
                     }
+
                     mensch.einheiten.forEach {
                         if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
                             auswählen(it)
                         }
                     }
-
 
                     box.children.remove(r)
                 }
@@ -351,7 +354,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 auswahlRechteck = null
                 event.consume()
             }
-
         }
 
         Thread({
@@ -387,7 +389,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                         }
                     }
                 }
-
             }
         })
     }
@@ -439,7 +440,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun neuesKommando(einheit: Einheit, kommando: Kommando, schiftcommand: Boolean) {
         einheit.kommandoQueue.toList().forEach {
-            if (!schiftcommand || it is Kommando.HoldPosition) {
+            if (!schiftcommand) {
                 kommandoEntfernen(einheit, it)
             }
         }
@@ -604,11 +605,11 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         if (kommando != null && kommando is Kommando.Angriff) {
             val ziel = kommando.ziel
 
-            kommando.zielpunktLinie!!.apply {
+            kommando.zielpunktLinie?.apply {
                 endX = ziel.x
                 endY = ziel.y
             }
-            kommando.zielpunktkreis!!.apply {
+            kommando.zielpunktkreis?.apply {
                 centerX = ziel.x
                 centerY = ziel.y
             }

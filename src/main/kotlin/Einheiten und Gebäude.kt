@@ -101,8 +101,7 @@ data class Einheit(
     var vergiftet: Double = 0.0,
     var verlangsamt: Double = 0.0,
     var stim: Double = 0.0,
-    val kommandoQueue: MutableList<Kommando> = mutableListOf(),
-    var holdPosition: Boolean = false
+    val kommandoQueue: MutableList<Kommando> = mutableListOf()
 ) {
     fun punkt() = Punkt(x = x, y = y)
     override fun toString(): String {
