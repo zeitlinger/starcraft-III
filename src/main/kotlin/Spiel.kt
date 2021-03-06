@@ -36,14 +36,14 @@ class Spiel(
         mensch.einheiten.toList().forEach { einheitEntfernen(it, mensch, computer) }
 
         if (computer.einheiten.none { it.typ == cBasis }) {
-            box.children.add(Text("Sieg").apply {
+            karte.children.add(Text("Sieg").apply {
                 x = 700.0
                 y = 500.0
                 font = Font(200.0)
             })
         }
         if (mensch.einheiten.none { it.typ == mBasis }) {
-            box.children.add(Text("Niderlage").apply {
+            karte.children.add(Text("Niderlage").apply {
                 x = 300.0
                 y = 500.0
                 font = Font(200.0)
@@ -394,7 +394,7 @@ class Spiel(
             if (ausgewaehlt.contains(einheit)) {
                 val kreis = einheit.auswahlkreis
                 ausgewaehlt.remove(einheit)
-                box.children.remove(kreis)
+                karte.children.remove(kreis)
             }
 
             gegner.einheiten.forEach { gegnerEinheit ->
@@ -404,9 +404,9 @@ class Spiel(
                     }
                 }
             }
-            box.children.remove(einheit.bild)
-            box.children.remove(einheit.lebenText)
-            box.children.remove(einheit.kuerzel)
+            karte.children.remove(einheit.bild)
+            karte.children.remove(einheit.lebenText)
+            karte.children.remove(einheit.kuerzel)
             einheit.kommandoQueue.toList().forEach {
                 kommandoEntfernen(einheit, it)
             }
@@ -455,10 +455,10 @@ fun Spieler.einheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) =
 
 fun kommandoEntfernen(einheit: Einheit, kommando: Kommando) {
     if (kommando.zielpunktkreis != null) {
-        box.children.remove(kommando.zielpunktkreis)
+        karte.children.remove(kommando.zielpunktkreis)
     }
     if (kommando.zielpunktLinie != null) {
-        box.children.remove(kommando.zielpunktLinie)
+        karte.children.remove(kommando.zielpunktLinie)
     }
     einheit.kommandoQueue.remove(kommando)
 }

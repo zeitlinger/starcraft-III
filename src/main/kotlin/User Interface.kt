@@ -15,6 +15,7 @@ import javafx.scene.Cursor
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.Button
+import javafx.scene.control.ScrollPane
 import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
@@ -36,9 +37,9 @@ import kotlin.math.min
 
 lateinit var spiel: Spiel
 
-val box: Pane = Pane().apply {
-    prefWidth = 1850.0
-    prefHeight = 950.0
+val karte: Pane = Pane().apply {
+    prefWidth = 3850.0
+    prefHeight = 2950.0
 }
 
 fun Node.mausTaste(
@@ -89,13 +90,13 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
 class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     val computer = spiel.computer
     val mensch = spiel.mensch
-    lateinit var hBox: HBox
+    lateinit var buttonLeiste: HBox
 
     fun button(name: String, aktion: (Button) -> Unit): Button = Button(name).apply {
         this.mausTaste(MouseButton.PRIMARY) {
             aktion(this)
         }
-        hBox.children.add(this)
+        buttonLeiste.children.add(this)
     }
 
     fun kaufButton(name: String, kritalle: Int, aktion: (Button) -> Unit): Button =
@@ -110,7 +111,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     fun einmalKaufen(name: String, kritalle: Int, aktion: () -> Unit): Button =
         kaufButton(name, kritalle) {
             aktion()
-            hBox.children.remove(it)
+            buttonLeiste.children.remove(it)
         }
 
     override fun start(stage: Stage) {
@@ -133,7 +134,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         stage.scene = scene
         stage.show()
 
-        hBox = HBox()
+        buttonLeiste = HBox()
         kaufButton("Mine", 2000 + 400 * mensch.minen) {
             mensch.minen += 1
         }
@@ -158,10 +159,10 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             laborGekauft()
         }
 
-        vBox.children.add(box)
-        vBox.children.add(hBox)
+        vBox.children.add(scrollPane(vBox))
+        vBox.children.add(buttonLeiste)
 
-        box.mausTaste(MouseButton.SECONDARY) {
+        karte.mausTaste(MouseButton.SECONDARY) {
             if (kommandoWählen != null) {
                 scene.cursor = Cursor.DEFAULT
                 kommandoWählen = null
@@ -175,7 +176,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         var auswahlStart: Punkt? = null
         var auswahlRechteck: Rectangle? = null
 
-        box.mausTaste(MouseButton.PRIMARY) {
+        karte.mausTaste(MouseButton.PRIMARY) {
             val laufbefehl = Laufbefehl.values().singleOrNull { it.wählen == kommandoWählen }
             if (laufbefehl != null) {
                 ausgewaehlt.forEach { einheit ->
@@ -192,7 +193,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             scene.cursor = Cursor.DEFAULT
             kommandoWählen = null
         }
-        box.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_DRAGGED) {
+        karte.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_DRAGGED) {
             auswahlStart?.let { s ->
                 val x = min(s.x, it.x)
                 val y = min(s.y, it.y)
@@ -211,11 +212,11 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
                 if (auswahlRechteck == null) {
                     auswahlRechteck = r
-                    box.children.add(auswahlRechteck)
+                    karte.children.add(auswahlRechteck)
                 }
             }
         }
-        box.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_RELEASED) {
+        karte.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_RELEASED) {
             auswahlRechteck?.let { r ->
                 mensch.einheiten.forEach {
                     if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
@@ -229,7 +230,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     }
                 }
 
-                box.children.remove(r)
+                karte.children.remove(r)
             }
             auswahlStart = null
             auswahlRechteck = null
@@ -252,6 +253,35 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 Thread.sleep(spiel.warteZeit)
             }
         }.start()
+    }
+
+    private fun scrollPane(vBox: VBox): ScrollPane {
+        val scroll = ScrollPane(karte)
+        scroll.minWidth = 3000.0
+        scroll.minWidth = 3000.0
+        scroll.isPannable = false
+        scroll.hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
+        scroll.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
+        scroll.addEventFilter(MouseEvent.MOUSE_MOVED) {
+            val sensitivity = 150
+            val h = (scroll.hmax - scroll.hmin) / 100
+//            val h = scroll.minWidth / vBox.width / 100
+            if (it.x < sensitivity) {
+                scroll.hvalue -= h
+            }
+            if (it.x > vBox.width - sensitivity) {
+                scroll.hvalue += h
+            }
+            val v = (scroll.vmax - scroll.vmin) / 100
+//            val v = scroll.minHeight / vBox.height / 100
+            if (it.y < sensitivity) {
+                scroll.vvalue -= v
+            }
+            if (it.y > vBox.height - sensitivity) {
+                scroll.vvalue += v
+            }
+        }
+        return scroll
     }
 
     private fun auswahlHotkeys(scene: Scene, text: String?, schift: Boolean) {
@@ -280,7 +310,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             it.text = "LV " + (mensch.schadensUpgrade + 1) + " Schaden"
 
             if (mensch.schadensUpgrade == 5) {
-                hBox.children.remove(it)
+                buttonLeiste.children.remove(it)
             }
         }
         kaufButton("LV " + (mensch.panzerungsUprade + 1) + " Panzerug", 2000 + 400 * mensch.panzerungsUprade) {
@@ -288,7 +318,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             it.text = "LV " + (mensch.panzerungsUprade + 1) + " Panzerug"
 
             if (mensch.panzerungsUprade == 5) {
-                hBox.children.remove(it)
+                buttonLeiste.children.remove(it)
             }
         }
         einmalKaufen("Ansturm", 1500) {
@@ -337,7 +367,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun `auswahl löschen`() {
         ausgewaehlt.forEach {
-            box.children.remove(it.auswahlkreis)
+            karte.children.remove(it.auswahlkreis)
             it.auswahlkreis = null
         }
         ausgewaehlt.clear()
@@ -386,7 +416,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     private fun zielpunktUndKreisHinzufügen(einheit: Einheit, kommando: Kommando, letztesKommando: Kommando?) {
         val zielPunkt = kommandoPosition(kommando, einheit)
         kommando.zielpunktkreis = kreis(x = zielPunkt.x, y = zielPunkt.y, radius = 5.0).apply {
-            box.children.add(this)
+            karte.children.add(this)
         }
 
         if (einheit.kommandoQueue.size < 2) {
@@ -408,7 +438,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             startY = startPunkt.y
             endX = zielPunkt.x
             endY = zielPunkt.y
-            box.children.add(this)
+            karte.children.add(this)
         }
     }
 
@@ -426,8 +456,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         spieler.einheiten.forEach {
             einheitUiErstellen(it)
         }
-        box.children.add(spieler.kristalleText)
-        box.children.add(spieler.minenText)
+        karte.children.add(spieler.kristalleText)
+        karte.children.add(spieler.minenText)
     }
 
     private fun einheitUiErstellen(einheit: Einheit) {
@@ -436,9 +466,9 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         einheit.kuerzel = Text(einheit.typ.kuerzel)
         einheit.lebenText = Text()
         einheit.bild.fill = spieler.farbe
-        box.children.add(einheit.bild)
-        box.children.add(einheit.lebenText)
-        box.children.add(einheit.kuerzel)
+        karte.children.add(einheit.bild)
+        karte.children.add(einheit.lebenText)
+        karte.children.add(einheit.kuerzel)
 
         einheitMouseHandler(spieler, einheit.bild, einheit)
         einheitMouseHandler(spieler, einheit.kuerzel!!, einheit)
@@ -472,7 +502,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     private fun auswählen(einheit: Einheit) {
         if (einheit.leben > 0 && einheit.auswahlkreis == null) {
             val auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
-            box.children.add(auswahlKreis)
+            karte.children.add(auswahlKreis)
             einheit.auswahlkreis = auswahlKreis
             ausgewaehlt.add(einheit)
         }
