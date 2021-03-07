@@ -10,12 +10,12 @@ class SpielTest : FreeSpec({
     "Heiler soll automatisch heilen und Zustände entfernen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
                 leben = 10.0
                 zuletztGetroffen = 2.0
                 verlangsamt = 2.0
             }
-            einheit(x = 20.0, y = 0.0, einheitenTyp = mSanitäter)
+            neueEinheit(x = 20.0, y = 0.0, einheitenTyp = mSanitäter)
             vertärkteHeilmittel = true
         }
 
@@ -28,11 +28,11 @@ class SpielTest : FreeSpec({
     "Heiler soll nur heilen wenn die Einheit nicht angegriffen wird" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
                 leben = 10.0
                 zuletztGetroffen = 1.0
             }
-            einheit(x = 20.0, y = 0.0, einheitenTyp = mSanitäter)
+            neueEinheit(x = 20.0, y = 0.0, einheitenTyp = mSanitäter)
         }
 
         spielen(spiel)
@@ -43,12 +43,12 @@ class SpielTest : FreeSpec({
     "Einheit soll nur von einen Heiler geheilt werden" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
                 leben = 10.0
                 zuletztGetroffen = 2.0
             }
-            einheit(x = 20.0, y = 0.0, einheitenTyp = mSanitäter)
-            einheit(x = 20.0, y = 0.0, einheitenTyp = mSanitäter)
+            neueEinheit(x = 20.0, y = 0.0, einheitenTyp = mSanitäter)
+            neueEinheit(x = 20.0, y = 0.0, einheitenTyp = mSanitäter)
         }
 
         spielen(spiel)
@@ -59,12 +59,12 @@ class SpielTest : FreeSpec({
     "nur ein Heiler geht zum Ziel" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
                 leben = 10.0
                 zuletztGetroffen = 2.0
             }
-            einheit(x = 200.0, y = 0.0, einheitenTyp = mSanitäter)
-            einheit(x = 200.0, y = 0.0, einheitenTyp = mSanitäter)
+            neueEinheit(x = 200.0, y = 0.0, einheitenTyp = mSanitäter)
+            neueEinheit(x = 200.0, y = 0.0, einheitenTyp = mSanitäter)
         }
 
         spielen(spiel)
@@ -76,11 +76,11 @@ class SpielTest : FreeSpec({
     "beschützen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
-            einheit(x = 300.0, y = 0.0, einheitenTyp = mInfantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
+            neueEinheit(x = 300.0, y = 0.0, einheitenTyp = mInfantrie)
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -92,10 +92,10 @@ class SpielTest : FreeSpec({
         //todo sollte fehlschlagen
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 200.0, y = 0.0, einheitenTyp = mInfantrie)//.apply { kommandoQueue.add(Kommando.HoldPosition()) }
+            neueEinheit(x = 200.0, y = 0.0, einheitenTyp = mInfantrie)//.apply { kommandoQueue.add(Kommando.HoldPosition()) }
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -106,10 +106,10 @@ class SpielTest : FreeSpec({
     "Einheiten in Reichweite angreifen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -121,10 +121,10 @@ class SpielTest : FreeSpec({
     "Heilungsmodifikator" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie).apply { wirdGeheilt = 2 }
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie).apply { wirdGeheilt = 2 }
             strahlungsheilung = true
         }
 
@@ -137,7 +137,7 @@ class SpielTest : FreeSpec({
     "vergiftung" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply { vergiftet = 1.0 }
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply { vergiftet = 1.0 }
         }
         spielen(spiel)
 
@@ -147,9 +147,9 @@ class SpielTest : FreeSpec({
     "verlangsamerung" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
                 verlangsamt = 1.0
-                kommandoQueue.add(Kommando.Bewegen(Punkt(x = 0.5, y = 0.0)))
+                kommandoQueue.add(EinheitenKommando.Bewegen(Punkt(x = 0.5, y = 0.0)))
             }
         }
         spielen(spiel)
@@ -160,10 +160,10 @@ class SpielTest : FreeSpec({
     "Nicht in einer Runde laufen und angreifen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 150.5, y = 0.0, einheitenTyp = mInfantrie)
+            neueEinheit(x = 150.5, y = 0.0, einheitenTyp = mInfantrie)
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -174,10 +174,10 @@ class SpielTest : FreeSpec({
     "Schusscooldown" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie.copy(schusscooldown = 0.03))
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie.copy(schusscooldown = 0.03))
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -196,11 +196,11 @@ class SpielTest : FreeSpec({
     "Flächenschaden" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mPanzer)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mPanzer)
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
-            einheit(x = 25.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 25.0, y = 150.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -212,11 +212,11 @@ class SpielTest : FreeSpec({
     "schadensupgrade" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
             schadensUpgrade = 1
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -227,10 +227,10 @@ class SpielTest : FreeSpec({
     "panzerugsupgrade" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
             panzerungsUprade = 1
         }
 
@@ -243,14 +243,14 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie).apply { leben = 0.1 }
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie).apply { leben = 0.1 }
         }
         spiel.mensch.apply {
-            einheit(
+            neueEinheit(
                 x = 0.0,
                 y = 0.0,
                 einheitenTyp = mInfantrie
-            ).apply { kommandoQueue.add(Kommando.Angriff(spiel.computer.einheiten[1])) }
+            ).apply { kommandoQueue.add(EinheitenKommando.Angriff(spiel.computer.einheiten[1])) }
         }
 
         spielen(spiel)
@@ -275,11 +275,11 @@ class SpielTest : FreeSpec({
 
             val spiel = neuesSpiel()
             spiel.mensch.apply {
-                einheit(
+                neueEinheit(
                     x = testFall.start.x,
                     y = testFall.start.y,
                     einheitenTyp = mInfantrie
-                ).apply { kommandoQueue.add(Kommando.Bewegen(Punkt(0.0, 1000.0))) }
+                ).apply { kommandoQueue.add(EinheitenKommando.Bewegen(Punkt(0.0, 1000.0))) }
             }
 
             spielen(spiel)
@@ -299,8 +299,8 @@ class SpielTest : FreeSpec({
         ) { testFall ->
             val spiel = neuesSpiel()
             spiel.mensch.apply {
-                einheit(x = testFall.start.x, y = testFall.start.y, einheitenTyp = mInfantrie).apply {
-                    kommandoQueue.add(Kommando.Attackmove(Punkt(0.0, 1000.0)))
+                neueEinheit(x = testFall.start.x, y = testFall.start.y, einheitenTyp = mInfantrie).apply {
+                    kommandoQueue.add(EinheitenKommando.Attackmove(Punkt(0.0, 1000.0)))
                 }
             }
 
@@ -313,12 +313,12 @@ class SpielTest : FreeSpec({
     "attackmove angreifen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
-                kommandoQueue.add(Kommando.Attackmove(Punkt(0.0, 1000.0)))
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
+                kommandoQueue.add(EinheitenKommando.Attackmove(Punkt(0.0, 1000.0)))
             }
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -330,10 +330,10 @@ class SpielTest : FreeSpec({
     "computer greift nächste einheit an" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
         }
         spiel.computer.apply {
-            einheit(x = 0.0, y = 200.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 200.0, einheitenTyp = cInfantrie)
         }
 
         spielen(spiel)
@@ -359,10 +359,10 @@ class SpielTest : FreeSpec({
             val spiel = neuesSpiel()
 
             spiel.computer.apply {
-                einheit(x = 0.0, y = 0.0, einheitenTyp = cInfantrie)
+                neueEinheit(x = 0.0, y = 0.0, einheitenTyp = cInfantrie)
             }
             spiel.mensch.apply {
-                einheit(x = 0.0, y = testFall.start, einheitenTyp = mBerserker).apply {
+                neueEinheit(x = 0.0, y = testFall.start, einheitenTyp = mBerserker).apply {
                     typ.springen = 100
                     `springen cooldown` = testFall.`alter cooldown`
                 }
@@ -379,15 +379,15 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
-            einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
-            einheit(x = 0.0, y = 1334.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 1334.0, einheitenTyp = cInfantrie)
         }
         spiel.mensch.apply {
-            einheit(
+            neueEinheit(
                 x = 0.0,
                 y = 500.0,
                 einheitenTyp = mInfantrie
-            ).apply { kommandoQueue.add(Kommando.Angriff(spiel.computer.einheiten[2])) }
+            ).apply { kommandoQueue.add(EinheitenKommando.Angriff(spiel.computer.einheiten[2])) }
         }
         spielen(spiel)
 
@@ -399,9 +399,9 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
                 kommandoQueue.add(
-                    Kommando.Bewegen(
+                    EinheitenKommando.Bewegen(
                         Punkt(
                             0.0,
                             0.5
@@ -419,11 +419,11 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.mensch.apply {
-            einheit(
+            neueEinheit(
                 x = 0.0,
                 y = 0.0,
                 einheitenTyp = mInfantrie
-            ).apply { kommandoQueue.add(Kommando.Attackmove(Punkt(0.0, 0.5))) }
+            ).apply { kommandoQueue.add(EinheitenKommando.Attackmove(Punkt(0.0, 0.5))) }
         }
         spielen(spiel)
 
@@ -434,14 +434,14 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = cInfantrie).apply { leben = 0.1 }
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = cInfantrie).apply { leben = 0.1 }
         }
         spiel.mensch.apply {
-            einheit(
+            neueEinheit(
                 x = 0.0,
                 y = 0.0,
                 einheitenTyp = mInfantrie
-            ).apply { kommandoQueue.add(Kommando.Angriff(spiel.computer.einheiten[1])) }
+            ).apply { kommandoQueue.add(EinheitenKommando.Angriff(spiel.computer.einheiten[1])) }
         }
         spielen(spiel)
 
@@ -452,15 +452,15 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
-            einheit(x = 0.0, y = 510.0, einheitenTyp = cInfantrie)
-            einheit(x = 0.0, y = 520.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 510.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 520.0, einheitenTyp = cInfantrie)
         }
         spiel.mensch.apply {
-            einheit(
+            neueEinheit(
                 x = 0.0,
                 y = 500.0,
                 einheitenTyp = mInfantrie
-            ).apply { kommandoQueue.add(Kommando.Angriff(spiel.computer.einheiten[2])) }
+            ).apply { kommandoQueue.add(EinheitenKommando.Angriff(spiel.computer.einheiten[2])) }
         }
         spielen(spiel)
 
@@ -471,13 +471,13 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
-            einheit(x = 0.0, y = 510.0, einheitenTyp = cArbeiter)
-            einheit(x = 0.0, y = 520.0, einheitenTyp = cBerserker)
-            einheit(x = 0.0, y = 530.0, einheitenTyp = cBerserker)
-            einheit(x = 0.0, y = 660.0, einheitenTyp = cInfantrie)
+            neueEinheit(x = 0.0, y = 510.0, einheitenTyp = cArbeiter)
+            neueEinheit(x = 0.0, y = 520.0, einheitenTyp = cBerserker)
+            neueEinheit(x = 0.0, y = 530.0, einheitenTyp = cBerserker)
+            neueEinheit(x = 0.0, y = 660.0, einheitenTyp = cInfantrie)
         }
         spiel.mensch.apply {
-            einheit(
+            neueEinheit(
                 x = 0.0,
                 y = 500.0,
                 einheitenTyp = mJäger
@@ -495,11 +495,11 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
-            einheit(x = 0.0, y = 510.0, einheitenTyp = cArbeiter)
-            einheit(x = 0.0, y = 660.0, einheitenTyp = cPanzer)
+            neueEinheit(x = 0.0, y = 510.0, einheitenTyp = cArbeiter)
+            neueEinheit(x = 0.0, y = 660.0, einheitenTyp = cPanzer)
         }
         spiel.mensch.apply {
-            einheit(
+            neueEinheit(
                 x = 0.0,
                 y = 500.0,
                 einheitenTyp = mInfantrie
@@ -514,10 +514,10 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = cPanzer)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = cPanzer)
         }
         spiel.mensch.apply {
-            einheit(x = 0.0, y = 0.0, einheitenTyp = mJäger)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = mJäger)
         }
         spielen(spiel)
 
@@ -542,7 +542,7 @@ private fun neuesSpiel(): Spiel {
         schadensUpgrade = 0,
         panzerungsUprade = 0
     ).apply {
-        einheit(x = 900.0, y = 970.0, einheitenTyp = cBasis)
+        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = cBasis)
     }
 
     val mensch = Spieler(
@@ -556,7 +556,7 @@ private fun neuesSpiel(): Spiel {
         schadensUpgrade = 0,
         panzerungsUprade = 0
     ).apply {
-        einheit(x = 900.0, y = 970.0, einheitenTyp = mBasis)
+        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = mBasis)
     }
 
     return Spiel(mensch, computer, rundenLimit = 1)

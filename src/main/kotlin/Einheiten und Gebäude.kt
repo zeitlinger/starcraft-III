@@ -78,8 +78,9 @@ data class EinheitenTyp(
     var button: Button? = null,
     var springen: Int? = null,
     val typ: Typ,
-    var flächenschaden: Int? = null,
+    var flächenschaden: Double? = null,
     var schusscooldown: Double = 1.0,
+    val firstShotDeley: Double = 1.0,
     var machtZustand: MachtZustand? = null,
     val zivileEinheit: Boolean = false
 )
@@ -100,11 +101,12 @@ data class Einheit(
     var wirdGeheilt: Int = 0,
     var zuletztGetroffen: Double = 0.0,
     var schusscooldown: Double = 0.0,
+    var firstShotCooldown: Double = 0.0,
     var hatSichBewegt: Boolean = false,
     var vergiftet: Double = 0.0,
     var verlangsamt: Double = 0.0,
     var stim: Double = 0.0,
-    val kommandoQueue: MutableList<Kommando> = mutableListOf()
+    val kommandoQueue: MutableList<EinheitenKommando> = mutableListOf()
 ) {
     fun punkt() = Punkt(x = x, y = y)
     override fun toString(): String {
@@ -120,6 +122,12 @@ data class Punkt(
 
 typealias DoubleObserver = (Double) -> Unit
 
+enum class SpielerTyp {
+    mensch,
+    computer,
+    gegnerMensch
+}
+
 class Spieler(
     val einheiten: MutableList<Einheit> = mutableListOf(),
     private val kristallObservers: MutableList<DoubleObserver> = mutableListOf(),
@@ -129,7 +137,7 @@ class Spieler(
     var minen: Int,
     var startpunkt: Punkt,
     val farbe: Color,
-    val mensch: Boolean,
+    val spielerTyp: SpielerTyp,
     val kristalleText: Text = Text(),
     val minenText: Text = Text(),
     var schadensUpgrade: Int,
@@ -141,29 +149,31 @@ class Spieler(
         this.kristallObservers.forEach { it(new) }
     }
 
+    val mensch: Boolean = spielerTyp == SpielerTyp.mensch
+
     fun addKristallObserver(o: DoubleObserver) {
         this.kristallObservers.add(o)
         o(kristalle)
     }
 
     override fun toString(): String {
-        return "Spieler(mensch=$mensch)"
+        return "Spieler(typ=$spielerTyp)"
     }
 }
 
 
-sealed class Kommando(var zielpunktLinie: Line? = null, var zielpunktkreis: Arc? = null) {
-    class Bewegen(val zielPunkt: Punkt) : Kommando()
-    class Attackmove(val zielPunkt: Punkt) : Kommando()
-    class Angriff(val ziel: Einheit) : Kommando()
-    class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : Kommando()
-    class HoldPosition : Kommando()
-    class Stopp: Kommando()
+sealed class EinheitenKommando(var zielpunktLinie: Line? = null, var zielpunktkreis: Arc? = null) {
+    class Bewegen(val zielPunkt: Punkt) : EinheitenKommando()
+    class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
+    class Angriff(val ziel: Einheit) : EinheitenKommando()
+    class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : EinheitenKommando()
+    class HoldPosition : EinheitenKommando()
+    class Stopp: EinheitenKommando()
 }
 
 val kommandoHotKeys = mapOf(
-    "s" to { Kommando.Stopp() },
-    "h" to { Kommando.HoldPosition() }
+    "s" to { EinheitenKommando.Stopp() },
+    "h" to { EinheitenKommando.HoldPosition() }
 )
 
 val mInfantrie = EinheitenTyp(
@@ -242,7 +252,7 @@ val mPanzer = EinheitenTyp(
     techGebäude = reaktor,
     hotkey = "t",
     typ = Typ.mechanisch,
-    flächenschaden = 25,
+    flächenschaden = 25.0,
     durchschlag = 0.0
 )
 val mBasis = EinheitenTyp(

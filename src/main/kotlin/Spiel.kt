@@ -19,6 +19,7 @@ class Spiel(
     val rundenLimit: Int? = null,
     var runde: Int = 0,
     val warteZeit: Long = 15,
+    val multiplayer: Multiplayer,
     var einheitProduziert: (Einheit) -> Unit = {}
 ) {
 
@@ -58,7 +59,7 @@ class Spiel(
     }
 
     private fun rundenende(it: Einheit) {
-        if (it.kommandoQueue.firstOrNull { it is Kommando.Stopp } != null) {
+        if (it.kommandoQueue.firstOrNull { it is EinheitenKommando.Stopp } != null) {
             it.kommandoQueue.toList().forEach { kommando ->
                 kommandoEntfernen(it, kommando)
             }
@@ -105,11 +106,12 @@ class Spiel(
     }
 
     fun neueEinheit(spieler: Spieler, einheitenTyp: EinheitenTyp) {
-        val einheit = spieler.einheit(
-                x = spieler.startpunkt.x,
-                y = spieler.startpunkt.y,
-                einheitenTyp = einheitenTyp
+        val einheit = spieler.neueEinheit(
+            x = spieler.startpunkt.x,
+            y = spieler.startpunkt.y,
+            einheitenTyp = einheitenTyp
         )
+        multiplayer.neueEinheit(einheit.x, einheit.y, einheitenTyp)
         einheitProduziert(einheit)
     }
 
@@ -118,12 +120,12 @@ class Spiel(
     }
 
     fun bewege(einheit: Einheit, gegner: Spieler) {
-        if (einheit.kommandoQueue.firstOrNull { it is Kommando.HoldPosition } != null) {
+        if (einheit.kommandoQueue.firstOrNull { it is EinheitenKommando.HoldPosition } != null) {
             return
         }
         val kommando = einheit.kommandoQueue.getOrNull(0)
         val laufweite = richtigeLaufweite(einheit)
-        if (kommando is Kommando.Bewegen) {
+        if (kommando is EinheitenKommando.Bewegen) {
             val zielPunkt = kommando.zielPunkt
             bewege(einheit, zielPunkt, laufweite)
 
@@ -135,7 +137,7 @@ class Spiel(
 
         val ziel = zielauswaehlenBewegen(gegner, einheit)
         if (ziel == null) {
-            if (kommando is Kommando.Attackmove) {
+            if (kommando is EinheitenKommando.Attackmove) {
                 bewege(einheit, kommando.zielPunkt, laufweite)
                 if (kommando.zielPunkt == einheit.punkt()) {
                     kommandoEntfernen(einheit, kommando)
@@ -186,7 +188,7 @@ class Spiel(
 
     private fun zielauswaehlenSchießen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
-        if (kommando is Kommando.Angriff) {
+        if (kommando is EinheitenKommando.Angriff) {
             return kommando.ziel
         }
 
@@ -254,7 +256,7 @@ class Spiel(
 
     private fun zielauswaehlenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
-        if (kommando is Kommando.Angriff) {
+        if (kommando is EinheitenKommando.Angriff) {
             return kommando.ziel
         }
 
@@ -327,11 +329,7 @@ class Spiel(
     }
 
     private fun schiessen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
-        if (entfernung(
-                einheit,
-                ziel
-            ) <= einheit.typ.reichweite && einheit.schusscooldown <= 0.0 && !einheit.hatSichBewegt
-        ) {
+        if (`ist in Reichweite`(einheit, ziel) && einheit.schusscooldown <= 0.0 && !einheit.hatSichBewegt && einheit.firstShotCooldown <= 0.0) {
             einheit.schusscooldown = einheit.typ.schusscooldown
             if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
                 if ((ziel.heiler == null || ziel.heiler == einheit) &&
@@ -399,7 +397,7 @@ class Spiel(
 
             gegner.einheiten.forEach { gegnerEinheit ->
                 gegnerEinheit.kommandoQueue.toList().forEach {
-                    if (it is Kommando.Angriff && it.ziel == einheit) {
+                    if (it is EinheitenKommando.Angriff && it.ziel == einheit) {
                         kommandoEntfernen(gegnerEinheit, it)
                     }
                 }
@@ -443,7 +441,7 @@ fun kaufen(kristalle: Int, spieler: Spieler, aktion: () -> Unit) {
     }
 }
 
-fun Spieler.einheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) =
+fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) =
     Einheit(
         spieler = this,
         leben = einheitenTyp.leben,
@@ -453,7 +451,7 @@ fun Spieler.einheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) =
         typ = einheitenTyp
     ).also { einheiten.add(it) }
 
-fun kommandoEntfernen(einheit: Einheit, kommando: Kommando) {
+fun kommandoEntfernen(einheit: Einheit, kommando: EinheitenKommando) {
     if (kommando.zielpunktkreis != null) {
         karte.children.remove(kommando.zielpunktkreis)
     }
@@ -471,15 +469,17 @@ fun smaller(a: Double, b: Double): Double {
 }
 
 //Bugs:
-//rechtsclick wird beim loslassen ausgeführt
 //Wenn man eine Einheit als Ziel auswählt und dann mit Shift ein anderes Befehl gibt wird die zweite Zielpunktlinie nicht aktualisiert
-//Man kann nicht als Shiftbedfehl eine Einheit als Ziel wählen, die sich bewegt
+//Man kann nicht als Shiftbefehl eine Einheit als Ziel wählen, die sich bewegt
 //wegpunkte werden auch angezeigt wenn die Einheit nicht ausgewählt ist
+//scrollen fuktioniert nicht
+//wenn man "stopp" oder "holdposision" aktiviert wird die Kommandoqueue auch gelöscht, wenn man shift gedrückt hat + Fehlermeldung
 
 //Features:
+//Verzögerung des erste Schusses
 //Wenn man Attackmove macht und dann auf eine Einheit klickt, soll die Einheit als Ziel ausgewählt werden
+//Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
 //patrollieren
-//größere Karte
 //Kriegsnebel
 //Sichtweite für Einheiten
 //Minnimap

@@ -9,7 +9,8 @@ buildscript {
 plugins {
     kotlin("jvm") version "1.4.31"
     kotlin("plugin.serialization") version "1.4.0"
-    id("org.openjfx.javafxplugin") version "0.0.8"
+    id("application")
+    id("org.openjfx.javafxplugin") version "0.0.9"
 }
 
 tasks.withType<Test> {
@@ -40,7 +41,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinSerialization")
     implementation("io.ktor:ktor-client-cio:$ktorVersion")
 
-
     testImplementation("io.ktor:ktor-server-tests:$ktorVersion")
 
     testImplementation("io.kotest:kotest-assertions-core-jvm:$kotestVersion")
@@ -63,6 +63,6 @@ repositories {
 }
 
 javafx {
-    version = "11"
-    modules = listOf( "javafx.controls", "javafx.fxml")
+    version = "15.0.1"
+    modules = listOf( "javafx.controls")
 }

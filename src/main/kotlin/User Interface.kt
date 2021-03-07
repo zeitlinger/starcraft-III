@@ -59,7 +59,7 @@ fun Node.mausTaste(
     }
 }
 
-var ausgewaehlt: MutableSet<Einheit> = Collections.newSetFromMap(IdentityHashMap<Einheit, Boolean>())
+var ausgewaehlt: MutableSet<Einheit> = Collections.newSetFromMap(IdentityHashMap())
 
 private fun kreis(x: Double, y: Double, radius: Double): Arc {
     return Arc().apply {
@@ -258,15 +258,12 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun scrollPane(vBox: VBox): ScrollPane {
         val scroll = ScrollPane(karte)
-        scroll.minWidth = 3000.0
-        scroll.minWidth = 3000.0
         scroll.isPannable = false
         scroll.hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
         scroll.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
         scroll.addEventFilter(MouseEvent.MOUSE_MOVED) {
-            val sensitivity = 150
+            val sensitivity = 1
             val h = (scroll.hmax - scroll.hmin) / 100
-//            val h = scroll.minWidth / vBox.width / 100
             if (it.x < sensitivity) {
                 scroll.hvalue -= h
             }
@@ -274,7 +271,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 scroll.hvalue += h
             }
             val v = (scroll.vmax - scroll.vmin) / 100
-//            val v = scroll.minHeight / vBox.height / 100
             if (it.y < sensitivity) {
                 scroll.vvalue -= v
             }
@@ -342,7 +338,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             mensch.strahlungsheilung = true
         }
         einmalKaufen("Flammenwurf", 1500) {
-            mFlammenwerfer.flächenschaden = 40
+            mFlammenwerfer.flächenschaden = 40.0
             mFlammenwerfer.schaden = 2.5
         }
     }
@@ -386,20 +382,20 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
         val kommando = when (laufbefehl) {
             Laufbefehl.Attackmove -> {
-                Kommando.Attackmove(zielPunkt = Punkt(x, y))
+                EinheitenKommando.Attackmove(zielPunkt = Punkt(x, y))
             }
             Laufbefehl.Bewegen -> {
-                Kommando.Bewegen(Punkt(x, y))
+                EinheitenKommando.Bewegen(Punkt(x, y))
             }
             else -> {
-                Kommando.Patrolieren(letzterPunkt, Punkt(x, y))
+                EinheitenKommando.Patrolieren(letzterPunkt, Punkt(x, y))
             }
         }
         neuesKommando(einheit, kommando, schiftcommand)
         zielpunktKreisUndLinieHinzufügen(kommando, einheit)
     }
 
-    private fun neuesKommando(einheit: Einheit, kommando: Kommando, schiftcommand: Boolean) {
+    private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, schiftcommand: Boolean) {
         einheit.kommandoQueue.toList().forEach {
             if (!schiftcommand) {
                 kommandoEntfernen(einheit, it)
@@ -408,13 +404,13 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         einheit.kommandoQueue.add(kommando)
     }
 
-    private fun zielpunktKreisUndLinieHinzufügen(kommando: Kommando, einheit: Einheit) {
+    private fun zielpunktKreisUndLinieHinzufügen(kommando: EinheitenKommando, einheit: Einheit) {
         val queue = einheit.kommandoQueue
         val letztesKommando = queue.getOrNull(queue.size - 2)
         zielpunktUndKreisHinzufügen(einheit, kommando, letztesKommando)
     }
 
-    private fun zielpunktUndKreisHinzufügen(einheit: Einheit, kommando: Kommando, letztesKommando: Kommando?) {
+    private fun zielpunktUndKreisHinzufügen(einheit: Einheit, kommando: EinheitenKommando, letztesKommando: EinheitenKommando?) {
         val zielPunkt = kommandoPosition(kommando, einheit)
         kommando.zielpunktkreis = kreis(x = zielPunkt.x, y = zielPunkt.y, radius = 5.0).apply {
             karte.children.add(this)
@@ -433,7 +429,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         linieHinzufügen(kommando, startPunkt, zielPunkt)
     }
 
-    private fun linieHinzufügen(kommando: Kommando, startPunkt: Punkt, zielPunkt: Punkt) {
+    private fun linieHinzufügen(kommando: EinheitenKommando, startPunkt: Punkt, zielPunkt: Punkt) {
         kommando.zielpunktLinie = Line().apply {
             startX = startPunkt.x
             startY = startPunkt.y
@@ -443,14 +439,14 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
     }
 
-    private fun kommandoPosition(letztesKommando: Kommando?, einheit: Einheit) = when (letztesKommando) {
+    private fun kommandoPosition(letztesKommando: EinheitenKommando?, einheit: Einheit) = when (letztesKommando) {
         null -> Punkt(einheit.x, einheit.y)
-        is Kommando.Angriff -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
-        is Kommando.Bewegen -> letztesKommando.zielPunkt
-        is Kommando.Attackmove -> letztesKommando.zielPunkt
-        is Kommando.Patrolieren -> letztesKommando.punkt2
-        is Kommando.HoldPosition -> throw AssertionError("kann nicht passieren")
-        is Kommando.Stopp -> throw AssertionError("kann nicht passieren")
+        is EinheitenKommando.Angriff -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
+        is EinheitenKommando.Bewegen -> letztesKommando.zielPunkt
+        is EinheitenKommando.Attackmove -> letztesKommando.zielPunkt
+        is EinheitenKommando.Patrolieren -> letztesKommando.punkt2
+        is EinheitenKommando.HoldPosition -> throw AssertionError("kann nicht passieren")
+        is EinheitenKommando.Stopp -> throw AssertionError("kann nicht passieren")
     }
 
     private fun initSpieler(spieler: Spieler) {
@@ -494,7 +490,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun `ziel auswählen`(einheit: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
-            val kommando = Kommando.Angriff(ziel = einheit)
+            val kommando = EinheitenKommando.Angriff(ziel = einheit)
             neuesKommando(einheit = it, kommando = kommando, schiftcommand = schiftcommand)
             zielpunktKreisUndLinieHinzufügen(kommando, einheit)
         }
@@ -544,7 +540,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
 
         val kommando = einheit.kommandoQueue.getOrNull(0)
-        if (kommando != null && kommando is Kommando.Angriff) {
+        if (kommando != null && kommando is EinheitenKommando.Angriff) {
             val ziel = kommando.ziel
 
             kommando.zielpunktLinie?.apply {
@@ -561,6 +557,15 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
+            var server: Server? = null
+            var client: Client? = null
+            if (args.getOrNull(0) == "server") {
+               server = Server()
+            } else if (args.getOrNull(0) == "client") {
+                val server = args.get(1)
+                client = Client(server)
+            }
+
             val computer = Spieler(
                 kristalle = 0.0,
                 angriffspunkte = 20,
@@ -568,15 +573,15 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 minen = 0,
                 startpunkt = Punkt(x = 900.0, y = 115.0),
                 farbe = Color.RED,
-                mensch = false,
+                spielerTyp = SpielerTyp.computer,
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
-                einheit(x = 1050.0, y = 110.0, einheitenTyp = cSpäher)
-                einheit(x = 750.0, y = 110.0, einheitenTyp = cSonde)
-                einheit(x = 850.0, y = 110.0, einheitenTyp = cInfantrie)
-                einheit(x = 900.0, y = 50.0, einheitenTyp = cBasis)
-                einheit(x = 950.0, y = 110.0, einheitenTyp = cInfantrie)
+                neueEinheit(x = 1050.0, y = 110.0, einheitenTyp = cSpäher)
+                neueEinheit(x = 750.0, y = 110.0, einheitenTyp = cSonde)
+                neueEinheit(x = 850.0, y = 110.0, einheitenTyp = cInfantrie)
+                neueEinheit(x = 900.0, y = 50.0, einheitenTyp = cBasis)
+                neueEinheit(x = 950.0, y = 110.0, einheitenTyp = cInfantrie)
             }
 
             val mensch = Spieler(
@@ -586,18 +591,18 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 minen = 0,
                 startpunkt = Punkt(x = 900.0, y = 905.0),
                 farbe = Color.BLUE,
-                mensch = true,
+                spielerTyp = SpielerTyp.mensch,
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
-                einheit(x = 1050.0, y = 895.0, einheitenTyp = mSpäher)
-                einheit(x = 750.0, y = 895.0, einheitenTyp = mArbeiter)
-                einheit(x = 850.0, y = 895.0, einheitenTyp = mInfantrie)
-                einheit(x = 900.0, y = 970.0, einheitenTyp = mBasis)
-                einheit(x = 950.0, y = 895.0, einheitenTyp = mInfantrie)
+                neueEinheit(x = 1050.0, y = 895.0, einheitenTyp = mSpäher)
+                neueEinheit(x = 750.0, y = 895.0, einheitenTyp = mArbeiter)
+                neueEinheit(x = 850.0, y = 895.0, einheitenTyp = mInfantrie)
+                neueEinheit(x = 900.0, y = 970.0, einheitenTyp = mBasis)
+                neueEinheit(x = 950.0, y = 895.0, einheitenTyp = mInfantrie)
             }
 
-            spiel = Spiel(mensch, computer)
+            spiel = Spiel(mensch, computer, multiplayer = Multiplayer(client, server))
 
             launch(App::class.java)
         }
