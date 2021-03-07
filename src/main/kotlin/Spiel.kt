@@ -197,7 +197,7 @@ class Spiel(
         val l = gegner.einheiten.filter { `ist in Reichweite`(einheit, it) }.sortedBy { angriffspriorität(einheit, it) }
         if (l.isNotEmpty()) {
             val p = angriffspriorität(einheit, l.first())
-            val e = l.filter { angriffspriorität(einheit, it) == p }.minBy { entfernung(einheit, it) }
+            val e = l.filter { angriffspriorität(einheit, it) == p }.minByOrNull { entfernung(einheit, it) }
             return e
             //automatisch auf Einheiten in Reichweite mit der höchsten Angriffspriorität schiessen
         }
@@ -297,7 +297,7 @@ class Spiel(
             }
         }
 
-        return liste.minWith(compareBy({ angriffspriorität(einheit, it) }, { entfernung(einheit, it) }))
+        return liste.minWithOrNull(compareBy({ angriffspriorität(einheit, it) }, { entfernung(einheit, it) }))
 
     }
 
@@ -312,7 +312,7 @@ class Spiel(
                         (it.typ.typ == Typ.biologisch || !gegner(gegner).vertärkteHeilmittel) &&
                         (it.zuletztGetroffen > 1 || gegner(gegner).strahlungsheilung)
             }
-            .minBy { entfernung(einheit, it) }
+            .minByOrNull { entfernung(einheit, it) }
         if (ziel != null) {
             ziel.heiler = einheit
         }

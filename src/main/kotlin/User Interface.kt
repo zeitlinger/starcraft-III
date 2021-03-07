@@ -30,7 +30,8 @@ import javafx.scene.shape.Line
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.Text
 import javafx.stage.Stage
-import sun.awt.util.IdentityArrayList
+import java.util.Collections
+import java.util.IdentityHashMap
 import kotlin.math.max
 import kotlin.math.min
 
@@ -58,7 +59,7 @@ fun Node.mausTaste(
     }
 }
 
-var ausgewaehlt: MutableList<Einheit> = IdentityArrayList()
+var ausgewaehlt: MutableSet<Einheit> = Collections.newSetFromMap(IdentityHashMap<Einheit, Boolean>())
 
 private fun kreis(x: Double, y: Double, radius: Double): Arc {
     return Arc().apply {
@@ -146,7 +147,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
 
         stage.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
-            if (ausgewaehlt.size == 1 && ausgewaehlt[0].typ == mBasis) {
+            if (ausgewaehlt.size == 1 && ausgewaehlt.iterator().next().typ == mBasis) {
                 kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
             } else {
                 if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ == mBasis }) {

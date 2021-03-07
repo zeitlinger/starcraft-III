@@ -1,11 +1,13 @@
+@file:Suppress("NonAsciiCharacters")
+
+import io.kotest.core.datatest.forAll
+import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.shouldBe
 import javafx.scene.paint.Color
-import org.junit.Test
 
-class SpielTest {
+class SpielTest : FreeSpec({
 
-    @Test
-    fun `Heiler soll automatisch heilen und Zustände entfernen`() {
+    "Heiler soll automatisch heilen und Zustände entfernen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
@@ -23,8 +25,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].verlangsamt shouldBe 0.0
     }
 
-    @Test
-    fun `Heiler soll nur heilen wenn die Einheit nicht angegriffen wird`() {
+    "Heiler soll nur heilen wenn die Einheit nicht angegriffen wird" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
@@ -39,8 +40,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].leben shouldBe 10.0
     }
 
-    @Test
-    fun `Einheit soll nur von einen Heiler geheilt werden`() {
+    "Einheit soll nur von einen Heiler geheilt werden" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
@@ -56,8 +56,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].leben shouldBe 12.0
     }
 
-    @Test
-    fun `nur ein Heiler geht zum Ziel`() {
+    "nur ein Heiler geht zum Ziel" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
@@ -74,8 +73,7 @@ class SpielTest {
         spiel.mensch.einheiten[3].x shouldBe 200.0
     }
 
-    @Test
-    fun Beschützen() {
+    "beschützen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
@@ -90,11 +88,11 @@ class SpielTest {
         spiel.mensch.einheiten[2].punkt() shouldBe Punkt(x = 299.55278640450007, y = 0.22360679774997896)
     }
 
-    @Test
-    fun `hold Position`() {
+    "hold Position" {
+        //todo sollte fehlschlagen
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            einheit(x = 200.0, y = 0.0, einheitenTyp = mInfantrie).apply { holdPosition = true }
+            einheit(x = 200.0, y = 0.0, einheitenTyp = mInfantrie)//.apply { kommandoQueue.add(Kommando.HoldPosition()) }
         }
         spiel.computer.apply {
             einheit(x = 0.0, y = 150.0, einheitenTyp = cInfantrie)
@@ -105,8 +103,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x = 200.0, y = 0.0)
     }
 
-    @Test
-    fun `Einheiten in Reichweite angreifen`() {
+    "Einheiten in Reichweite angreifen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
@@ -121,8 +118,7 @@ class SpielTest {
         spiel.computer.einheiten[1].leben shouldBe 999.125
     }
 
-    @Test
-    fun Heilungsmodifikator() {
+    "Heilungsmodifikator" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
@@ -138,8 +134,7 @@ class SpielTest {
         spiel.computer.einheiten[1].leben shouldBe 999.3875
     }
 
-    @Test
-    fun vergiftung() {
+    "vergiftung" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply { vergiftet = 1.0 }
@@ -149,8 +144,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].leben shouldBe 995.0
     }
 
-    @Test
-    fun verlangsamerung() {
+    "verlangsamerung" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
@@ -163,8 +157,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].x shouldBe 0.25
     }
 
-    @Test
-    fun `Nicht in einer Runde laufen und angreifen`() {
+    "Nicht in einer Runde laufen und angreifen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 150.5, y = 0.0, einheitenTyp = mInfantrie)
@@ -178,8 +171,7 @@ class SpielTest {
         spiel.computer.einheiten[1].leben shouldBe 1000.0
     }
 
-    @Test
-    fun Schusscooldown() {
+    "Schusscooldown" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie.copy(schusscooldown = 0.03))
@@ -201,8 +193,7 @@ class SpielTest {
         spiel.computer.einheiten[1].leben shouldBe 998.25
     }
 
-    @Test
-    fun Flächenschaden() {
+    "Flächenschaden" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mPanzer)
@@ -218,8 +209,7 @@ class SpielTest {
         spiel.computer.einheiten[2].leben shouldBe 995.125
     }
 
-    @Test
-    fun schadensupgrade() {
+    "schadensupgrade" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
@@ -234,8 +224,7 @@ class SpielTest {
         spiel.computer.einheiten[1].leben shouldBe 999.025
     }
 
-    @Test
-    fun panzerugsupgrade() {
+    "panzerugsupgrade" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
@@ -250,8 +239,7 @@ class SpielTest {
         spiel.computer.einheiten[1].leben shouldBe 999.225
     }
 
-    @Test
-    fun `einheit stirbt`() {
+    "einheit stirbt" {
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
@@ -271,58 +259,58 @@ class SpielTest {
         spiel.mensch.einheiten[0].kommandoQueue.size shouldBe 0
     }
 
-    @Test
-    fun `zum Zielpunkt laufen`() {
+    "zum Zielpunkt laufen" - {
         data class TestFall(val start: Punkt, val ziel: Punkt)
 
-        val parameter = listOf(
-            TestFall(start = Punkt(x = 1000.0, y = 0.0), ziel = Punkt(x = 999.6464466094068, y = 0.35355339059327373)),
+        forAll(
+            TestFall(
+                start = Punkt(x = 1000.0, y = 0.0),
+                ziel = Punkt(x = 999.6464466094068, y = 0.35355339059327373)
+            ),
             TestFall(start = Punkt(x = 0.0, y = 1000.0), ziel = Punkt(x = 0.0, y = 1000.0)),
             TestFall(start = Punkt(x = 0.0, y = 999.0), ziel = Punkt(x = 0.0, y = 999.5)),
             TestFall(start = Punkt(x = 0.0, y = 999.999), ziel = Punkt(x = 0.0, y = 1000.0))
-        )
-        parameter.forEach { testfall ->
+        ) { testFall ->
+            println(testFall.toString())
+
             val spiel = neuesSpiel()
             spiel.mensch.apply {
                 einheit(
-                    x = testfall.start.x,
-                    y = testfall.start.y,
+                    x = testFall.start.x,
+                    y = testFall.start.y,
                     einheitenTyp = mInfantrie
                 ).apply { kommandoQueue.add(Kommando.Bewegen(Punkt(0.0, 1000.0))) }
             }
 
             spielen(spiel)
 
-            spiel.mensch.einheiten[1].punkt() shouldBe testfall.ziel
+            spiel.mensch.einheiten[1].punkt() shouldBe testFall.ziel
         }
     }
 
-    @Test
-    fun `attackmove laufen`() {
+    "attackmove laufen" - {
         data class TestFall(val start: Punkt, val ziel: Punkt)
 
-        val parameter = listOf(
+        forAll(
             TestFall(start = Punkt(x = 1000.0, y = 0.0), ziel = Punkt(x = 999.6464466094068, y = 0.35355339059327373)),
             TestFall(start = Punkt(x = 0.0, y = 1000.0), ziel = Punkt(x = 0.0, y = 1000.0)),
             TestFall(start = Punkt(x = 0.0, y = 999.0), ziel = Punkt(x = 0.0, y = 999.5)),
             TestFall(start = Punkt(x = 0.0, y = 999.999), ziel = Punkt(x = 0.0, y = 1000.0))
-        )
-        parameter.forEach { testfall ->
+        ) { testFall ->
             val spiel = neuesSpiel()
             spiel.mensch.apply {
-                einheit(x = testfall.start.x, y = testfall.start.y, einheitenTyp = mInfantrie).apply {
+                einheit(x = testFall.start.x, y = testFall.start.y, einheitenTyp = mInfantrie).apply {
                     kommandoQueue.add(Kommando.Attackmove(Punkt(0.0, 1000.0)))
                 }
             }
 
             spielen(spiel)
 
-            spiel.mensch.einheiten[1].punkt() shouldBe testfall.ziel
+            spiel.mensch.einheiten[1].punkt() shouldBe testFall.ziel
         }
     }
 
-    @Test
-    fun `attackmove angreifen`() {
+    "attackmove angreifen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie).apply {
@@ -339,8 +327,7 @@ class SpielTest {
         spiel.computer.einheiten[1].leben shouldBe 999.125
     }
 
-    @Test
-    fun `computer greift nächste einheit an`() {
+    "computer greift nächste einheit an" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             einheit(x = 0.0, y = 0.0, einheitenTyp = mInfantrie)
@@ -354,8 +341,7 @@ class SpielTest {
         spiel.computer.einheiten[1].punkt() shouldBe Punkt(x = 0.0, y = 199.5)
     }
 
-    @Test
-    fun `springen`() {
+    "springen" - {
         data class TestFall(
             val start: Double,
             val ziel: Double,
@@ -364,13 +350,12 @@ class SpielTest {
             val `neuer cooldown`: Double
         )
 
-        val parameter = listOf(
+        forAll(
             TestFall(start = 140.0, ziel = 40.0, leben = 988.0, `alter cooldown` = 0.0, `neuer cooldown` = 9.985),
             TestFall(start = 141.0, ziel = 140.5, leben = 1000.0, `alter cooldown` = 0.0, `neuer cooldown` = 0.0),
             TestFall(start = 139.0, ziel = 40.0, leben = 988.0, `alter cooldown` = 0.0, `neuer cooldown` = 9.985),
             TestFall(start = 140.0, ziel = 139.5, leben = 1000.0, `alter cooldown` = 34.0, `neuer cooldown` = 33.985)
-        )
-        parameter.forEach { testFall ->
+        ) { testFall ->
             val spiel = neuesSpiel()
 
             spiel.computer.apply {
@@ -379,7 +364,7 @@ class SpielTest {
             spiel.mensch.apply {
                 einheit(x = 0.0, y = testFall.start, einheitenTyp = mBerserker).apply {
                     typ.springen = 100
-                    `springen cooldown` = testFall.`alter cooldown`.toDouble()
+                    `springen cooldown` = testFall.`alter cooldown`
                 }
             }
             spielen(spiel)
@@ -390,8 +375,7 @@ class SpielTest {
         }
     }
 
-    @Test
-    fun `zu ziel laufen`() {
+    "zu ziel laufen" {
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
@@ -411,8 +395,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x = 0.0, y = 500.5)
     }
 
-    @Test
-    fun `kommando entfernen (bewegen)`() {
+    "kommando entfernen (bewegen)" {
         val spiel = neuesSpiel()
 
         spiel.mensch.apply {
@@ -432,8 +415,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].kommandoQueue.size shouldBe 0
     }
 
-    @Test
-    fun `kommando entfernen (attackmove)`() {
+    "kommando entfernen (attackmove)" {
         val spiel = neuesSpiel()
 
         spiel.mensch.apply {
@@ -448,8 +430,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].kommandoQueue.size shouldBe 0
     }
 
-    @Test
-    fun `kommando entfernen (angreifen)`() {
+    "kommando entfernen (angreifen)" {
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
@@ -467,8 +448,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].kommandoQueue.size shouldBe 0
     }
 
-    @Test
-    fun `ziel angreifen`() {
+    "ziel angreifen" {
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
@@ -487,8 +467,7 @@ class SpielTest {
         spiel.computer.einheiten[2].leben shouldBe 999.125
     }
 
-    @Test
-    fun `höchste Priorität die in reichweite ist angreifen`() {
+    "höchste Priorität die in reichweite ist angreifen" {
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
@@ -512,8 +491,7 @@ class SpielTest {
         spiel.computer.einheiten[4].leben shouldBe 1000
     }
 
-    @Test
-    fun `zu Einheit mit höchste Priorität laufen`() {
+    "zu Einheit mit höchste Priorität laufen" {
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
@@ -532,8 +510,7 @@ class SpielTest {
         spiel.mensch.einheiten[1].y shouldBe 500.5
     }
 
-    @Test
-    fun `kann Lufteinheit nicht angreifen`() {
+    "kann Lufteinheit nicht angreifen" {
         val spiel = neuesSpiel()
 
         spiel.computer.apply {
@@ -547,39 +524,40 @@ class SpielTest {
         spiel.mensch.einheiten[1].leben shouldBe 800.0
     }
 
-    private fun spielen(spiel: Spiel) {
-        spiel.runde()
+})
+
+private fun spielen(spiel: Spiel) {
+    spiel.runde()
+}
+
+private fun neuesSpiel(): Spiel {
+    val computer = Spieler(
+        kristalle = 0.0,
+        angriffspunkte = 20,
+        verteidiegungspunkte = 10,
+        minen = 0,
+        startpunkt = Punkt(x = 900.0, y = 115.0),
+        farbe = Color.RED,
+        mensch = false,
+        schadensUpgrade = 0,
+        panzerungsUprade = 0
+    ).apply {
+        einheit(x = 900.0, y = 970.0, einheitenTyp = cBasis)
     }
 
-    private fun neuesSpiel(): Spiel {
-        val computer = Spieler(
-            kristalle = 0.0,
-            angriffspunkte = 20,
-            verteidiegungspunkte = 10,
-            minen = 0,
-            startpunkt = Punkt(x = 900.0, y = 115.0),
-            farbe = Color.RED,
-            mensch = false,
-            schadensUpgrade = 0,
-            panzerungsUprade = 0
-        ).apply {
-            einheit(x = 900.0, y = 970.0, einheitenTyp = cBasis)
-        }
-
-        val mensch = Spieler(
-            kristalle = 10000000000000000000.0,
-            angriffspunkte = 20,
-            verteidiegungspunkte = 10,
-            minen = 0,
-            startpunkt = Punkt(x = 900.0, y = 905.0),
-            farbe = Color.BLUE,
-            mensch = true,
-            schadensUpgrade = 0,
-            panzerungsUprade = 0
-        ).apply {
-            einheit(x = 900.0, y = 970.0, einheitenTyp = mBasis)
-        }
-
-        return Spiel(mensch, computer, rundenLimit = 1)
+    val mensch = Spieler(
+        kristalle = 10000000000000000000.0,
+        angriffspunkte = 20,
+        verteidiegungspunkte = 10,
+        minen = 0,
+        startpunkt = Punkt(x = 900.0, y = 905.0),
+        farbe = Color.BLUE,
+        mensch = true,
+        schadensUpgrade = 0,
+        panzerungsUprade = 0
+    ).apply {
+        einheit(x = 900.0, y = 970.0, einheitenTyp = mBasis)
     }
+
+    return Spiel(mensch, computer, rundenLimit = 1)
 }
