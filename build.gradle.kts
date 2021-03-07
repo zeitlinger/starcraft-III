@@ -40,6 +40,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization:$ktorVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinSerialization")
     implementation("io.ktor:ktor-client-cio:$ktorVersion")
+    implementation("io.ktor:ktor-client-serialization:$ktorVersion")
+
 
     testImplementation("io.ktor:ktor-server-tests:$ktorVersion")
 
