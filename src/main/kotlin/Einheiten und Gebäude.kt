@@ -96,6 +96,7 @@ data class EinheitenTyp(
 
 var einheitenNummer: MutableMap<SpielerTyp, Int> = mutableMapOf()
 
+@Serializable(with = EinheitSerializer::class)
 data class Einheit(
     val spieler: Spieler,
     val typ: EinheitenTyp,
@@ -136,6 +137,7 @@ data class Punkt(
 typealias DoubleObserver = (Double) -> Unit
 
 
+
 @Serializable
 sealed class EinheitenKommando(
     @Transient
@@ -150,9 +152,7 @@ sealed class EinheitenKommando(
     class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
 
     @Serializable
-    class Angriff(val zielNummer: Int) : EinheitenKommando() {
-        fun ziel(einheit: Einheit): Einheit = einheit.spieler.einheit(zielNummer)
-    }
+    class Angriff(val ziel: Einheit) : EinheitenKommando()
 
     @Serializable
     class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : EinheitenKommando()
@@ -433,7 +433,8 @@ val viper = EinheitenTyp(
 enum class SpielerTyp {
     mensch,
     computer,
-    gegnerMensch
+    client,
+    server
 }
 
 class Spieler(
@@ -459,8 +460,6 @@ class Spieler(
     var kristalle: Double by Delegates.observable(kristalle) { _, _, new ->
         this.kristallObservers.forEach { it(new) }
     }
-
-    val mensch: Boolean = spielerTyp == SpielerTyp.mensch
 
     fun addKristallObserver(o: DoubleObserver) {
         this.kristallObservers.add(o)

@@ -18,10 +18,32 @@ import io.ktor.serialization.json
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.modules.serializersModuleOf
 import java.util.concurrent.ConcurrentLinkedDeque
+
+
+@Serializable
+@SerialName("Einheit")
+private class EinheitSurrogate(val spieler: SpielerTyp, val nummer: Int) {}
+
+object EinheitSerializer : KSerializer<Einheit> {
+    private val serializer = EinheitSurrogate.serializer()
+    override val descriptor: SerialDescriptor = serializer.descriptor
+
+    override fun serialize(encoder: Encoder, value: Einheit) {
+        encoder.encodeSerializableValue(serializer, EinheitSurrogate(value.spieler.spielerTyp, value.nummer))
+    }
+
+    override fun deserialize(decoder: Decoder): Einheit =
+        decoder.decodeSerializableValue(serializer).let { spiel.spieler(it.spieler).einheit(it.nummer) }
+}
 
 @Serializable
 data class MultiplayerKommandos(val data: List<MultiplayerKommando>)

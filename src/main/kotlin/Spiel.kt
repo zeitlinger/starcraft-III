@@ -5,7 +5,7 @@
     "NonAsciiCharacters",
     "PropertyName",
     "EnumEntryName",
-    "SpellCheckingInspection"
+    "SpellCheckingInspection", "FunctionName", "LocalVariableName", "FunctionName",
 )
 
 import javafx.scene.text.Font
@@ -26,6 +26,8 @@ class Spiel(
     val multiplayer: Multiplayer,
     var einheitProduziert: (Einheit) -> Unit = {}
 ) {
+
+    fun spieler(typ: SpielerTyp): Spieler = if (typ == mensch.spielerTyp) mensch else gegner
 
     fun runde() {
         multiplayer.empfangeneKommandosVerarbeiten { kommando ->
@@ -65,8 +67,8 @@ class Spiel(
                 font = Font(200.0)
             })
         }
-        if (mensch.einheiten.none { it.typ == basis }) {
-            karte.children.add(Text("Niderlage").apply {
+        if (mensch.einheiten.none { it.typ.name == basis.name }) {
+            karte.children.add(Text("Niederlage").apply {
                 x = 300.0
                 y = 500.0
                 font = Font(200.0)
@@ -211,7 +213,7 @@ class Spiel(
     private fun zielauswaehlenSchießen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando is EinheitenKommando.Angriff) {
-            return kommando.ziel(einheit)
+            return kommando.ziel
         }
 
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
@@ -221,8 +223,7 @@ class Spiel(
         val l = gegner.einheiten.filter { `ist in Reichweite`(einheit, it) }.sortedBy { angriffspriorität(einheit, it) }
         if (l.isNotEmpty()) {
             val p = angriffspriorität(einheit, l.first())
-            val e = l.filter { angriffspriorität(einheit, it) == p }.minByOrNull { entfernung(einheit, it) }
-            return e
+            return l.filter { angriffspriorität(einheit, it) == p }.minByOrNull { entfernung(einheit, it) }
             //automatisch auf Einheiten in Reichweite mit der höchsten Angriffspriorität schiessen
         }
         return null
@@ -279,7 +280,7 @@ class Spiel(
     private fun zielauswaehlenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando is EinheitenKommando.Angriff) {
-            return kommando.ziel(einheit)
+            return kommando.ziel
         }
 
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
@@ -423,7 +424,7 @@ class Spiel(
 
             gegner.einheiten.forEach { gegnerEinheit ->
                 gegnerEinheit.kommandoQueue.toList().forEach {
-                    if (it is EinheitenKommando.Angriff && it.ziel(gegnerEinheit) == einheit) {
+                    if (it is EinheitenKommando.Angriff && it.ziel == einheit) {
                         kommandoEntfernen(gegnerEinheit, it)
                     }
                 }

@@ -118,6 +118,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
 
     override fun start(stage: Stage) {
+        stage.title = spiel.mensch.spielerTyp.name
+
         spiel.einheitProduziert = { einheitUiErstellen(it) }
 
         initSpieler(computer)
@@ -149,10 +151,10 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
 
         stage.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
-            if (ausgewaehlt.size == 1 && ausgewaehlt.iterator().next().typ == basis) {
+            if (ausgewaehlt.size == 1 && ausgewaehlt.iterator().next().typ.name == basis.name) {
                 kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
             } else {
-                if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ == basis }) {
+                if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ.name == basis.name }) {
                     auswahlHotkeys(scene, event.text, event.isShiftDown)
                 }
             }
@@ -444,7 +446,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun kommandoPosition(letztesKommando: EinheitenKommando?, einheit: Einheit) = when (letztesKommando) {
         null -> Punkt(einheit.x, einheit.y)
-        is EinheitenKommando.Angriff -> letztesKommando.ziel(einheit).punkt()
+        is EinheitenKommando.Angriff -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
         is EinheitenKommando.Bewegen -> letztesKommando.zielPunkt
         is EinheitenKommando.Attackmove -> letztesKommando.zielPunkt
         is EinheitenKommando.Patrolieren -> letztesKommando.punkt2
@@ -479,7 +481,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
         }
 
-        if (spieler.mensch) {
+        if (spieler == spiel.mensch) {
             imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == null }) {
                 `auswahl löschen`()
                 auswählen(einheit)
@@ -493,7 +495,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun `ziel auswählen`(einheit: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
-            val kommando = EinheitenKommando.Angriff(zielNummer = einheit.nummer)
+            val kommando = EinheitenKommando.Angriff(ziel = einheit)
             neuesKommando(einheit = it, kommando = kommando, schiftcommand = schiftcommand)
             zielpunktKreisUndLinieHinzufügen(kommando, einheit)
         }
@@ -544,7 +546,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando != null && kommando is EinheitenKommando.Angriff) {
-            val ziel = kommando.ziel(einheit)
+            val ziel = kommando.ziel
 
             kommando.zielpunktLinie?.apply {
                 endX = ziel.x
@@ -563,6 +565,17 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             val multiplayer = leseMultiplayerModus(args)
 
             val server = !multiplayer.multiplayer || multiplayer.server == null
+            val spielerTyp = when {
+                !multiplayer.multiplayer -> SpielerTyp.mensch
+                server -> SpielerTyp.server
+                else -> SpielerTyp.client
+            }
+            val gegnerTyp = when {
+                !multiplayer.multiplayer -> SpielerTyp.computer
+                server -> SpielerTyp.client
+                else -> SpielerTyp.server
+            }
+
             val gegner = Spieler(
                 kristalle = 0.0,
                 angriffspunkte = 20,
@@ -570,7 +583,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 minen = 0,
                 startpunkt = startPunkt(!server),
                 farbe = spielerFarbe(!server),
-                spielerTyp = if (multiplayer.multiplayer) SpielerTyp.gegnerMensch else SpielerTyp.computer,
+                spielerTyp = gegnerTyp,
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
@@ -584,7 +597,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 minen = 0,
                 startpunkt = startPunkt(server),
                 farbe = spielerFarbe(server),
-                spielerTyp = SpielerTyp.mensch,
+                spielerTyp = spielerTyp,
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
