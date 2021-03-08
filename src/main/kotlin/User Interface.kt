@@ -50,7 +50,7 @@ fun Node.mausTaste(
     consume: Boolean = true,
     aktion: (MouseEvent) -> Unit
 ) {
-    this.addEventFilter(type) { event ->
+    this.addEventHandler(type) { event ->
         if (event.button == button && filter()) {
             aktion(event)
             if (consume) {
@@ -93,9 +93,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     val computer = spiel.gegner
     val mensch = spiel.mensch
     val kaufbareEinheiten = mensch.einheitenTypen.values
-
-    var auswahlStart: Punkt? = null
-    var auswahlRechteck: Rectangle? = null
 
     lateinit var buttonLeiste: HBox
 
@@ -181,6 +178,9 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 }
             }
         }
+
+        var auswahlStart: Punkt? = null
+        var auswahlRechteck: Rectangle? = null
 
         karte.mausTaste(MouseButton.PRIMARY, consume = false) {
             val laufbefehl = Laufbefehl.values().singleOrNull { it.wählen == kommandoWählen }
@@ -480,14 +480,12 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     private fun einheitMouseHandler(spieler: Spieler, imageView: Node, einheit: Einheit) {
         imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Attackmove }) {
             `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
-            auswahlStart = null
         }
 
         if (spieler == spiel.mensch) {
             imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == null }) {
                 `auswahl löschen`()
                 auswählen(einheit)
-                auswahlStart = null
             }
         }
 
