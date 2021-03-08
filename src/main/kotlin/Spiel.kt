@@ -10,7 +10,11 @@
 
 import javafx.scene.text.Font
 import javafx.scene.text.Text
-import kotlin.math.*
+import kotlin.math.absoluteValue
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 
 class Spiel(
@@ -24,9 +28,16 @@ class Spiel(
 ) {
 
     fun runde() {
+        multiplayer.empfangeneKommandosVerarbeiten {
+            //todo
+//            when (it) {
+//                is NeueEinheit -> computer.neueEinheit(it.x,it.y, )
+//            }
+        }
+
         computer.kristalle += 1.0 + 0.2 * computer.minen
         mensch.kristalle += 1.0 + 0.2 * mensch.minen
-        produzieren(spieler = computer, einheitenTyp = cBerserker)
+        produzieren(spieler = computer, berserker)
         bewegeSpieler(computer, mensch)
         bewegeSpieler(mensch, computer)
 
@@ -36,14 +47,14 @@ class Spiel(
         computer.einheiten.toList().forEach { einheitEntfernen(it, computer, mensch) }
         mensch.einheiten.toList().forEach { einheitEntfernen(it, mensch, computer) }
 
-        if (computer.einheiten.none { it.typ == cBasis }) {
+        if (computer.einheiten.none { it.typ.name == basis.name }) {
             karte.children.add(Text("Sieg").apply {
                 x = 700.0
                 y = 500.0
                 font = Font(200.0)
             })
         }
-        if (mensch.einheiten.none { it.typ == mBasis }) {
+        if (mensch.einheiten.none { it.typ == basis }) {
             karte.children.add(Text("Niderlage").apply {
                 x = 300.0
                 y = 500.0
@@ -99,7 +110,8 @@ class Spiel(
         }
     }
 
-    fun produzieren(spieler: Spieler, einheitenTyp: EinheitenTyp) {
+    fun produzieren(spieler: Spieler, neutraleTyp: EinheitenTyp) {
+        val einheitenTyp = spieler.einheitenTypen.getValue(neutraleTyp.name)
         kaufen(einheitenTyp.kristalle, spieler) {
             neueEinheit(spieler, einheitenTyp)
         }
@@ -111,7 +123,7 @@ class Spiel(
             y = spieler.startpunkt.y,
             einheitenTyp = einheitenTyp
         )
-        multiplayer.neueEinheit(einheit.x, einheit.y, einheitenTyp)
+        multiplayer.neueEinheit(einheit.x, einheit.y, einheit)
         einheitProduziert(einheit)
     }
 
@@ -441,15 +453,17 @@ fun kaufen(kristalle: Int, spieler: Spieler, aktion: () -> Unit) {
     }
 }
 
-fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) =
-    Einheit(
+fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp): Einheit {
+    val spielerTyp = einheitenTypen.getValue(einheitenTyp.name)
+    return Einheit(
         spieler = this,
-        leben = einheitenTyp.leben,
+        leben = spielerTyp.leben,
         x = x,
         y = y,
-        panzerung = einheitenTyp.panzerung,
-        typ = einheitenTyp
+        panzerung = spielerTyp.panzerung,
+        typ = spielerTyp
     ).also { einheiten.add(it) }
+}
 
 fun kommandoEntfernen(einheit: Einheit, kommando: EinheitenKommando) {
     if (kommando.zielpunktkreis != null) {

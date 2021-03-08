@@ -25,18 +25,27 @@ import java.util.concurrent.ConcurrentLinkedDeque
 data class MultiplayerKommandos(val data: List<MultiplayerKommando>)
 
 @Serializable
-sealed class MultiplayerKommando() {
-}
+sealed class MultiplayerKommando {}
 
 @Serializable
-class NeueEinheit(val x: Double, val y: Double, val einheitenTyp: Int) : MultiplayerKommando()
+class NeueEinheit(val x: Double, val y: Double, val einheitenTyp: String, val nummer: Int) : MultiplayerKommando()
 
-class Multiplayer(val client: Client?, val server: Server?) {
+class Multiplayer(private val client: Client?, private val server: Server?) {
 
     val multiplayer: Boolean = client != null || server != null
 
-    fun neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) {
-        neuesKommando(NeueEinheit(x, y, 0))
+    fun empfangeneKommandosVerarbeiten(handler: (MultiplayerKommando) -> Unit) {
+        fun empfange(l: ConcurrentLinkedDeque<MultiplayerKommando>) {
+            val kommando = l.pollFirst() ?: return
+            handler(kommando)
+            empfange(l)
+        }
+        server?.empfangen?.let { empfange(it) }
+        client?.empfangen?.let { empfange(it) }
+    }
+
+    fun neueEinheit(x: Double, y: Double, einheit: Einheit) {
+        neuesKommando(NeueEinheit(x, y, einheit.typ.name, einheit.nummer))
     }
 
     private fun neuesKommando(kommando: MultiplayerKommando) {
@@ -111,7 +120,7 @@ class Client(
         }.start()
     }
 
-    suspend fun sende(kommandos: MultiplayerKommandos): MultiplayerKommandos {
+    private suspend fun sende(kommandos: MultiplayerKommandos): MultiplayerKommandos {
         val client = HttpClient(CIO) {
             install(JsonFeature) {
                 serializer = KotlinxSerializer()

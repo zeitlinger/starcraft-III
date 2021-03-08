@@ -91,6 +91,8 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
 class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     val computer = spiel.computer
     val mensch = spiel.mensch
+    val kaufbareEinheiten = mensch.einheitenTypen.values
+
     lateinit var buttonLeiste: HBox
 
     fun button(name: String, aktion: (Button) -> Unit): Button = Button(name).apply {
@@ -139,18 +141,18 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         kaufButton("Mine", 2000 + 400 * mensch.minen) {
             mensch.minen += 1
         }
-        kaufButton("Arbeiter", mArbeiter.kristalle) {
-            spiel.neueEinheit(mensch, mArbeiter)
+        kaufButton("Arbeiter", arbeiter.kristalle) {
+            spiel.neueEinheit(mensch, arbeiter)
         }
         prodoktionsgebäude.forEach { gebäude ->
             produktionsgebäude(gebäude)
         }
 
         stage.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
-            if (ausgewaehlt.size == 1 && ausgewaehlt.iterator().next().typ == mBasis) {
+            if (ausgewaehlt.size == 1 && ausgewaehlt.iterator().next().typ == basis) {
                 kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
             } else {
-                if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ == mBasis }) {
+                if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ == basis }) {
                     auswahlHotkeys(scene, event.text, event.isShiftDown)
                 }
             }
@@ -319,27 +321,27 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             }
         }
         einmalKaufen("Ansturm", 1500) {
-            mBerserker.laufweite = 1.0
-            mBerserker.springen = 150
+            berserker.laufweite = 1.0
+            berserker.springen = 150
         }
         einmalKaufen("Verbesserte Zielsysteme", 1500) {
-            mPanzer.reichweite = 500.0
+            panzer.reichweite = 500.0
         }
         einmalKaufen("Fusionsantrieb", 1500) {
-            mJäger.laufweite = 1.2
-            mKampfschiff.laufweite = 0.3
+            jäger.laufweite = 1.2
+            kampfschiff.laufweite = 0.3
         }
         einmalKaufen("Verstärkte Heilmittel", 1500) {
-            mSanitäter.schaden = 3.0
+            sanitäter.schaden = 3.0
             mensch.vertärkteHeilmittel = true
         }
         einmalKaufen("Strahlungsheilung", 1500) {
-            mSanitäter.reichweite = 140.01
+            sanitäter.reichweite = 140.01
             mensch.strahlungsheilung = true
         }
         einmalKaufen("Flammenwurf", 1500) {
-            mFlammenwerfer.flächenschaden = 40.0
-            mFlammenwerfer.schaden = 2.5
+            flammenwerfer.flächenschaden = 40.0
+            flammenwerfer.schaden = 2.5
         }
     }
 
@@ -577,11 +579,11 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
-                neueEinheit(x = 1050.0, y = 110.0, einheitenTyp = cSpäher)
-                neueEinheit(x = 750.0, y = 110.0, einheitenTyp = cSonde)
-                neueEinheit(x = 850.0, y = 110.0, einheitenTyp = cInfantrie)
-                neueEinheit(x = 900.0, y = 50.0, einheitenTyp = cBasis)
-                neueEinheit(x = 950.0, y = 110.0, einheitenTyp = cInfantrie)
+                neueEinheit(x = 1050.0, y = 110.0, einheitenTyp = späher)
+                neueEinheit(x = 750.0, y = 110.0, einheitenTyp = sonde)
+                neueEinheit(x = 850.0, y = 110.0, einheitenTyp = infantrie)
+                neueEinheit(x = 900.0, y = 50.0, einheitenTyp = basis)
+                neueEinheit(x = 950.0, y = 110.0, einheitenTyp = infantrie)
             }
 
             val mensch = Spieler(
@@ -595,11 +597,11 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
-                neueEinheit(x = 1050.0, y = 895.0, einheitenTyp = mSpäher)
-                neueEinheit(x = 750.0, y = 895.0, einheitenTyp = mArbeiter)
-                neueEinheit(x = 850.0, y = 895.0, einheitenTyp = mInfantrie)
-                neueEinheit(x = 900.0, y = 970.0, einheitenTyp = mBasis)
-                neueEinheit(x = 950.0, y = 895.0, einheitenTyp = mInfantrie)
+                neueEinheit(x = 1050.0, y = 895.0, einheitenTyp = späher)
+                neueEinheit(x = 750.0, y = 895.0, einheitenTyp = arbeiter)
+                neueEinheit(x = 850.0, y = 895.0, einheitenTyp = infantrie)
+                neueEinheit(x = 900.0, y = 970.0, einheitenTyp = basis)
+                neueEinheit(x = 950.0, y = 895.0, einheitenTyp = infantrie)
             }
 
             spiel = Spiel(mensch, computer, multiplayer = Multiplayer(client, server))

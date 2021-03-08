@@ -82,8 +82,17 @@ data class EinheitenTyp(
     var schusscooldown: Double = 1.0,
     val firstShotDeley: Double = 1.0,
     var machtZustand: MachtZustand? = null,
-    val zivileEinheit: Boolean = false
-)
+    val zivileEinheit: Boolean = false,
+    val spielerTyp: SpielerTyp = SpielerTyp.mensch
+) {
+    init {
+        if (spielerTyp == SpielerTyp.mensch) {
+            neutraleEinheitenTypen[name] = this
+        }
+    }
+}
+
+var einheitenNummer = 0
 
 data class Einheit(
     val spieler: Spieler,
@@ -106,7 +115,8 @@ data class Einheit(
     var vergiftet: Double = 0.0,
     var verlangsamt: Double = 0.0,
     var stim: Double = 0.0,
-    val kommandoQueue: MutableList<EinheitenKommando> = mutableListOf()
+    val kommandoQueue: MutableList<EinheitenKommando> = mutableListOf(),
+    val nummer: Int = einheitenNummer.also { einheitenNummer += 1 }
 ) {
     fun punkt() = Punkt(x = x, y = y)
     override fun toString(): String {
@@ -121,6 +131,282 @@ data class Punkt(
 
 
 typealias DoubleObserver = (Double) -> Unit
+
+
+sealed class EinheitenKommando(var zielpunktLinie: Line? = null, var zielpunktkreis: Arc? = null) {
+    class Bewegen(val zielPunkt: Punkt) : EinheitenKommando()
+    class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
+    class Angriff(val ziel: Einheit) : EinheitenKommando()
+    class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : EinheitenKommando()
+    class HoldPosition : EinheitenKommando()
+    class Stopp : EinheitenKommando()
+}
+
+val kommandoHotKeys = mapOf(
+    "s" to { EinheitenKommando.Stopp() },
+    "h" to { EinheitenKommando.HoldPosition() }
+)
+
+val neutraleEinheitenTypen: MutableMap<String, EinheitenTyp> = mutableMapOf()
+
+val infantrie = EinheitenTyp(
+    name = "Infantrie",
+    reichweite = 150.0,
+    leben = 1000.0,
+    schaden = 1.0,
+    laufweite = 0.5,
+    kristalle = 500,
+    kuerzel = "INF",
+    panzerung = 0.125,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = kaserne,
+    hotkey = "q",
+    typ = Typ.biologisch,
+    durchschlag = 0.0
+)
+val eliteInfantrie = EinheitenTyp(
+    name = "Elite-Infantrie",
+    reichweite = 250.0,
+    leben = 1200.0,
+    schaden = 1.8,
+    laufweite = 0.8,
+    kristalle = 1400,
+    kuerzel = "ELI",
+    panzerung = 0.1,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = kaserne,
+    techGebäude = akademie,
+    hotkey = "w",
+    typ = Typ.biologisch,
+    durchschlag = 0.0
+)
+val berserker = EinheitenTyp(
+    name = "Berserker",
+    reichweite = 40.01,
+    leben = 2000.0,
+    schaden = 4.0,
+    laufweite = 0.5,
+    kristalle = 1000,
+    kuerzel = "BER",
+    panzerung = 0.25,
+    kannAngreifen = KannAngreifen.boden,
+    gebäude = kaserne,
+    techGebäude = schmiede,
+    hotkey = "e",
+    typ = Typ.biologisch,
+    durchschlag = 0.0
+)
+val flammenwerfer = EinheitenTyp(
+    name = "Flammenwerfer",
+    reichweite = 100.0,
+    leben = 2600.0,
+    schaden = 2.0,
+    laufweite = 1.2,
+    kristalle = 2200,
+    kuerzel = "FLA",
+    panzerung = 0.3,
+    kannAngreifen = KannAngreifen.boden,
+    gebäude = fabrik,
+    hotkey = "r",
+    typ = Typ.mechanisch,
+    durchschlag = 0.0
+)
+val panzer = EinheitenTyp(
+    name = "Panzer",
+    reichweite = 350.0,
+    leben = 10000.0,
+    schaden = 5.0,
+    laufweite = 0.25,
+    kristalle = 2500,
+    kuerzel = "PAN",
+    panzerung = 0.4,
+    kannAngreifen = KannAngreifen.boden,
+    gebäude = fabrik,
+    techGebäude = reaktor,
+    hotkey = "t",
+    typ = Typ.mechanisch,
+    flächenschaden = 25.0,
+    durchschlag = 0.0
+)
+val basis = EinheitenTyp(
+    name = "Basis",
+    reichweite = 0.0,
+    leben = 30000.0,
+    schaden = 0.0,
+    laufweite = 0.0,
+    kristalle = 0,
+    kuerzel = "BAS",
+    panzerung = 0.45,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = null,
+    hotkey = null,
+    typ = Typ.struktur,
+    durchschlag = 0.0
+)
+val jäger = EinheitenTyp(
+    name = "Jäger",
+    reichweite = 120.0,
+    leben = 800.0,
+    schaden = 3.0,
+    laufweite = 0.8,
+    kristalle = 1800,
+    kuerzel = "JÄG",
+    panzerung = 0.14,
+    kannAngreifen = KannAngreifen.alles,
+    luftBoden = LuftBoden.luft,
+    gebäude = raumhafen,
+    hotkey = "a",
+    typ = Typ.mechanisch,
+    durchschlag = 0.0
+)
+val sanitäter = EinheitenTyp(
+    name = "Sanitäter",
+    reichweite = 40.01,
+    leben = 800.0,
+    schaden = 2.0,
+    laufweite = 0.7,
+    kristalle = 1100,
+    kuerzel = "SAN",
+    panzerung = 0.0,
+    kannAngreifen = KannAngreifen.heilen,
+    gebäude = kaserne,
+    techGebäude = akademie,
+    hotkey = "s",
+    typ = Typ.biologisch,
+    zivileEinheit = true,
+    durchschlag = 0.0
+)
+val kampfschiff = EinheitenTyp(
+    name = "Kampfschiff",
+    reichweite = 250.0,
+    leben = 20000.0,
+    schaden = 9.0,
+    laufweite = 0.2,
+    kristalle = 3500,
+    kuerzel = "KSF",
+    panzerung = 0.5,
+    kannAngreifen = KannAngreifen.alles,
+    luftBoden = LuftBoden.luft,
+    gebäude = raumhafen,
+    techGebäude = fusionskern,
+    hotkey = "d",
+    typ = Typ.mechanisch,
+    durchschlag = 0.0
+)
+val arbeiter = EinheitenTyp(
+    name = "Arbeiter",
+    reichweite = 0.0,
+    leben = 800.0,
+    schaden = 0.0,
+    laufweite = 0.7,
+    kristalle = 1000,
+    kuerzel = "ARB",
+    panzerung = 0.0,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = null,
+    hotkey = "f",
+    typ = Typ.biologisch,
+    zivileEinheit = true,
+    durchschlag = 0.0
+)
+val späher = EinheitenTyp(
+    name = "Späher",
+    reichweite = 0.0,
+    leben = 800.0,
+    schaden = 0.0,
+    laufweite = 0.7,
+    kristalle = 200,
+    kuerzel = "SPÄ",
+    panzerung = 0.0,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = kaserne,
+    hotkey = "g",
+    typ = Typ.biologisch,
+    durchschlag = 0.0
+)
+val sonde = EinheitenTyp(
+    name = "Sonde",
+    reichweite = 0.0,
+    leben = 800.0,
+    schaden = 0.0,
+    laufweite = 0.7,
+    kristalle = 1000,
+    kuerzel = "SON",
+    panzerung = 0.0,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = null,
+    hotkey = "y",
+    typ = Typ.mechanisch,
+    zivileEinheit = true,
+    durchschlag = 0.0
+)
+val wissenschaftler = EinheitenTyp(
+    name = "Wissenschaftler",
+    reichweite = 0.0,
+    leben = 800.0,
+    schaden = 0.0,
+    laufweite = 0.7,
+    kristalle = 2000,
+    kuerzel = "WIS",
+    panzerung = 0.0,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = null,
+    hotkey = "x",
+    typ = Typ.biologisch,
+    zivileEinheit = true,
+    durchschlag = 0.0
+)
+val kreuzschiff = EinheitenTyp(
+    name = "Kreuzschiff",
+    reichweite = 300.0,
+    leben = 10000.0,
+    schaden = 4.0,
+    laufweite = 0.5,
+    kristalle = 3000,
+    kuerzel = "KSF",
+    panzerung = 0.3,
+    kannAngreifen = KannAngreifen.boden,
+    gebäude = null,
+    hotkey = "c",
+    typ = Typ.mechanisch,
+    luftBoden = LuftBoden.wasser,
+    durchschlag = 0.0
+)
+val forschungsschiff = EinheitenTyp(
+    name = "Forschungsschiff",
+    reichweite = 0.0,
+    leben = 1000.0,
+    schaden = 0.0,
+    laufweite = 0.9,
+    kristalle = 2500,
+    kuerzel = "FSF",
+    panzerung = 0.0,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = null,
+    hotkey = "v",
+    typ = Typ.mechanisch,
+    luftBoden = LuftBoden.wasser,
+    zivileEinheit = true,
+    durchschlag = 0.0
+)
+val viper = EinheitenTyp(
+    name = "Viper",
+    reichweite = 120.0,
+    leben = 1500.0,
+    schaden = 1.5,
+    laufweite = 1.0,
+    kristalle = 1500,
+    kuerzel = "VIP",
+    panzerung = 0.2,
+    kannAngreifen = KannAngreifen.boden,
+    gebäude = brutstätte,
+    techGebäude = vipernbau,
+    hotkey = "b",
+    typ = Typ.mechanisch,
+    luftBoden = LuftBoden.boden,
+    machtZustand = MachtZustand.vergiftung,
+    durchschlag = 0.0
+)
 
 enum class SpielerTyp {
     mensch,
@@ -143,7 +429,10 @@ class Spieler(
     var schadensUpgrade: Int,
     var panzerungsUprade: Int,
     var vertärkteHeilmittel: Boolean = false,
-    var strahlungsheilung: Boolean = false
+    var strahlungsheilung: Boolean = false,
+    val einheitenTypen: Map<String, EinheitenTyp> =
+        neutraleEinheitenTypen.values.map { it.copy(spielerTyp = spielerTyp) }.associateBy { it.name }
+
 ) {
     var kristalle: Double by Delegates.observable(kristalle) { _, _, new ->
         this.kristallObservers.forEach { it(new) }
@@ -161,311 +450,3 @@ class Spieler(
     }
 }
 
-
-sealed class EinheitenKommando(var zielpunktLinie: Line? = null, var zielpunktkreis: Arc? = null) {
-    class Bewegen(val zielPunkt: Punkt) : EinheitenKommando()
-    class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
-    class Angriff(val ziel: Einheit) : EinheitenKommando()
-    class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : EinheitenKommando()
-    class HoldPosition : EinheitenKommando()
-    class Stopp: EinheitenKommando()
-}
-
-val kommandoHotKeys = mapOf(
-    "s" to { EinheitenKommando.Stopp() },
-    "h" to { EinheitenKommando.HoldPosition() }
-)
-
-val mInfantrie = EinheitenTyp(
-    name = "Infantrie",
-    reichweite = 150.0,
-    leben = 1000.0,
-    schaden = 1.0,
-    laufweite = 0.5,
-    kristalle = 500,
-    kuerzel = "INF",
-    panzerung = 0.125,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = kaserne,
-    hotkey = "q",
-    typ = Typ.biologisch,
-    durchschlag = 0.0
-)
-val mEliteinfantrie = EinheitenTyp(
-    name = "Elite-Infantrie",
-    reichweite = 250.0,
-    leben = 1200.0,
-    schaden = 1.8,
-    laufweite = 0.8,
-    kristalle = 1400,
-    kuerzel = "ELI",
-    panzerung = 0.1,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = kaserne,
-    techGebäude = akademie,
-    hotkey = "w",
-    typ = Typ.biologisch,
-    durchschlag = 0.0
-)
-val mBerserker = EinheitenTyp(
-    name = "Berserker",
-    reichweite = 40.01,
-    leben = 2000.0,
-    schaden = 4.0,
-    laufweite = 0.5,
-    kristalle = 1000,
-    kuerzel = "BER",
-    panzerung = 0.25,
-    kannAngreifen = KannAngreifen.boden,
-    gebäude = kaserne,
-    techGebäude = schmiede,
-    hotkey = "e",
-    typ = Typ.biologisch,
-    durchschlag = 0.0
-)
-val mFlammenwerfer = EinheitenTyp(
-    name = "Flammenwerfer",
-    reichweite = 100.0,
-    leben = 2600.0,
-    schaden = 2.0,
-    laufweite = 1.2,
-    kristalle = 2200,
-    kuerzel = "FLA",
-    panzerung = 0.3,
-    kannAngreifen = KannAngreifen.boden,
-    gebäude = fabrik,
-    hotkey = "r",
-    typ = Typ.mechanisch,
-    durchschlag = 0.0
-)
-val mPanzer = EinheitenTyp(
-    name = "Panzer",
-    reichweite = 350.0,
-    leben = 10000.0,
-    schaden = 5.0,
-    laufweite = 0.25,
-    kristalle = 2500,
-    kuerzel = "PAN",
-    panzerung = 0.4,
-    kannAngreifen = KannAngreifen.boden,
-    gebäude = fabrik,
-    techGebäude = reaktor,
-    hotkey = "t",
-    typ = Typ.mechanisch,
-    flächenschaden = 25.0,
-    durchschlag = 0.0
-)
-val mBasis = EinheitenTyp(
-    name = "Basis",
-    reichweite = 0.0,
-    leben = 30000.0,
-    schaden = 0.0,
-    laufweite = 0.0,
-    kristalle = 0,
-    kuerzel = "BAS",
-    panzerung = 0.45,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
-    hotkey = null,
-    typ = Typ.struktur,
-    durchschlag = 0.0
-)
-val mJäger = EinheitenTyp(
-    name = "Jäger",
-    reichweite = 120.0,
-    leben = 800.0,
-    schaden = 3.0,
-    laufweite = 0.8,
-    kristalle = 1800,
-    kuerzel = "JÄG",
-    panzerung = 0.14,
-    kannAngreifen = KannAngreifen.alles,
-    luftBoden = LuftBoden.luft,
-    gebäude = raumhafen,
-    hotkey = "a",
-    typ = Typ.mechanisch,
-    durchschlag = 0.0
-)
-val mSanitäter = EinheitenTyp(
-    name = "Sanitäter",
-    reichweite = 40.01,
-    leben = 800.0,
-    schaden = 2.0,
-    laufweite = 0.7,
-    kristalle = 1100,
-    kuerzel = "SAN",
-    panzerung = 0.0,
-    kannAngreifen = KannAngreifen.heilen,
-    gebäude = kaserne,
-    techGebäude = akademie,
-    hotkey = "s",
-    typ = Typ.biologisch,
-    zivileEinheit = true,
-    durchschlag = 0.0
-)
-val mKampfschiff = EinheitenTyp(
-    name = "Kampfschiff",
-    reichweite = 250.0,
-    leben = 20000.0,
-    schaden = 9.0,
-    laufweite = 0.2,
-    kristalle = 3500,
-    kuerzel = "KSF",
-    panzerung = 0.5,
-    kannAngreifen = KannAngreifen.alles,
-    luftBoden = LuftBoden.luft,
-    gebäude = raumhafen,
-    techGebäude = fusionskern,
-    hotkey = "d",
-    typ = Typ.mechanisch,
-    durchschlag = 0.0
-)
-val mArbeiter = EinheitenTyp(
-    name = "Arbeiter",
-    reichweite = 0.0,
-    leben = 800.0,
-    schaden = 0.0,
-    laufweite = 0.7,
-    kristalle = 1000,
-    kuerzel = "ARB",
-    panzerung = 0.0,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
-    hotkey = "f",
-    typ = Typ.biologisch,
-    zivileEinheit = true,
-    durchschlag = 0.0
-)
-val mSpäher = EinheitenTyp(
-    name = "Späher",
-    reichweite = 0.0,
-    leben = 800.0,
-    schaden = 0.0,
-    laufweite = 0.7,
-    kristalle = 200,
-    kuerzel = "SPÄ",
-    panzerung = 0.0,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = kaserne,
-    hotkey = "g",
-    typ = Typ.biologisch,
-    durchschlag = 0.0
-)
-val mSonde = EinheitenTyp(
-    name = "Sonde",
-    reichweite = 0.0,
-    leben = 800.0,
-    schaden = 0.0,
-    laufweite = 0.7,
-    kristalle = 1000,
-    kuerzel = "SON",
-    panzerung = 0.0,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
-    hotkey = "y",
-    typ = Typ.mechanisch,
-    zivileEinheit = true,
-    durchschlag = 0.0
-)
-val mWissenschaftler = EinheitenTyp(
-    name = "Wissenschaftler",
-    reichweite = 0.0,
-    leben = 800.0,
-    schaden = 0.0,
-    laufweite = 0.7,
-    kristalle = 2000,
-    kuerzel = "WIS",
-    panzerung = 0.0,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
-    hotkey = "x",
-    typ = Typ.biologisch,
-    zivileEinheit = true,
-    durchschlag = 0.0
-)
-val mKreuzschiff = EinheitenTyp(
-    name = "Kreuzschiff",
-    reichweite = 300.0,
-    leben = 10000.0,
-    schaden = 4.0,
-    laufweite = 0.5,
-    kristalle = 3000,
-    kuerzel = "KSF",
-    panzerung = 0.3,
-    kannAngreifen = KannAngreifen.boden,
-    gebäude = null,
-    hotkey = "c",
-    typ = Typ.mechanisch,
-    luftBoden = LuftBoden.wasser,
-    durchschlag = 0.0
-)
-val mForschungsschiff = EinheitenTyp(
-    name = "Forschungsschiff",
-    reichweite = 0.0,
-    leben = 1000.0,
-    schaden = 0.0,
-    laufweite = 0.9,
-    kristalle = 2500,
-    kuerzel = "FSF",
-    panzerung = 0.0,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
-    hotkey = "v",
-    typ = Typ.mechanisch,
-    luftBoden = LuftBoden.wasser,
-    zivileEinheit = true,
-    durchschlag = 0.0
-)
-val mViper = EinheitenTyp(
-    name = "Viper",
-    reichweite = 120.0,
-    leben = 1500.0,
-    schaden = 1.5,
-    laufweite = 1.0,
-    kristalle = 1500,
-    kuerzel = "VIP",
-    panzerung = 0.2,
-    kannAngreifen = KannAngreifen.boden,
-    gebäude = brutstätte,
-    techGebäude = vipernbau,
-    hotkey = "b",
-    typ = Typ.mechanisch,
-    luftBoden = LuftBoden.boden,
-    machtZustand = MachtZustand.vergiftung,
-    durchschlag = 0.0
-)
-
-val cInfantrie = mInfantrie.copy()
-val cEliteinfantrie = mEliteinfantrie.copy()
-val cBerserker = mBerserker.copy()
-val cFlammenwerfer = mFlammenwerfer.copy()
-val cPanzer = mPanzer.copy()
-val cBasis = mBasis.copy()
-val cJäger = mJäger.copy()
-val cSanitäter = mSanitäter.copy()
-val cKampfschiff = mKampfschiff.copy()
-val cArbeiter = mArbeiter.copy()
-val cSpäher = mSpäher.copy()
-val cSonde = mSonde.copy()
-val cWissenschaftler = mWissenschaftler.copy()
-val cKreuzschiff = mKreuzschiff.copy()
-val cForschungsschiff = mForschungsschiff.copy()
-val cViper = mViper.copy()
-
-val kaufbareEinheiten = listOf(
-    mInfantrie,
-    mEliteinfantrie,
-    mBerserker,
-    mPanzer,
-    mJäger,
-    mSanitäter,
-    mKampfschiff,
-    mFlammenwerfer,
-    mArbeiter,
-    mSpäher,
-    mViper,
-    mSonde,
-    mWissenschaftler,
-    mKreuzschiff,
-    mForschungsschiff
-)
