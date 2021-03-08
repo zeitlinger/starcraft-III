@@ -21,7 +21,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].leben shouldBe 12.0
+        spiel.mensch.einheiten[1].leben shouldBe 22.0
         spiel.mensch.einheiten[1].verlangsamt shouldBe 0.0
     }
 
@@ -53,7 +53,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].leben shouldBe 12.0
+        spiel.mensch.einheiten[1].leben shouldBe 22.0
     }
 
     "nur ein Heiler geht zum Ziel" {
@@ -118,8 +118,8 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].leben shouldBe 999.125
-        spiel.gegner.einheiten[1].leben shouldBe 999.125
+        spiel.mensch.einheiten[1].leben shouldBe 93.125
+        spiel.gegner.einheiten[1].leben shouldBe 93.125
     }
 
     "Heilungsmodifikator" {
@@ -134,8 +134,8 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].leben shouldBe 999.125
-        spiel.gegner.einheiten[1].leben shouldBe 999.3875
+        spiel.mensch.einheiten[1].leben shouldBe 93.125
+        spiel.gegner.einheiten[1].leben shouldBe 95.1875
     }
 
     "vergiftung" {
@@ -145,7 +145,7 @@ class SpielTest : FreeSpec({
         }
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].leben shouldBe 995.0
+        spiel.mensch.einheiten[1].leben shouldBe 95.0
     }
 
     "verlangsamerung" {
@@ -172,7 +172,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 1000.0
+        spiel.gegner.einheiten[1].leben shouldBe 100.0
     }
 
     "Schusscooldown" {
@@ -188,15 +188,15 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 999.125
+        spiel.gegner.einheiten[1].leben shouldBe 93.125
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 999.125
+        spiel.gegner.einheiten[1].leben shouldBe 93.125
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 998.25
+        spiel.gegner.einheiten[1].leben shouldBe 86.25
     }
 
     "Flächenschaden" {
@@ -211,8 +211,8 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 995.125
-        spiel.gegner.einheiten[2].leben shouldBe 995.125
+        spiel.gegner.einheiten[1].leben shouldBe 70.125
+        spiel.gegner.einheiten[2].leben shouldBe 70.125
     }
 
     "schadensupgrade" {
@@ -227,7 +227,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 999.025
+        spiel.gegner.einheiten[1].leben shouldBe 93.025
     }
 
     "panzerugsupgrade" {
@@ -242,7 +242,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 999.225
+        spiel.gegner.einheiten[1].leben shouldBe 93.225
     }
 
     "einheit stirbt" {
@@ -330,7 +330,7 @@ class SpielTest : FreeSpec({
         spielen(spiel)
 
         spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x = 0.0, y = 0.0)
-        spiel.gegner.einheiten[1].leben shouldBe 999.125
+        spiel.gegner.einheiten[1].leben shouldBe 93.125
     }
 
     "computer greift nächste einheit an" {
@@ -357,10 +357,10 @@ class SpielTest : FreeSpec({
         )
 
         forAll(
-            TestFall(start = 140.0, ziel = 40.0, leben = 988.0, `alter cooldown` = 0.0, `neuer cooldown` = 9.985),
-            TestFall(start = 141.0, ziel = 140.5, leben = 1000.0, `alter cooldown` = 0.0, `neuer cooldown` = 0.0),
-            TestFall(start = 139.0, ziel = 40.0, leben = 988.0, `alter cooldown` = 0.0, `neuer cooldown` = 9.985),
-            TestFall(start = 140.0, ziel = 139.5, leben = 1000.0, `alter cooldown` = 34.0, `neuer cooldown` = 33.985)
+            TestFall(start = 140.0, ziel = 40.0, leben = 25.0, `alter cooldown` = 0.0, `neuer cooldown` = 9.985),
+            TestFall(start = 141.0, ziel = 140.5, leben = 100.0, `alter cooldown` = 0.0, `neuer cooldown` = 0.0),
+            TestFall(start = 139.0, ziel = 40.0, leben = 25.0, `alter cooldown` = 0.0, `neuer cooldown` = 9.985),
+            TestFall(start = 140.0, ziel = 139.5, leben = 100.0, `alter cooldown` = 34.0, `neuer cooldown` = 33.985)
         ) { testFall ->
             val spiel = neuesSpiel()
 
@@ -397,7 +397,7 @@ class SpielTest : FreeSpec({
         }
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 1000.0
+        spiel.gegner.einheiten[1].leben shouldBe 100.0
         spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x = 0.0, y = 500.5)
     }
 
@@ -470,7 +470,7 @@ class SpielTest : FreeSpec({
         }
         spielen(spiel)
 
-        spiel.gegner.einheiten[2].leben shouldBe 999.125
+        spiel.gegner.einheiten[2].leben shouldBe 93.125
     }
 
     "höchste Priorität die in reichweite ist angreifen" {
@@ -491,10 +491,10 @@ class SpielTest : FreeSpec({
         }
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 800
-        spiel.gegner.einheiten[2].leben shouldBe 1997.25
-        spiel.gegner.einheiten[3].leben shouldBe 2000
-        spiel.gegner.einheiten[4].leben shouldBe 1000
+        spiel.gegner.einheiten[1].leben shouldBe 80
+        spiel.gegner.einheiten[2].leben shouldBe 180.25
+        spiel.gegner.einheiten[3].leben shouldBe 200
+        spiel.gegner.einheiten[4].leben shouldBe 100
     }
 
     "zu Einheit mit höchste Priorität laufen" {
@@ -527,7 +527,7 @@ class SpielTest : FreeSpec({
         }
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].leben shouldBe 800.0
+        spiel.mensch.einheiten[1].leben shouldBe 80.0
     }
 
 })

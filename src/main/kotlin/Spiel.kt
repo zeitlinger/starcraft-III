@@ -511,6 +511,7 @@ fun smaller(a: Double, b: Double): Double {
 //Wenn man Attackmove macht und dann auf eine Einheit klickt, soll die Einheit als Ziel ausgewählt werden
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
 //patrollieren
+//Chat
 //Kriegsnebel
 //Sichtweite für Einheiten
 //Minnimap
