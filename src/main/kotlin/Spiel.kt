@@ -41,7 +41,7 @@ class Spiel(
         gegner.kristalle += 1.0 + 0.2 * gegner.minen
         mensch.kristalle += 1.0 + 0.2 * mensch.minen
         if (gegner.spielerTyp == SpielerTyp.computer) {
-            produzieren(spieler = gegner, berserker)
+            produzieren(spieler = gegner, einheitenProduzierenKI())
         }
         bewegeSpieler(gegner, mensch)
         bewegeSpieler(mensch, gegner)

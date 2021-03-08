@@ -5,3 +5,7 @@ fun zielAuswählenKI(gegner: Spieler, einheit: Einheit): Einheit? {
 
     return nächsteEinheit
 }
+
+fun einheitenProduzierenKI(): EinheitenTyp {
+    return infantrie
+}

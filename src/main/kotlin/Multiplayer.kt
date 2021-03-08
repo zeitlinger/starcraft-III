@@ -32,7 +32,7 @@ sealed class MultiplayerKommando()
 @Serializable
 class NeueEinheit(val x: Double, val y: Double, val einheitenTyp: String, val nummer: Int) : MultiplayerKommando()
 
-class Multiplayer(private val client: Client?, private val server: Server?) {
+class Multiplayer(private val client: Client?, val server: Server?) {
 
     val multiplayer: Boolean = client != null || server != null
 
@@ -64,8 +64,6 @@ suspend fun sendenUndEmpfangen(
     val kopie = sendeKommands.toList()
     val empfangen = senden(MultiplayerKommandos(kopie))
 
-    println("gesendet: $kopie empfangen: $empfangen")
-
     sendeKommands.removeAll(kopie)
     empfangenKommands.addAll(empfangen.data)
 }
@@ -84,7 +82,6 @@ class Server(
     }
 
     private fun server() {
-        println("server gestartet")
         val server = embeddedServer(Netty, port = 8080) {
             install(ContentNegotiation) {
                 json(Json {

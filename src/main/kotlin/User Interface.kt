@@ -561,45 +561,53 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         fun main(args: Array<String>) {
             val multiplayer = leseMultiplayerModus(args)
 
+            val server = !multiplayer.multiplayer || multiplayer.server == null
             val gegner = Spieler(
                 kristalle = 0.0,
                 angriffspunkte = 20,
                 verteidiegungspunkte = 10,
                 minen = 0,
-                startpunkt = Punkt(x = 900.0, y = 115.0),
-                farbe = Color.RED,
+                startpunkt = startPunkt(!server),
+                farbe = spielerFarbe(!server),
                 spielerTyp = if (multiplayer.multiplayer) SpielerTyp.gegnerMensch else SpielerTyp.computer,
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
-                neueEinheit(x = 1050.0, y = 110.0, einheitenTyp = späher)
-                neueEinheit(x = 750.0, y = 110.0, einheitenTyp = sonde)
-                neueEinheit(x = 850.0, y = 110.0, einheitenTyp = infantrie)
-                neueEinheit(x = 900.0, y = 50.0, einheitenTyp = basis)
-                neueEinheit(x = 950.0, y = 110.0, einheitenTyp = infantrie)
+                startEinheiten(!server)
             }
 
             val mensch = Spieler(
-                kristalle = 100.0,
+                kristalle = 0.0,
                 angriffspunkte = 20,
                 verteidiegungspunkte = 10,
                 minen = 0,
-                startpunkt = Punkt(x = 900.0, y = 905.0),
-                farbe = Color.BLUE,
+                startpunkt = startPunkt(server),
+                farbe = spielerFarbe(server),
                 spielerTyp = SpielerTyp.mensch,
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
-                neueEinheit(x = 1050.0, y = 895.0, einheitenTyp = späher)
-                neueEinheit(x = 750.0, y = 895.0, einheitenTyp = arbeiter)
-                neueEinheit(x = 850.0, y = 895.0, einheitenTyp = infantrie)
-                neueEinheit(x = 900.0, y = 970.0, einheitenTyp = basis)
-                neueEinheit(x = 950.0, y = 895.0, einheitenTyp = infantrie)
+                startEinheiten(server)
             }
 
             spiel = Spiel(mensch, gegner, multiplayer = multiplayer)
 
             launch(App::class.java)
+        }
+
+        private fun spielerFarbe(server: Boolean) = if (server) Color.RED else Color.BLUE
+
+        private fun startPunkt(server: Boolean) =
+            if (server) Punkt(x = 900.0, y = 115.0) else Punkt(x = 900.0, y = 905.0)
+
+        private fun Spieler.startEinheiten(server: Boolean) {
+            val vorzeichen = if (server) -1 else 1
+
+            neueEinheit(x = 1050.0, y = startpunkt.y, einheitenTyp = späher)
+            neueEinheit(x = 750.0, y = startpunkt.y, einheitenTyp = arbeiter)
+            neueEinheit(x = 850.0, y = startpunkt.y, einheitenTyp = infantrie)
+            neueEinheit(x = 900.0, y = startpunkt.y + 60 * vorzeichen, einheitenTyp = basis)
+            neueEinheit(x = 950.0, y = startpunkt.y, einheitenTyp = infantrie)
         }
 
 
