@@ -6,6 +6,8 @@ import javafx.scene.shape.Arc
 import javafx.scene.shape.Circle
 import javafx.scene.shape.Line
 import javafx.scene.text.Text
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import kotlin.properties.Delegates
 
 data class Gebäude(
@@ -92,7 +94,7 @@ data class EinheitenTyp(
     }
 }
 
-var einheitenNummer = 0
+var einheitenNummer: MutableMap<SpielerTyp, Int> = mutableMapOf()
 
 data class Einheit(
     val spieler: Spieler,
@@ -124,6 +126,7 @@ data class Einheit(
     }
 }
 
+@Serializable
 data class Punkt(
     var x: Double,
     var y: Double
@@ -133,12 +136,31 @@ data class Punkt(
 typealias DoubleObserver = (Double) -> Unit
 
 
-sealed class EinheitenKommando(var zielpunktLinie: Line? = null, var zielpunktkreis: Arc? = null) {
+@Serializable
+sealed class EinheitenKommando(
+    @Transient
+    var zielpunktLinie: Line? = null,
+    @Transient
+    var zielpunktkreis: Arc? = null
+) {
+    @Serializable
     class Bewegen(val zielPunkt: Punkt) : EinheitenKommando()
+
+    @Serializable
     class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
-    class Angriff(val ziel: Einheit) : EinheitenKommando()
+
+    @Serializable
+    class Angriff(val zielNummer: Int) : EinheitenKommando() {
+        fun ziel(einheit: Einheit): Einheit = einheit.spieler.einheit(zielNummer)
+    }
+
+    @Serializable
     class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : EinheitenKommando()
+
+    @Serializable
     class HoldPosition : EinheitenKommando()
+
+    @Serializable
     class Stopp : EinheitenKommando()
 }
 
@@ -443,6 +465,10 @@ class Spieler(
     fun addKristallObserver(o: DoubleObserver) {
         this.kristallObservers.add(o)
         o(kristalle)
+    }
+
+    fun einheit(nummer: Int): Einheit {
+        return einheiten.single { it.nummer == nummer }
     }
 
     override fun toString(): String {

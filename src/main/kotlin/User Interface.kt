@@ -404,6 +404,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             }
         }
         einheit.kommandoQueue.add(kommando)
+        spiel.multiplayer.neueKommandos(einheit)
     }
 
     private fun zielpunktKreisUndLinieHinzufügen(kommando: EinheitenKommando, einheit: Einheit) {
@@ -443,7 +444,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun kommandoPosition(letztesKommando: EinheitenKommando?, einheit: Einheit) = when (letztesKommando) {
         null -> Punkt(einheit.x, einheit.y)
-        is EinheitenKommando.Angriff -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
+        is EinheitenKommando.Angriff -> letztesKommando.ziel(einheit).punkt()
         is EinheitenKommando.Bewegen -> letztesKommando.zielPunkt
         is EinheitenKommando.Attackmove -> letztesKommando.zielPunkt
         is EinheitenKommando.Patrolieren -> letztesKommando.punkt2
@@ -492,7 +493,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun `ziel auswählen`(einheit: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
-            val kommando = EinheitenKommando.Angriff(ziel = einheit)
+            val kommando = EinheitenKommando.Angriff(zielNummer = einheit.nummer)
             neuesKommando(einheit = it, kommando = kommando, schiftcommand = schiftcommand)
             zielpunktKreisUndLinieHinzufügen(kommando, einheit)
         }
@@ -543,7 +544,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando != null && kommando is EinheitenKommando.Angriff) {
-            val ziel = kommando.ziel
+            val ziel = kommando.ziel(einheit)
 
             kommando.zielpunktLinie?.apply {
                 endX = ziel.x

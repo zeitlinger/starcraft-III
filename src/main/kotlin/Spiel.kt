@@ -30,11 +30,17 @@ class Spiel(
     fun runde() {
         multiplayer.empfangeneKommandosVerarbeiten { kommando ->
             when (kommando) {
-                is NeueEinheit -> gegner.neueEinheit(
-                    kommando.x,
-                    kommando.y,
-                    neutraleEinheitenTypen.getValue(kommando.einheitenTyp)
-                ).also { einheitProduziert(it) }
+                is NeueEinheit ->
+                    gegner.neueEinheit(
+                        kommando.x,
+                        kommando.y,
+                        neutraleEinheitenTypen.getValue(kommando.einheitenTyp)
+                    ).also { einheitProduziert(it) }
+                is NeueKommandos ->
+                    gegner.einheit(kommando.nummer).kommandoQueue.apply {
+                        clear()
+                        addAll(kommando.kommandos)
+                    }
             }
         }
 
@@ -186,8 +192,7 @@ class Spiel(
         } else {
             1
         }
-        val laufweite = einheit.typ.laufweite / verlangsamerung
-        return laufweite
+        return einheit.typ.laufweite / verlangsamerung
     }
 
     private fun bewege(einheit: Einheit, zielPunkt: Punkt, laufweite: Double) {
@@ -206,7 +211,7 @@ class Spiel(
     private fun zielauswaehlenSchießen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando is EinheitenKommando.Angriff) {
-            return kommando.ziel
+            return kommando.ziel(einheit)
         }
 
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
@@ -274,7 +279,7 @@ class Spiel(
     private fun zielauswaehlenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando is EinheitenKommando.Angriff) {
-            return kommando.ziel
+            return kommando.ziel(einheit)
         }
 
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
@@ -418,7 +423,7 @@ class Spiel(
 
             gegner.einheiten.forEach { gegnerEinheit ->
                 gegnerEinheit.kommandoQueue.toList().forEach {
-                    if (it is EinheitenKommando.Angriff && it.ziel == einheit) {
+                    if (it is EinheitenKommando.Angriff && it.ziel(gegnerEinheit) == einheit) {
                         kommandoEntfernen(gegnerEinheit, it)
                     }
                 }
@@ -471,7 +476,8 @@ fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer
         y = y,
         panzerung = spielerTyp.panzerung,
         typ = spielerTyp,
-        nummer = nummer ?: einheitenNummer.also { einheitenNummer += 1 }
+        nummer = nummer ?: einheitenNummer.getOrDefault(this.spielerTyp, 0)
+            .also { einheitenNummer[this.spielerTyp] = it + 1 }
     ).also { einheiten.add(it) }
 }
 

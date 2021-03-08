@@ -32,6 +32,9 @@ sealed class MultiplayerKommando()
 @Serializable
 class NeueEinheit(val x: Double, val y: Double, val einheitenTyp: String, val nummer: Int) : MultiplayerKommando()
 
+@Serializable
+class NeueKommandos(val nummer: Int, val kommandos: List<EinheitenKommando>) : MultiplayerKommando()
+
 class Multiplayer(private val client: Client?, val server: Server?) {
 
     val multiplayer: Boolean = client != null || server != null
@@ -48,6 +51,10 @@ class Multiplayer(private val client: Client?, val server: Server?) {
 
     fun neueEinheit(x: Double, y: Double, einheit: Einheit) {
         neuesKommando(NeueEinheit(x, y, einheit.typ.name, einheit.nummer))
+    }
+
+    fun neueKommandos(einheit: Einheit) {
+        neuesKommando(NeueKommandos(einheit.nummer, einheit.kommandoQueue))
     }
 
     private fun neuesKommando(kommando: MultiplayerKommando) {
@@ -112,7 +119,7 @@ class Client(
     init {
         Thread {
             while (true) {
-                Thread.sleep(1000)
+                Thread.sleep(100)
                 runBlocking {
                     sendenUndEmpfangen(senden, empfangen) {
                         sende(it)
