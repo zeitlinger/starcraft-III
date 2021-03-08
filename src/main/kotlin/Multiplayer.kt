@@ -19,13 +19,15 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.modules.serializersModuleOf
 import java.util.concurrent.ConcurrentLinkedDeque
 
 @Serializable
 data class MultiplayerKommandos(val data: List<MultiplayerKommando>)
 
 @Serializable
-sealed class MultiplayerKommando {}
+sealed class MultiplayerKommando()
 
 @Serializable
 class NeueEinheit(val x: Double, val y: Double, val einheitenTyp: String, val nummer: Int) : MultiplayerKommando()
@@ -85,7 +87,10 @@ class Server(
         println("server gestartet")
         val server = embeddedServer(Netty, port = 8080) {
             install(ContentNegotiation) {
-                json()
+                json(Json {
+                    serializersModule =
+                        serializersModuleOf(MultiplayerKommandos::class, MultiplayerKommandos.serializer())
+                })
             }
             routing {
                 put(endpoint) {

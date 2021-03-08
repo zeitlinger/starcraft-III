@@ -89,7 +89,7 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
 
 @Suppress("SpellCheckingInspection")
 class App(var kommandoWählen: KommandoWählen? = null) : Application() {
-    val computer = spiel.computer
+    val computer = spiel.gegner
     val mensch = spiel.mensch
     val kaufbareEinheiten = mensch.einheitenTypen.values
 
@@ -559,23 +559,16 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
-            var server: Server? = null
-            var client: Client? = null
-            if (args.getOrNull(0) == "server") {
-               server = Server()
-            } else if (args.getOrNull(0) == "client") {
-                val server = args.get(1)
-                client = Client(server)
-            }
+            val multiplayer = leseMultiplayerModus(args)
 
-            val computer = Spieler(
+            val gegner = Spieler(
                 kristalle = 0.0,
                 angriffspunkte = 20,
                 verteidiegungspunkte = 10,
                 minen = 0,
                 startpunkt = Punkt(x = 900.0, y = 115.0),
                 farbe = Color.RED,
-                spielerTyp = SpielerTyp.computer,
+                spielerTyp = if (multiplayer.multiplayer) SpielerTyp.gegnerMensch else SpielerTyp.computer,
                 schadensUpgrade = 0,
                 panzerungsUprade = 0
             ).apply {
@@ -604,13 +597,26 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 neueEinheit(x = 950.0, y = 895.0, einheitenTyp = infantrie)
             }
 
-            spiel = Spiel(mensch, computer, multiplayer = Multiplayer(client, server))
+            spiel = Spiel(mensch, gegner, multiplayer = multiplayer)
 
             launch(App::class.java)
         }
+
+
     }
 }
 
 fun einheitenBild(): Circle {
     return Circle(20.toDouble())
+}
+
+private fun leseMultiplayerModus(args: Array<String>): Multiplayer {
+    var server: Server? = null
+    var client: Client? = null
+    if (args.getOrNull(0) == "server") {
+        server = Server()
+    } else if (args.getOrNull(0) == "client") {
+        client = Client(args[1])
+    }
+    return Multiplayer(client, server)
 }

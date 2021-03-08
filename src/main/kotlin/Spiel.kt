@@ -19,7 +19,7 @@ import kotlin.math.sqrt
 
 class Spiel(
     val mensch: Spieler,
-    val computer: Spieler,
+    val gegner: Spieler,
     val rundenLimit: Int? = null,
     var runde: Int = 0,
     val warteZeit: Long = 15,
@@ -28,26 +28,31 @@ class Spiel(
 ) {
 
     fun runde() {
-        multiplayer.empfangeneKommandosVerarbeiten {
-            //todo
-//            when (it) {
-//                is NeueEinheit -> computer.neueEinheit(it.x,it.y, )
-//            }
+        multiplayer.empfangeneKommandosVerarbeiten { kommando ->
+            when (kommando) {
+                is NeueEinheit -> gegner.neueEinheit(
+                    kommando.x,
+                    kommando.y,
+                    neutraleEinheitenTypen.getValue(kommando.einheitenTyp)
+                ).also { einheitProduziert(it) }
+            }
         }
 
-        computer.kristalle += 1.0 + 0.2 * computer.minen
+        gegner.kristalle += 1.0 + 0.2 * gegner.minen
         mensch.kristalle += 1.0 + 0.2 * mensch.minen
-        produzieren(spieler = computer, berserker)
-        bewegeSpieler(computer, mensch)
-        bewegeSpieler(mensch, computer)
+        if (gegner.spielerTyp == SpielerTyp.computer) {
+            produzieren(spieler = gegner, berserker)
+        }
+        bewegeSpieler(gegner, mensch)
+        bewegeSpieler(mensch, gegner)
 
-        schiessen(computer, mensch)
-        schiessen(mensch, computer)
+        schiessen(gegner, mensch)
+        schiessen(mensch, gegner)
 
-        computer.einheiten.toList().forEach { einheitEntfernen(it, computer, mensch) }
-        mensch.einheiten.toList().forEach { einheitEntfernen(it, mensch, computer) }
+        gegner.einheiten.toList().forEach { einheitEntfernen(it, gegner, mensch) }
+        mensch.einheiten.toList().forEach { einheitEntfernen(it, mensch, gegner) }
 
-        if (computer.einheiten.none { it.typ.name == basis.name }) {
+        if (gegner.einheiten.none { it.typ.name == basis.name }) {
             karte.children.add(Text("Sieg").apply {
                 x = 700.0
                 y = 500.0
@@ -64,7 +69,7 @@ class Spiel(
         mensch.einheiten.forEach {
             rundenende(it)
         }
-        computer.einheiten.forEach {
+        gegner.einheiten.forEach {
             rundenende(it)
         }
     }
@@ -285,7 +290,7 @@ class Spiel(
             return gEinheiten
         }
 
-        if (gegner.mensch) {
+        if (einheit.spieler.spielerTyp == SpielerTyp.computer) {
             return zielAuswählenKI(mensch, einheit)
         }
         return null
@@ -320,11 +325,11 @@ class Spiel(
         val ziel = gegner(gegner).einheiten
             .filter {
                 it.leben < it.typ.leben &&
-                        entfernung(einheit, it) <= 300 &&
-                        einheit != it &&
-                        (it.heiler == null || it.heiler == einheit) &&
-                        (it.typ.typ == Typ.biologisch || !gegner(gegner).vertärkteHeilmittel) &&
-                        (it.zuletztGetroffen > 1 || gegner(gegner).strahlungsheilung)
+                    entfernung(einheit, it) <= 300 &&
+                    einheit != it &&
+                    (it.heiler == null || it.heiler == einheit) &&
+                    (it.typ.typ == Typ.biologisch || !gegner(gegner).vertärkteHeilmittel) &&
+                    (it.zuletztGetroffen > 1 || gegner(gegner).strahlungsheilung)
             }
             .minByOrNull { entfernung(einheit, it) }
         if (ziel != null) {
@@ -335,13 +340,17 @@ class Spiel(
 
     fun gegner(spieler: Spieler): Spieler {
         if (spieler === mensch) {
-            return computer
+            return gegner
         }
         return mensch
     }
 
     private fun schiessen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
-        if (`ist in Reichweite`(einheit, ziel) && einheit.schusscooldown <= 0.0 && !einheit.hatSichBewegt && einheit.firstShotCooldown <= 0.0) {
+        if (`ist in Reichweite`(
+                einheit,
+                ziel
+            ) && einheit.schusscooldown <= 0.0 && !einheit.hatSichBewegt && einheit.firstShotCooldown <= 0.0
+        ) {
             einheit.schusscooldown = einheit.typ.schusscooldown
             if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
                 if ((ziel.heiler == null || ziel.heiler == einheit) &&
@@ -453,7 +462,7 @@ fun kaufen(kristalle: Int, spieler: Spieler, aktion: () -> Unit) {
     }
 }
 
-fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp): Einheit {
+fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {
     val spielerTyp = einheitenTypen.getValue(einheitenTyp.name)
     return Einheit(
         spieler = this,
@@ -461,7 +470,8 @@ fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp): Einhe
         x = x,
         y = y,
         panzerung = spielerTyp.panzerung,
-        typ = spielerTyp
+        typ = spielerTyp,
+        nummer = nummer ?: einheitenNummer.also { einheitenNummer += 1 }
     ).also { einheiten.add(it) }
 }
 
