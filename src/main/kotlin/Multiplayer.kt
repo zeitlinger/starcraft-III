@@ -58,6 +58,12 @@ class NeueEinheit(val x: Double, val y: Double, val einheitenTyp: String, val nu
 class NeueKommandos(val einheit: Einheit, val kommandos: List<EinheitenKommando>) : MultiplayerKommando()
 
 @Serializable
+class NeueUpgrades(val einheitenTyp: EinheitenTyp) : MultiplayerKommando()
+
+@Serializable
+class NeueSpielerUpgrades(val spielerUpgrades: SpielerUpgrades) : MultiplayerKommando()
+
+@Serializable
 object ClientJoined : MultiplayerKommando()
 
 class Multiplayer(private val client: Client?, val server: Server?) {
@@ -94,6 +100,14 @@ class Multiplayer(private val client: Client?, val server: Server?) {
 
     fun neueKommandos(einheit: Einheit) {
         neuesKommando(NeueKommandos(einheit, einheit.kommandoQueue))
+    }
+
+    fun upgrade(einheitenTyp: EinheitenTyp) {
+        neuesKommando(NeueUpgrades(einheitenTyp))
+    }
+
+    fun upgrade(spieler: Spieler) {
+        neuesKommando(NeueSpielerUpgrades(spieler.upgrades))
     }
 
     private fun neuesKommando(kommando: MultiplayerKommando) {

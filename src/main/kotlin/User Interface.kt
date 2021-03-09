@@ -112,6 +112,22 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             mensch.addKristallObserver { this.isDisable = it < kritalle }
         }
 
+    fun upgradeKaufen(
+        name: String,
+        kritalle: Int,
+        vararg upgrades: Pair<EinheitenTyp, EinheitenTyp.() -> Unit>,
+        spielerUpgrade: SpielerUpgrades.() -> Unit = {}
+    ): Button =
+        einmalKaufen(name, kritalle) {
+            upgrades.forEach { (neutralerTyp, aktion) ->
+                val value = mensch.einheitenTypen.getValue(neutralerTyp.name)
+                value.aktion()
+                spiel.multiplayer.upgrade(value)
+            }
+            mensch.upgrades.spielerUpgrade()
+            spiel.multiplayer.upgrade(mensch)
+        }
+
     fun einmalKaufen(name: String, kritalle: Int, aktion: () -> Unit): Button =
         kaufButton(name, kritalle) {
             aktion()
@@ -307,45 +323,51 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     private fun laborGekauft() {
-        kaufButton("LV " + (mensch.schadensUpgrade + 1) + " Schaden", 2000 + 400 * mensch.schadensUpgrade) {
-            mensch.schadensUpgrade += 1
-            it.text = "LV " + (mensch.schadensUpgrade + 1) + " Schaden"
+        val upgrades = mensch.upgrades
+        kaufButton("LV " + (upgrades.schadensUpgrade + 1) + " Schaden", 2000 + 400 * upgrades.schadensUpgrade) {
+            upgrades.schadensUpgrade += 1
+            it.text = "LV " + (upgrades.schadensUpgrade + 1) + " Schaden"
 
-            if (mensch.schadensUpgrade == 5) {
+            if (upgrades.schadensUpgrade == 5) {
                 buttonLeiste.children.remove(it)
             }
+            spiel.multiplayer.upgrade(mensch)
         }
-        kaufButton("LV " + (mensch.panzerungsUprade + 1) + " Panzerug", 2000 + 400 * mensch.panzerungsUprade) {
-            mensch.panzerungsUprade += 1
-            it.text = "LV " + (mensch.panzerungsUprade + 1) + " Panzerug"
+        kaufButton("LV " + (upgrades.panzerungsUprade + 1) + " Panzerug", 2000 + 400 * upgrades.panzerungsUprade) {
+            upgrades.panzerungsUprade += 1
+            it.text = "LV " + (upgrades.panzerungsUprade + 1) + " Panzerug"
 
-            if (mensch.panzerungsUprade == 5) {
+            if (upgrades.panzerungsUprade == 5) {
                 buttonLeiste.children.remove(it)
             }
+            spiel.multiplayer.upgrade(mensch)
         }
-        einmalKaufen("Ansturm", 1500) {
-            berserker.laufweite = 1.0
-            berserker.springen = 150
-        }
-        einmalKaufen("Verbesserte Zielsysteme", 1500) {
-            panzer.reichweite = 500.0
-        }
-        einmalKaufen("Fusionsantrieb", 1500) {
-            jäger.laufweite = 1.2
-            kampfschiff.laufweite = 0.3
-        }
-        einmalKaufen("Verstärkte Heilmittel", 1500) {
-            sanitäter.schaden = 3.0
-            mensch.vertärkteHeilmittel = true
-        }
-        einmalKaufen("Strahlungsheilung", 1500) {
-            sanitäter.reichweite = 140.01
-            mensch.strahlungsheilung = true
-        }
-        einmalKaufen("Flammenwurf", 1500) {
-            flammenwerfer.flächenschaden = 40.0
-            flammenwerfer.schaden = 2.5
-        }
+        upgradeKaufen("Ansturm", 1500, berserker to {
+            laufweite = 1.0
+            springen = 150
+        })
+        upgradeKaufen("Verbesserte Zielsysteme", 1500, panzer to {
+            reichweite = 500.0
+        })
+        upgradeKaufen(
+            "Fusionsantrieb", 1500,
+            jäger to { laufweite = 1.2 },
+            kampfschiff to { laufweite = 0.3 },
+        )
+        upgradeKaufen(
+            "Verstärkte Heilmittel", 1500,
+            sanitäter to { schaden = 3.0 },
+            spielerUpgrade = { vertärkteHeilmittel = true },
+        )
+        upgradeKaufen(
+            "Strahlungsheilung", 1500,
+            sanitäter to { reichweite = 140.01 },
+            spielerUpgrade = { strahlungsheilung = true },
+        )
+        upgradeKaufen("Flammenwurf", 1500, flammenwerfer to {
+            flächenschaden = 40.0
+            schaden = 2.5
+        })
     }
 
     private fun produktionsgebäude(gebäude: Gebäude) {
@@ -416,7 +438,11 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         zielpunktUndKreisHinzufügen(einheit, kommando, letztesKommando)
     }
 
-    private fun zielpunktUndKreisHinzufügen(einheit: Einheit, kommando: EinheitenKommando, letztesKommando: EinheitenKommando?) {
+    private fun zielpunktUndKreisHinzufügen(
+        einheit: Einheit,
+        kommando: EinheitenKommando,
+        letztesKommando: EinheitenKommando?
+    ) {
         val zielPunkt = kommandoPosition(kommando, einheit)
         kommando.zielpunktkreis = kreis(x = zielPunkt.x, y = zielPunkt.y, radius = 5.0).apply {
             karte.children.add(this)
@@ -568,14 +594,16 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             val gegnerTyp = multiplayer.gegnerTyp
             val gegner = Spieler(
                 kristalle = 0.0,
-                angriffspunkte = 20,
-                verteidiegungspunkte = 10,
                 minen = 0,
                 startpunkt = startPunkt(gegnerTyp),
                 farbe = spielerFarbe(gegnerTyp),
                 spielerTyp = gegnerTyp,
-                schadensUpgrade = 0,
-                panzerungsUprade = 0
+                upgrades = SpielerUpgrades(
+                    angriffspunkte = 20,
+                    verteidiegungspunkte = 10,
+                    schadensUpgrade = 0,
+                    panzerungsUprade = 0,
+                )
             ).apply {
                 startEinheiten(gegnerTyp)
             }
@@ -583,14 +611,16 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             val spielerTyp = multiplayer.spielerTyp
             val mensch = Spieler(
                 kristalle = 0.0,
-                angriffspunkte = 20,
-                verteidiegungspunkte = 10,
                 minen = 0,
                 startpunkt = startPunkt(spielerTyp),
                 farbe = spielerFarbe(spielerTyp),
                 spielerTyp = spielerTyp,
-                schadensUpgrade = 0,
-                panzerungsUprade = 0
+                upgrades = SpielerUpgrades(
+                    angriffspunkte = 20,
+                    verteidiegungspunkte = 10,
+                    schadensUpgrade = 0,
+                    panzerungsUprade = 0
+                )
             ).apply {
                 startEinheiten(spielerTyp)
             }
@@ -601,13 +631,14 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
 
         private fun spielerFarbe(spielerTyp: SpielerTyp) =
-            if (spielerTyp == SpielerTyp.client) Color.RED else Color.BLUE
+            if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) Color.RED else Color.BLUE
 
         private fun startPunkt(spielerTyp: SpielerTyp) =
-            if (spielerTyp == SpielerTyp.client) Punkt(x = 900.0, y = 115.0) else Punkt(x = 900.0, y = 905.0)
+            if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer)
+                Punkt(x = 900.0, y = 115.0) else Punkt(x = 900.0, y = 905.0)
 
         private fun Spieler.startEinheiten(spielerTyp: SpielerTyp) {
-            val vorzeichen = if (spielerTyp == SpielerTyp.client) -1 else 1
+            val vorzeichen = if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) -1 else 1
 
             neueEinheit(x = 1050.0, y = startpunkt.y, einheitenTyp = späher)
             neueEinheit(x = 750.0, y = startpunkt.y, einheitenTyp = arbeiter)

@@ -16,7 +16,7 @@ class SpielTest : FreeSpec({
                 verlangsamt = 2.0
             }
             neueEinheit(x = 20.0, y = 0.0, einheitenTyp = sanitäter)
-            vertärkteHeilmittel = true
+            upgrades.vertärkteHeilmittel = true
         }
 
         spielen(spiel)
@@ -129,7 +129,7 @@ class SpielTest : FreeSpec({
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie).apply { wirdGeheilt = 2 }
-            strahlungsheilung = true
+            upgrades.strahlungsheilung = true
         }
 
         spielen(spiel)
@@ -219,7 +219,7 @@ class SpielTest : FreeSpec({
         val spiel = neuesSpiel()
         spiel.mensch.apply {
             neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
-            schadensUpgrade = 1
+            upgrades.schadensUpgrade = 1
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
@@ -237,7 +237,7 @@ class SpielTest : FreeSpec({
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
-            panzerungsUprade = 1
+            upgrades.panzerungsUprade = 1
         }
 
         spielen(spiel)
@@ -539,28 +539,32 @@ private fun spielen(spiel: Spiel) {
 private fun neuesSpiel(): Spiel {
     val computer = Spieler(
         kristalle = 0.0,
-        angriffspunkte = 20,
-        verteidiegungspunkte = 10,
         minen = 0,
         startpunkt = Punkt(x = 900.0, y = 115.0),
         farbe = Color.RED,
         spielerTyp = SpielerTyp.computer,
-        schadensUpgrade = 0,
-        panzerungsUprade = 0
+        upgrades = SpielerUpgrades(
+            angriffspunkte = 20,
+            verteidiegungspunkte = 10,
+            schadensUpgrade = 0,
+            panzerungsUprade = 0
+        )
     ).apply {
         neueEinheit(x = 900.0, y = 970.0, einheitenTyp = basis)
     }
 
     val mensch = Spieler(
         kristalle = 10000000000000000000.0,
-        angriffspunkte = 20,
-        verteidiegungspunkte = 10,
         minen = 0,
         startpunkt = Punkt(x = 900.0, y = 905.0),
         farbe = Color.BLUE,
         spielerTyp = SpielerTyp.mensch,
-        schadensUpgrade = 0,
-        panzerungsUprade = 0
+        upgrades = SpielerUpgrades(
+            angriffspunkte = 20,
+            verteidiegungspunkte = 10,
+            schadensUpgrade = 0,
+            panzerungsUprade = 0
+        )
     ).apply {
         neueEinheit(x = 900.0, y = 970.0, einheitenTyp = basis)
     }

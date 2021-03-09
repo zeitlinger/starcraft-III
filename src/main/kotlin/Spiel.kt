@@ -44,6 +44,8 @@ class Spiel(
                         addAll(kommando.kommandos)
                     }
                 ClientJoined -> started = true
+                is NeueSpielerUpgrades -> gegner.upgrades = kommando.spielerUpgrades
+                is NeueUpgrades -> gegner.einheitenTypen[kommando.einheitenTyp.name] = kommando.einheitenTyp
             }
         }
         if (!started) {
@@ -344,8 +346,8 @@ class Spiel(
                     entfernung(einheit, it) <= 300 &&
                     einheit != it &&
                     (it.heiler == null || it.heiler == einheit) &&
-                    (it.typ.typ == Typ.biologisch || !gegner(gegner).vertärkteHeilmittel) &&
-                    (it.zuletztGetroffen > 1 || gegner(gegner).strahlungsheilung)
+                    (it.typ.typ == Typ.biologisch || !gegner(gegner).upgrades.vertärkteHeilmittel) &&
+                    (it.zuletztGetroffen > 1 || gegner(gegner).upgrades.strahlungsheilung)
             }
             .minByOrNull { entfernung(einheit, it) }
         if (ziel != null) {
@@ -370,12 +372,12 @@ class Spiel(
             einheit.schusscooldown = einheit.typ.schusscooldown
             if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
                 if ((ziel.heiler == null || ziel.heiler == einheit) &&
-                    (ziel.typ.typ == Typ.biologisch || !spieler.vertärkteHeilmittel) && ziel.leben < ziel.typ.leben &&
-                    (ziel.zuletztGetroffen > 1 || spieler.strahlungsheilung)
+                    (ziel.typ.typ == Typ.biologisch || !spieler.upgrades.vertärkteHeilmittel) && ziel.leben < ziel.typ.leben &&
+                    (ziel.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
                 ) {
                     ziel.leben = min(ziel.leben + einheit.typ.schaden, ziel.typ.leben)
                     ziel.heiler = einheit
-                    if (spieler.vertärkteHeilmittel) {
+                    if (spieler.upgrades.vertärkteHeilmittel) {
                         ziel.vergiftet = 0.0
                         ziel.verlangsamt = 0.0
                     }
@@ -383,12 +385,12 @@ class Spiel(
                 }
             } else if (einheit.typ.flächenschaden == null) {
                 ziel.leben -= max(
-                    (einheit.typ.schaden + spieler.schadensUpgrade / 10.0 - (max(
-                        ziel.panzerung + gegner(spieler).panzerungsUprade / 10.0,
+                    (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
+                        ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
                         0.0
                     ))) * if (ziel.wirdGeheilt > 0 && gegner(
                             spieler
-                        ).strahlungsheilung
+                        ).upgrades.strahlungsheilung
                     ) 0.7 else 1.0, 0.5
                 )
                 ziel.zuletztGetroffen = 0.0
@@ -403,12 +405,12 @@ class Spiel(
                 }
                 getroffeneEinheiten.forEach {
                     it.leben -= max(
-                        (einheit.typ.schaden + spieler.schadensUpgrade / 10.0 - (max(
-                            ziel.panzerung + gegner(spieler).panzerungsUprade / 10.0,
+                        (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
+                            ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
                             0.0
                         ))) * if (ziel.wirdGeheilt > 0 && gegner(
                                 spieler
-                            ).strahlungsheilung
+                            ).upgrades.strahlungsheilung
                         ) 0.7 else 1.0, 0.5
                     )
                     it.zuletztGetroffen = 0.0

@@ -1,4 +1,4 @@
-@file:Suppress("SpellCheckingInspection")
+@file:Suppress("SpellCheckingInspection", "ObjectPropertyName")
 
 import javafx.scene.control.Button
 import javafx.scene.paint.Color
@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.properties.Delegates
 
+@Serializable
 data class Gebäude(
     val name: String,
     val kristalle: Int
@@ -26,7 +27,7 @@ val prodoktionsgebäude = listOf(
     brutstätte
 )
 
-
+@Serializable
 data class TechGebäude(
     val name: String,
     val kristalle: Int,
@@ -62,6 +63,7 @@ enum class MachtZustand {
     langsamkeit, vergiftung
 }
 
+@Serializable
 data class EinheitenTyp(
     var schaden: Double,
     var reichweite: Double,
@@ -77,6 +79,7 @@ data class EinheitenTyp(
     val techGebäude: TechGebäude? = null,
     val name: String,
     val hotkey: String?,
+    @Transient
     var button: Button? = null,
     var springen: Int? = null,
     val typ: Typ,
@@ -135,7 +138,6 @@ data class Punkt(
 
 
 typealias DoubleObserver = (Double) -> Unit
-
 
 
 @Serializable
@@ -437,25 +439,29 @@ enum class SpielerTyp {
     server
 }
 
+@Serializable
+data class SpielerUpgrades(
+    var angriffspunkte: Int,
+    var verteidiegungspunkte: Int,
+    var schadensUpgrade: Int,
+    var panzerungsUprade: Int,
+    var vertärkteHeilmittel: Boolean = false,
+    var strahlungsheilung: Boolean = false,
+)
+
 class Spieler(
     val einheiten: MutableList<Einheit> = mutableListOf(),
     private val kristallObservers: MutableList<DoubleObserver> = mutableListOf(),
     kristalle: Double,
-    var angriffspunkte: Int,
-    var verteidiegungspunkte: Int,
+    var upgrades: SpielerUpgrades,
     var minen: Int,
     var startpunkt: Punkt,
     val farbe: Color,
     val spielerTyp: SpielerTyp,
     val kristalleText: Text = Text(),
     val minenText: Text = Text(),
-    var schadensUpgrade: Int,
-    var panzerungsUprade: Int,
-    var vertärkteHeilmittel: Boolean = false,
-    var strahlungsheilung: Boolean = false,
-    val einheitenTypen: Map<String, EinheitenTyp> =
-        neutraleEinheitenTypen.values.map { it.copy(spielerTyp = spielerTyp) }.associateBy { it.name }
-
+    val einheitenTypen: MutableMap<String, EinheitenTyp> =
+        neutraleEinheitenTypen.values.map { it.copy(spielerTyp = spielerTyp) }.associateBy { it.name }.toMutableMap()
 ) {
     var kristalle: Double by Delegates.observable(kristalle) { _, _, new ->
         this.kristallObservers.forEach { it(new) }
