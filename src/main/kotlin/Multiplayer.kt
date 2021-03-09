@@ -49,17 +49,30 @@ object EinheitSerializer : KSerializer<Einheit> {
 data class MultiplayerKommandos(val data: List<MultiplayerKommando>)
 
 @Serializable
-sealed class MultiplayerKommando()
+sealed class MultiplayerKommando
 
 @Serializable
 class NeueEinheit(val x: Double, val y: Double, val einheitenTyp: String, val nummer: Int) : MultiplayerKommando()
 
 @Serializable
-class NeueKommandos(val nummer: Int, val kommandos: List<EinheitenKommando>) : MultiplayerKommando()
+class NeueKommandos(val einheit: Einheit, val kommandos: List<EinheitenKommando>) : MultiplayerKommando()
+
+@Serializable
+object ClientJoined : MultiplayerKommando()
 
 class Multiplayer(private val client: Client?, val server: Server?) {
 
-    val multiplayer: Boolean = client != null || server != null
+    val spielerTyp: SpielerTyp = when {
+        client == null && server == null -> SpielerTyp.mensch
+        server != null -> SpielerTyp.server
+        else -> SpielerTyp.client
+    }
+
+    val gegnerTyp: SpielerTyp = when (spielerTyp) {
+        SpielerTyp.mensch -> SpielerTyp.computer
+        SpielerTyp.server -> SpielerTyp.client
+        else -> SpielerTyp.server
+    }
 
     fun empfangeneKommandosVerarbeiten(handler: (MultiplayerKommando) -> Unit) {
         fun empfange(l: ConcurrentLinkedDeque<MultiplayerKommando>) {
@@ -71,12 +84,16 @@ class Multiplayer(private val client: Client?, val server: Server?) {
         client?.empfangen?.let { empfange(it) }
     }
 
+    fun sendeStartAnServer() {
+        neuesKommando(ClientJoined)
+    }
+
     fun neueEinheit(x: Double, y: Double, einheit: Einheit) {
         neuesKommando(NeueEinheit(x, y, einheit.typ.name, einheit.nummer))
     }
 
     fun neueKommandos(einheit: Einheit) {
-        neuesKommando(NeueKommandos(einheit.nummer, einheit.kommandoQueue))
+        neuesKommando(NeueKommandos(einheit, einheit.kommandoQueue))
     }
 
     private fun neuesKommando(kommando: MultiplayerKommando) {

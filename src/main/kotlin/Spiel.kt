@@ -16,7 +16,6 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sqrt
 
-
 class Spiel(
     val mensch: Spieler,
     val gegner: Spieler,
@@ -26,6 +25,7 @@ class Spiel(
     val multiplayer: Multiplayer,
     var einheitProduziert: (Einheit) -> Unit = {}
 ) {
+    private var started = mensch.spielerTyp == SpielerTyp.mensch
 
     fun spieler(typ: SpielerTyp): Spieler = if (typ == mensch.spielerTyp) mensch else gegner
 
@@ -39,10 +39,20 @@ class Spiel(
                         neutraleEinheitenTypen.getValue(kommando.einheitenTyp)
                     ).also { einheitProduziert(it) }
                 is NeueKommandos ->
-                    gegner.einheit(kommando.nummer).kommandoQueue.apply {
+                    kommando.einheit.kommandoQueue.apply {
                         clear()
                         addAll(kommando.kommandos)
                     }
+                ClientJoined -> started = true
+            }
+        }
+        if (!started) {
+            if (mensch.spielerTyp == SpielerTyp.client) {
+                multiplayer.sendeStartAnServer()
+                started = true
+            } else {
+                //auf client warten
+                return
             }
         }
 
