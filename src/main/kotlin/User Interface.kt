@@ -432,7 +432,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, shift: Boolean) {
-        println("${kommando::class} ${shift}")
 
         einheit.kommandoQueue.toList().forEach {
             if (!shift) {
@@ -583,24 +582,32 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         einheit.kuerzel!!.y = einheit.y
 
 
-        if (einheit.kommandoQueue.size > 1) {
-            einheit.kommandoQueue[0].zielpunktLinie?.apply {
+        val queue = einheit.kommandoQueue
+        if (queue.size >= 1) {
+            queue[0].zielpunktLinie?.apply {
                 startX = einheit.x
                 startY = einheit.y
             }
         }
 
-        val kommando = einheit.kommandoQueue.getOrNull(0)
-        if (kommando != null && kommando is EinheitenKommando.Angriff) {
-            val ziel = kommando.ziel
+        queue.forEachIndexed { index, kommando ->
+            if (kommando is EinheitenKommando.Angriff) {
+                val ziel = kommando.ziel
 
-            kommando.zielpunktLinie?.apply {
-                endX = ziel.x
-                endY = ziel.y
-            }
-            kommando.zielpunktkreis?.apply {
-                centerX = ziel.x
-                centerY = ziel.y
+                kommando.zielpunktLinie?.apply {
+                    endX = ziel.x
+                    endY = ziel.y
+                }
+                if (index < queue.size - 1) {
+                    queue[index +1].zielpunktLinie?.apply {
+                        startX = ziel.x
+                        startY = ziel.y
+                    }
+                }
+                kommando.zielpunktkreis?.apply {
+                    centerX = ziel.x
+                    centerY = ziel.y
+                }
             }
         }
     }

@@ -523,9 +523,8 @@ fun smaller(a: Double, b: Double): Double {
 }
 
 //Bugs:
-//Wenn man eine Einheit als Ziel auswählt und dann mit Shift ein anderes Befehl gibt wird die zweite Zielpunktlinie nicht aktualisiert
-//Man kann nicht als Shiftbefehl eine Einheit als Ziel wählen, die sich bewegt
 //wegpunkte werden auch angezeigt wenn die Einheit nicht ausgewählt ist
+//wenn ein angriffsbefehl das ende einer Ziehlpunktlinie ist wird diese nicht angezeigt
 
 //Features:
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
