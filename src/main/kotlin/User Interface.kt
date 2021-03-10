@@ -259,6 +259,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             auswahlRechteck = null
         }
 
+        stage.isFullScreen = true
         stage.show()
 
         Thread {
@@ -285,20 +286,20 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         scroll.isPannable = false
         scroll.hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
         scroll.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
-        scroll.addEventFilter(MouseEvent.MOUSE_MOVED) {
+        vBox.addEventFilter(MouseEvent.MOUSE_MOVED) {
             val sensitivity = 1
             val h = (scroll.hmax - scroll.hmin) / 100
-            if (it.x < sensitivity) {
+            if (it.x <= sensitivity) {
                 scroll.hvalue -= h
             }
-            if (it.x > vBox.width - sensitivity) {
+            if (it.x >= scroll.width - sensitivity) {
                 scroll.hvalue += h
             }
             val v = (scroll.vmax - scroll.vmin) / 100
-            if (it.y < sensitivity) {
+            if (it.y <= sensitivity) {
                 scroll.vvalue -= v
             }
-            if (it.y > vBox.height - sensitivity) {
+            if (it.y >= scroll.height - sensitivity) {
                 scroll.vvalue += v
             }
         }
