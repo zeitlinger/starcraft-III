@@ -220,6 +220,7 @@ class Spiel(
         einheit.x += smaller(x, x * laufweite / entfernung)
         einheit.y += smaller(y, y * laufweite / entfernung)
         einheit.hatSichBewegt = true
+        einheit.letzterAngriff = null
     }
 
     private fun zielauswaehlenSchießen(gegner: Spieler, einheit: Einheit): Einheit? {
@@ -346,8 +347,8 @@ class Spiel(
                     entfernung(einheit, it) <= 300 &&
                     einheit != it &&
                     (it.heiler == null || it.heiler == einheit) &&
-                    (it.typ.typ == Typ.biologisch || !gegner(gegner).upgrades.vertärkteHeilmittel) &&
-                    (it.zuletztGetroffen > 1 || gegner(gegner).upgrades.strahlungsheilung)
+                        (it.typ.typ == Typ.biologisch || !gegner(gegner).upgrades.vertärkteHeilmittel) &&
+                        (it.zuletztGetroffen > 1 || gegner(gegner).upgrades.strahlungsheilung)
             }
             .minByOrNull { entfernung(einheit, it) }
         if (ziel != null) {
@@ -364,62 +365,69 @@ class Spiel(
     }
 
     private fun schiessen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
-        if (`ist in Reichweite`(
-                einheit,
-                ziel
-            ) && einheit.schusscooldown <= 0.0 && !einheit.hatSichBewegt && einheit.firstShotCooldown <= 0.0
-        ) {
-            einheit.schusscooldown = einheit.typ.schusscooldown
-            if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
-                if ((ziel.heiler == null || ziel.heiler == einheit) &&
-                    (ziel.typ.typ == Typ.biologisch || !spieler.upgrades.vertärkteHeilmittel) && ziel.leben < ziel.typ.leben &&
-                    (ziel.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
-                ) {
-                    ziel.leben = min(ziel.leben + einheit.typ.schaden, ziel.typ.leben)
-                    ziel.heiler = einheit
-                    if (spieler.upgrades.vertärkteHeilmittel) {
-                        ziel.vergiftet = 0.0
-                        ziel.verlangsamt = 0.0
+        if (`ist in Reichweite`(einheit, ziel) && einheit.schusscooldown <= 0.0 && !einheit.hatSichBewegt) {
+            if (einheit.firstShotCooldown <= 0.0) {
+                einheit.schusscooldown = einheit.typ.schusscooldown
+                if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
+                    if ((ziel.heiler == null || ziel.heiler == einheit) &&
+                        (ziel.typ.typ == Typ.biologisch || !spieler.upgrades.vertärkteHeilmittel) && ziel.leben < ziel.typ.leben &&
+                        (ziel.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
+                    ) {
+                        ziel.leben = min(ziel.leben + einheit.typ.schaden, ziel.typ.leben)
+                        ziel.heiler = einheit
+                        if (spieler.upgrades.vertärkteHeilmittel) {
+                            ziel.vergiftet = 0.0
+                            ziel.verlangsamt = 0.0
+                        }
+                        ziel.wirdGeheilt = 2
                     }
-                    ziel.wirdGeheilt = 2
-                }
-            } else if (einheit.typ.flächenschaden == null) {
-                ziel.leben -= max(
-                    (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
-                        ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
-                        0.0
-                    ))) * if (ziel.wirdGeheilt > 0 && gegner(
-                            spieler
-                        ).upgrades.strahlungsheilung
-                    ) 0.7 else 1.0, 0.5
-                )
-                ziel.zuletztGetroffen = 0.0
-                if (einheit.typ.machtZustand == MachtZustand.vergiftung && ziel.vergiftet <= 0) {
-                    ziel.vergiftet = 10.0
-                } else if (einheit.typ.machtZustand == MachtZustand.langsamkeit && ziel.verlangsamt <= 0) {
-                    ziel.verlangsamt = 10.0
-                }
-            } else {
-                val getroffeneEinheiten = gegner(spieler).einheiten.filter {
-                    entfernung(it, ziel) <= einheit.typ.flächenschaden!!
-                }
-                getroffeneEinheiten.forEach {
-                    it.leben -= max(
+                } else if (einheit.typ.flächenschaden == null) {
+                    ziel.leben -= max(
                         (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
                             ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
                             0.0
                         ))) * if (ziel.wirdGeheilt > 0 && gegner(
                                 spieler
                             ).upgrades.strahlungsheilung
-                        ) 0.7 else 1.0, 0.5
+                        ) {
+                            0.7
+                        } else 1.0, 0.5
                     )
-                    it.zuletztGetroffen = 0.0
+                    ziel.zuletztGetroffen = 0.0
                     if (einheit.typ.machtZustand == MachtZustand.vergiftung && ziel.vergiftet <= 0) {
                         ziel.vergiftet = 10.0
                     } else if (einheit.typ.machtZustand == MachtZustand.langsamkeit && ziel.verlangsamt <= 0) {
                         ziel.verlangsamt = 10.0
                     }
+                } else {
+                    val getroffeneEinheiten = gegner(spieler).einheiten.filter {
+                        entfernung(it, ziel) <= einheit.typ.flächenschaden!!
+                    }
+                    getroffeneEinheiten.forEach {
+                        it.leben -= max(
+                            (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
+                                ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
+                                0.0
+                            ))) * if (ziel.wirdGeheilt > 0 && gegner(
+                                    spieler
+                                ).upgrades.strahlungsheilung
+                            ) {
+                                0.7
+                            } else 1.0, 0.5
+                        )
+                        it.zuletztGetroffen = 0.0
+                        if (einheit.typ.machtZustand == MachtZustand.vergiftung && ziel.vergiftet <= 0) {
+                            ziel.vergiftet = 10.0
+                        } else if (einheit.typ.machtZustand == MachtZustand.langsamkeit && ziel.verlangsamt <= 0) {
+                            ziel.verlangsamt = 10.0
+                        }
+                    }
                 }
+            } else if (einheit.letzterAngriff == ziel) {
+                einheit.firstShotCooldown -= warteZeit.toDouble()
+            } else {
+                einheit.firstShotCooldown = einheit.typ.firstShotDeley
+                einheit.letzterAngriff = ziel
             }
         }
     }
@@ -519,10 +527,9 @@ fun smaller(a: Double, b: Double): Double {
 //wenn man "stopp" oder "holdposision" aktiviert wird die Kommandoqueue auch gelöscht, wenn man shift gedrückt hat + Fehlermeldung
 
 //Features:
-//Verzögerung des erste Schusses
-//Wenn man Attackmove macht und dann auf eine Einheit klickt, soll die Einheit als Ziel ausgewählt werden
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
 //patrollieren
+//verbessertes Multiplayer
 //Chat
 //Kriegsnebel
 //Sichtweite für Einheiten
@@ -536,14 +543,13 @@ fun smaller(a: Double, b: Double): Double {
 //produktionszeit
 //recourssen auf der Karte (wissenschafts-und produktionsressoursen)
 //arbeiter und wissenschafter können ressoursen abbauen bzw. erforschen und zu außenposten bringen
-//Einheitengröße
+//Einheitengröße anpassen
 //Physik (Einheiten nicht übereinander)
 //Wasser + Schiffe
 //bessere Grafik mit 3D-Moddelen und Animationen
 //sound
 //Hintergrundmusik
 //totorial
-//multiplayer
 //kampagne
 //mehr Einheiten + Upgrades
 //balance
@@ -552,9 +558,13 @@ fun smaller(a: Double, b: Double): Double {
 //programm-optiemierung
 
 //Rassen:
-//Silikoiden: Eine Ressource mehr als die anderen Rassen (silizium); high tech; teure, große, schnelle Einheiten;
-//            Punkte auf der Karte die nur für eine Rasse sichtbar sind (Siliziumvorkommen) die durch eine Rafinerie abbauen können; Einheiten fusionieren; viele Upgrades
-//Terraner: Mechs, Infantrie, Panzer; “vanilla”; Heimatwelt-boni
-//Psilons: psionische Einheiten; Templer; Helden-Einheiten; Mana für Zaubersprüche; Archiv um Zaubersprüche um für die Templer zu erlernen; XP für Einheiten;
-//         unerfahrene Einheiten können nur einfache; Entscheidungen über tech tree für Upgrades
-//Alkari: Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen
+//Silikoiden:
+//Eine Ressource mehr als die anderen Rassen (silizium); high tech; teure, große, schnelle Einheiten;
+//Punkte auf der Karte die nur für eine Rasse sichtbar sind (Siliziumvorkommen) die durch eine Rafinerie abbauen können; Einheiten fusionieren; viele Upgrades
+//Terraner:
+//Mechs, Infantrie, Panzer; “vanilla”; Heimatwelt-boni
+//Psilons:
+//psionische Einheiten; Templer; Helden-Einheiten; Mana für Zaubersprüche; Archiv um Zaubersprüche um für die Templer zu erlernen; XP für Einheiten;
+//unerfahrene Einheiten können nur einfache; Entscheidungen über tech tree für Upgrades
+//Alkari:
+//Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen

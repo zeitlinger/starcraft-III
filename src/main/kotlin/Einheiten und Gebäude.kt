@@ -85,7 +85,7 @@ data class EinheitenTyp(
     val typ: Typ,
     var flächenschaden: Double? = null,
     var schusscooldown: Double = 1.0,
-    val firstShotDeley: Double = 1.0,
+    val firstShotDeley: Double = 0.5,
     var machtZustand: MachtZustand? = null,
     val zivileEinheit: Boolean = false,
     val spielerTyp: SpielerTyp = SpielerTyp.mensch
@@ -120,9 +120,9 @@ data class Einheit(
     var hatSichBewegt: Boolean = false,
     var vergiftet: Double = 0.0,
     var verlangsamt: Double = 0.0,
-    var stim: Double = 0.0,
     val kommandoQueue: MutableList<EinheitenKommando> = mutableListOf(),
-    val nummer: Int
+    val nummer: Int,
+    var letzterAngriff: Einheit? = null
 ) {
     fun punkt() = Punkt(x = x, y = y)
     override fun toString(): String {

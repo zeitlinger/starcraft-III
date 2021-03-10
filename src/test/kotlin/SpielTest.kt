@@ -110,11 +110,13 @@ class SpielTest : FreeSpec({
     "Einheiten in Reichweite angreifen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply { firstShotCooldown = 0.0 }
         }
         spiel.gegner.apply {
-            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie).apply {  firstShotCooldown = 0.0
+                letzterAngriff = spiel.mensch.einheiten[1] }
         }
+        spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
 
         spielen(spiel)
 
@@ -125,12 +127,15 @@ class SpielTest : FreeSpec({
     "Heilungsmodifikator" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply {  firstShotCooldown = 0.0 }
         }
         spiel.gegner.apply {
-            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie).apply { wirdGeheilt = 2 }
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie).apply { wirdGeheilt = 2
+                firstShotCooldown = 0.0
+                letzterAngriff = spiel.mensch.einheiten[1] }
             upgrades.strahlungsheilung = true
         }
+        spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
 
         spielen(spiel)
 
@@ -180,11 +185,13 @@ class SpielTest : FreeSpec({
 
         spiel.mensch.apply {
             einheitenTypen.getValue(infantrie.name).schusscooldown = 0.03
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply {  firstShotCooldown = 0.0 }
         }
         spiel.gegner.apply {
-            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
+            neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie).apply {  firstShotCooldown = 0.0
+                letzterAngriff = spiel.mensch.einheiten[1]}
         }
+        spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
 
         spielen(spiel)
 
@@ -202,12 +209,13 @@ class SpielTest : FreeSpec({
     "Flächenschaden" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = panzer)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = panzer).apply {  firstShotCooldown = 0.0 }
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
             neueEinheit(x = 25.0, y = 150.0, einheitenTyp = infantrie)
         }
+        spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
 
         spielen(spiel)
 
@@ -218,12 +226,13 @@ class SpielTest : FreeSpec({
     "schadensupgrade" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply {  firstShotCooldown = 0.0 }
             upgrades.schadensUpgrade = 1
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
         }
+        spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
 
         spielen(spiel)
 
@@ -233,12 +242,13 @@ class SpielTest : FreeSpec({
     "panzerugsupgrade" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply {  firstShotCooldown = 0.0 }
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
             upgrades.panzerungsUprade = 1
         }
+        spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
 
         spielen(spiel)
 
@@ -321,11 +331,12 @@ class SpielTest : FreeSpec({
         spiel.mensch.apply {
             neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply {
                 kommandoQueue.add(EinheitenKommando.Attackmove(Punkt(0.0, 1000.0)))
-            }
+                firstShotCooldown = 0.0}
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
         }
+        spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
 
         spielen(spiel)
 
@@ -466,8 +477,10 @@ class SpielTest : FreeSpec({
                 x = 0.0,
                 y = 500.0,
                 einheitenTyp = infantrie
-            ).apply { kommandoQueue.add(EinheitenKommando.Angriff(spiel.gegner.einheiten[2])) }
+            ).apply { kommandoQueue.add(EinheitenKommando.Angriff(spiel.gegner.einheiten[2]))
+                firstShotCooldown = 0.0 }
         }
+        spiel.mensch.einheiten[2].letzterAngriff = spiel.gegner.einheiten[1]
         spielen(spiel)
 
         spiel.gegner.einheiten[2].leben shouldBe 93.125
@@ -487,8 +500,10 @@ class SpielTest : FreeSpec({
                 x = 0.0,
                 y = 500.0,
                 einheitenTyp = jäger
-            )
+            ).apply {
+                firstShotCooldown = 0.0 }
         }
+        spiel.mensch.einheiten[2].letzterAngriff = spiel.gegner.einheiten[1]
         spielen(spiel)
 
         spiel.gegner.einheiten[1].leben shouldBe 80
