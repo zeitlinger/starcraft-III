@@ -529,7 +529,6 @@ fun smaller(a: Double, b: Double): Double {
 }
 
 //Bugs:
-//wenn ein angriffsbefehl das ende einer Ziehlpunktlinie ist wird diese nicht angezeigt
 
 //Features:
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können

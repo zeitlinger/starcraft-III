@@ -549,11 +549,11 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
     }
 
-    private fun `ziel auswählen`(einheit: Einheit, schiftcommand: Boolean) {
+    private fun `ziel auswählen`(ziel: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
-            val kommando = EinheitenKommando.Angriff(ziel = einheit)
+            val kommando = EinheitenKommando.Angriff(ziel = ziel)
             neuesKommando(einheit = it, kommando = kommando, shift = schiftcommand)
-            zielpunktKreisUndLinieHinzufügen(kommando, einheit)
+            zielpunktKreisUndLinieHinzufügen(kommando, it)
         }
     }
 
