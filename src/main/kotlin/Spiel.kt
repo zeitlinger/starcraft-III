@@ -73,14 +73,14 @@ class Spiel(
         mensch.einheiten.toList().forEach { einheitEntfernen(it, mensch, gegner) }
 
         if (gegner.einheiten.none { it.typ.name == basis.name }) {
-            karte.children.add(Text("Sieg").apply {
+            karte.add(Text("Sieg").apply {
                 x = 700.0
                 y = 500.0
                 font = Font(200.0)
             })
         }
         if (mensch.einheiten.none { it.typ.name == basis.name }) {
-            karte.children.add(Text("Niederlage").apply {
+            karte.add(Text("Niederlage").apply {
                 x = 300.0
                 y = 500.0
                 font = Font(200.0)
@@ -442,7 +442,7 @@ class Spiel(
             if (ausgewaehlt.contains(einheit)) {
                 val kreis = einheit.auswahlkreis
                 ausgewaehlt.remove(einheit)
-                karte.children.remove(kreis)
+                karte.remove(kreis)
             }
 
             gegner.einheiten.forEach { gegnerEinheit ->
@@ -452,9 +452,9 @@ class Spiel(
                     }
                 }
             }
-            karte.children.remove(einheit.bild)
-            karte.children.remove(einheit.lebenText)
-            karte.children.remove(einheit.kuerzel)
+            karte.remove(einheit.bild)
+            karte.remove(einheit.lebenText)
+            karte.remove(einheit.kuerzel)
             einheit.kommandoQueue.toList().forEach {
                 kommandoEntfernen(einheit, it)
             }
@@ -506,13 +506,19 @@ fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer
 }
 
 fun kommandoEntfernen(einheit: Einheit, kommando: EinheitenKommando) {
-    if (kommando.zielpunktkreis != null) {
-        karte.children.remove(kommando.zielpunktkreis)
-    }
-    if (kommando.zielpunktLinie != null) {
-        karte.children.remove(kommando.zielpunktLinie)
-    }
+    kommandoAnzeigeEntfernen(kommando)
     einheit.kommandoQueue.remove(kommando)
+}
+
+fun kommandoAnzeigeEntfernen(kommando: EinheitenKommando) {
+    if (kommando.zielpunktLinie != null) {
+        karte.remove(kommando.zielpunktLinie)
+        kommando.zielpunktLinie = null
+    }
+    if (kommando.zielpunktkreis != null) {
+        karte.remove(kommando.zielpunktkreis)
+        kommando.zielpunktkreis = null
+    }
 }
 
 fun smaller(a: Double, b: Double): Double {
@@ -523,7 +529,6 @@ fun smaller(a: Double, b: Double): Double {
 }
 
 //Bugs:
-//wegpunkte werden auch angezeigt wenn die Einheit nicht ausgewählt ist
 //wenn ein angriffsbefehl das ende einer Ziehlpunktlinie ist wird diese nicht angezeigt
 
 //Features:

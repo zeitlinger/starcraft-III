@@ -287,8 +287,6 @@ class SpielTest : FreeSpec({
             TestFall(start = Punkt(x = 0.0, y = 999.0), ziel = Punkt(x = 0.0, y = 999.5)),
             TestFall(start = Punkt(x = 0.0, y = 999.999), ziel = Punkt(x = 0.0, y = 1000.0))
         ) { testFall ->
-            println(testFall.toString())
-
             val spiel = neuesSpiel()
             spiel.mensch.apply {
                 neueEinheit(

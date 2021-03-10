@@ -40,10 +40,7 @@ import kotlin.math.min
 
 lateinit var spiel: Spiel
 
-val karte: Pane = Pane().apply {
-    prefWidth = 3850.0
-    prefHeight = 2950.0
-}
+lateinit var karte: ObservableList<Node>
 
 fun Node.mausTaste(
     button: MouseButton,
@@ -141,6 +138,12 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
 
     override fun start(stage: Stage) {
+        val kartenPane = Pane().apply {
+            prefWidth = 3850.0
+            prefHeight = 2950.0
+        }
+        karte = kartenPane.children
+
         stage.title = spiel.mensch.spielerTyp.name
 
         spiel.einheitProduziert = { einheitUiErstellen(it) }
@@ -184,10 +187,9 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             laborGekauft()
         }
 
-        vBox.children.add(scrollPane(vBox))
+        vBox.children.add(scrollPane(vBox, kartenPane))
         vBox.children.add(hBox)
-
-        karte.mausTaste(MouseButton.SECONDARY, consume = false) {
+        kartenPane.mausTaste(MouseButton.SECONDARY, consume = false) {
             if (kommandoWählen != null) {
                 scene.cursor = Cursor.DEFAULT
                 kommandoWählen = null
@@ -201,7 +203,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         var auswahlStart: Punkt? = null
         var auswahlRechteck: Rectangle? = null
 
-        karte.mausTaste(MouseButton.PRIMARY, consume = false) {
+        kartenPane.mausTaste(MouseButton.PRIMARY, consume = false) {
             val laufbefehl = Laufbefehl.values().singleOrNull { it.wählen == kommandoWählen }
             if (laufbefehl != null) {
                 ausgewaehlt.forEach { einheit ->
@@ -218,7 +220,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             scene.cursor = Cursor.DEFAULT
             kommandoWählen = null
         }
-        karte.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_DRAGGED) {
+        kartenPane.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_DRAGGED) {
             auswahlStart?.let { s ->
                 val x = min(s.x, it.x)
                 val y = min(s.y, it.y)
@@ -237,25 +239,21 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
                 if (auswahlRechteck == null) {
                     auswahlRechteck = r
-                    karte.children.add(auswahlRechteck)
+                    karte.add(auswahlRechteck)
                 }
             }
         }
-        karte.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_RELEASED) {
+        kartenPane.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_RELEASED) {
             auswahlRechteck?.let { r ->
-                mensch.einheiten.forEach {
-                    if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
-                        `auswahl löschen`()
+                neueAuswahl {
+                    mensch.einheiten.forEach {
+                        if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
+                            auswählen(it)
+                        }
                     }
                 }
 
-                mensch.einheiten.forEach {
-                    if (it.bild.boundsInParent.intersects(r.boundsInParent)) {
-                        auswählen(it)
-                    }
-                }
-
-                karte.children.remove(r)
+                karte.remove(r)
             }
             auswahlStart = null
             auswahlRechteck = null
@@ -285,8 +283,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }.start()
     }
 
-    private fun scrollPane(vBox: VBox): ScrollPane {
-        val scroll = ScrollPane(karte)
+    private fun scrollPane(vBox: VBox, kartenPane: Pane): ScrollPane {
+        val scroll = ScrollPane(kartenPane)
         scroll.isPannable = false
         scroll.hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
         scroll.vbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
@@ -398,10 +396,24 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
     }
 
+    private fun neueAuswahl(aktion: () -> Unit) {
+        `auswahl löschen`()
+        aktion()
+        zeigeKommands()
+        ausgewaehlt.singleOrNull()?.let { einheit ->
+            einheit.kommandoQueue.forEachIndexed { index, kommando ->
+                zielpunktUndKreisHinzufügen(einheit, kommando, einheit.kommandoQueue.getOrNull(index - 1))
+            }
+        }
+    }
+
     private fun `auswahl löschen`() {
-        ausgewaehlt.forEach {
-            karte.children.remove(it.auswahlkreis)
-            it.auswahlkreis = null
+        ausgewaehlt.forEach { einheit ->
+            karte.remove(einheit.auswahlkreis)
+            einheit.auswahlkreis = null
+            einheit.kommandoQueue.forEach { kommando ->
+                kommandoAnzeigeEntfernen(kommando)
+            }
         }
         ausgewaehlt.clear()
     }
@@ -432,7 +444,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, shift: Boolean) {
-
         einheit.kommandoQueue.toList().forEach {
             if (!shift) {
                 kommandoEntfernen(einheit, it)
@@ -446,8 +457,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     private fun zeigeKommands() {
-        if (ausgewaehlt.size == 1) {
-            kommandoAnzeige.text = ausgewaehlt.single().kommandoQueue.map { it::class.simpleName }.joinToString(",")
+        ausgewaehlt.singleOrNull()?.let {
+            kommandoAnzeige.text = it.kommandoQueue.map { it::class.simpleName }.joinToString(",")
         }
     }
 
@@ -464,7 +475,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     ) {
         val zielPunkt = kommandoPosition(kommando, einheit)
         kommando.zielpunktkreis = kreis(x = zielPunkt.x, y = zielPunkt.y, radius = 5.0).apply {
-            karte.children.add(this)
+            karte.add(this)
         }
 
         if (einheit.kommandoQueue.size < 2) {
@@ -486,7 +497,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             startY = startPunkt.y
             endX = zielPunkt.x
             endY = zielPunkt.y
-            karte.children.add(this)
+            karte.add(this)
         }
     }
 
@@ -512,9 +523,9 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         einheit.kuerzel = Text(einheit.typ.kuerzel)
         einheit.lebenText = Text()
         einheit.bild.fill = spieler.farbe
-        karte.children.add(einheit.bild)
-        karte.children.add(einheit.lebenText)
-        karte.children.add(einheit.kuerzel)
+        karte.add(einheit.bild)
+        karte.add(einheit.lebenText)
+        karte.add(einheit.kuerzel)
 
         einheitMouseHandler(spieler, einheit.bild, einheit)
         einheitMouseHandler(spieler, einheit.kuerzel!!, einheit)
@@ -527,8 +538,9 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
         if (spieler == spiel.mensch) {
             imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == null }) {
-                `auswahl löschen`()
-                auswählen(einheit)
+                neueAuswahl {
+                    auswählen(einheit)
+                }
             }
         }
 
@@ -548,11 +560,10 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     private fun auswählen(einheit: Einheit) {
         if (einheit.leben > 0 && einheit.auswahlkreis == null) {
             val auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
-            karte.children.add(auswahlKreis)
+            karte.add(auswahlKreis)
             einheit.auswahlkreis = auswahlKreis
             ausgewaehlt.add(einheit)
         }
-        zeigeKommands()
     }
 
     fun male() {
@@ -599,7 +610,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     endY = ziel.y
                 }
                 if (index < queue.size - 1) {
-                    queue[index +1].zielpunktLinie?.apply {
+                    queue[index + 1].zielpunktLinie?.apply {
                         startX = ziel.x
                         startY = ziel.y
                     }
