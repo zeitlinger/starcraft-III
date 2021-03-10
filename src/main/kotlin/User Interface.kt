@@ -99,6 +99,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     lateinit var buttonLeiste: ObservableList<Node>
     val kristalleText: Label = Label().apply { minWidth = 100.0 }
     val minenText: Label = Label().apply { minWidth = 100.0 }
+    val kommandoAnzeige: Label = Label().apply { minWidth = 200.0 }
+
 
     fun button(name: String, aktion: (Button) -> Unit): Button = Button(name).apply {
         this.mausTaste(MouseButton.PRIMARY) {
@@ -259,6 +261,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             auswahlRechteck = null
         }
 
+        buttonLeiste.add(kommandoAnzeige)
+
         stage.isFullScreen = true
         stage.show()
 
@@ -313,13 +317,14 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             scene.cursor = Cursor.CROSSHAIR
             return
         } else {
-            val k = kommandoHotKeys[text]
+            val lowercase = text?.toLowerCase()
+            val k = kommandoHotKeys[lowercase]
             if (k != null) {
                 ausgewaehlt.forEach {
                     neuesKommando(
                         einheit = it,
                         kommando = k(),
-                        schiftcommand = schift
+                        shift = text != lowercase
                     )
                 }
             }
@@ -426,14 +431,25 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         zielpunktKreisUndLinieHinzufügen(kommando, einheit)
     }
 
-    private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, schiftcommand: Boolean) {
+    private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, shift: Boolean) {
+        println("${kommando::class} ${shift}")
+
         einheit.kommandoQueue.toList().forEach {
-            if (!schiftcommand) {
+            if (!shift) {
                 kommandoEntfernen(einheit, it)
             }
         }
         einheit.kommandoQueue.add(kommando)
         spiel.multiplayer.neueKommandos(einheit)
+        if (ausgewaehlt.singleOrNull() == einheit) {
+            zeigeKommands()
+        }
+    }
+
+    private fun zeigeKommands() {
+        if (ausgewaehlt.size == 1) {
+            kommandoAnzeige.text = ausgewaehlt.single().kommandoQueue.map { it::class.simpleName }.joinToString(",")
+        }
     }
 
     private fun zielpunktKreisUndLinieHinzufügen(kommando: EinheitenKommando, einheit: Einheit) {
@@ -525,7 +541,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     private fun `ziel auswählen`(einheit: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
             val kommando = EinheitenKommando.Angriff(ziel = einheit)
-            neuesKommando(einheit = it, kommando = kommando, schiftcommand = schiftcommand)
+            neuesKommando(einheit = it, kommando = kommando, shift = schiftcommand)
             zielpunktKreisUndLinieHinzufügen(kommando, einheit)
         }
     }
@@ -537,6 +553,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             einheit.auswahlkreis = auswahlKreis
             ausgewaehlt.add(einheit)
         }
+        zeigeKommands()
     }
 
     fun male() {

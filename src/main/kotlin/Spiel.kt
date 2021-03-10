@@ -95,7 +95,7 @@ class Spiel(
     }
 
     private fun rundenende(it: Einheit) {
-        if (it.kommandoQueue.firstOrNull { it is EinheitenKommando.Stopp } != null) {
+        if (erstesKommandoIst<EinheitenKommando.Stopp>(it)) {
             it.kommandoQueue.toList().forEach { kommando ->
                 kommandoEntfernen(it, kommando)
             }
@@ -157,7 +157,7 @@ class Spiel(
     }
 
     fun bewege(einheit: Einheit, gegner: Spieler) {
-        if (einheit.kommandoQueue.firstOrNull { it is EinheitenKommando.HoldPosition } != null) {
+        if (erstesKommandoIst<EinheitenKommando.HoldPosition>(einheit)) {
             return
         }
         val kommando = einheit.kommandoQueue.getOrNull(0)
@@ -199,6 +199,9 @@ class Spiel(
             bewege(einheit, ziel.punkt(), min(mindestabstand, `max laufweite`))
         }
     }
+
+    private inline fun <reified T> erstesKommandoIst(einheit: Einheit) =
+        einheit.kommandoQueue.size >= 1 && einheit.kommandoQueue[0] is T
 
     private fun richtigeLaufweite(einheit: Einheit): Double {
         val verlangsamerung = if (einheit.verlangsamt > 0) {
@@ -523,8 +526,6 @@ fun smaller(a: Double, b: Double): Double {
 //Wenn man eine Einheit als Ziel auswählt und dann mit Shift ein anderes Befehl gibt wird die zweite Zielpunktlinie nicht aktualisiert
 //Man kann nicht als Shiftbefehl eine Einheit als Ziel wählen, die sich bewegt
 //wegpunkte werden auch angezeigt wenn die Einheit nicht ausgewählt ist
-//scrollen fuktioniert nicht
-//wenn man "stopp" oder "holdposision" aktiviert wird die Kommandoqueue auch gelöscht, wenn man shift gedrückt hat + Fehlermeldung
 
 //Features:
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
