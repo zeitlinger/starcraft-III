@@ -458,8 +458,6 @@ class Spieler(
     var startpunkt: Punkt,
     val farbe: Color,
     val spielerTyp: SpielerTyp,
-    val kristalleText: Text = Text(),
-    val minenText: Text = Text(),
     val einheitenTypen: MutableMap<String, EinheitenTyp> =
         neutraleEinheitenTypen.values.map { it.copy(spielerTyp = spielerTyp) }.associateBy { it.name }.toMutableMap()
 ) {

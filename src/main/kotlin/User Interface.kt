@@ -10,11 +10,13 @@
 
 import javafx.application.Application
 import javafx.application.Platform
+import javafx.collections.ObservableList
 import javafx.event.EventType
 import javafx.scene.Cursor
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.Button
+import javafx.scene.control.Label
 import javafx.scene.control.ScrollPane
 import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseButton
@@ -90,17 +92,19 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
 
 @Suppress("SpellCheckingInspection")
 class App(var kommandoWählen: KommandoWählen? = null) : Application() {
-    val computer = spiel.gegner
+    val gegner = spiel.gegner
     val mensch = spiel.mensch
     val kaufbareEinheiten = mensch.einheitenTypen.values
 
-    lateinit var buttonLeiste: HBox
+    lateinit var buttonLeiste: ObservableList<Node>
+    val kristalleText: Label = Label().apply { minWidth = 100.0 }
+    val minenText: Label = Label().apply { minWidth = 100.0 }
 
     fun button(name: String, aktion: (Button) -> Unit): Button = Button(name).apply {
         this.mausTaste(MouseButton.PRIMARY) {
             aktion(this)
         }
-        buttonLeiste.children.add(this)
+        buttonLeiste.add(this)
     }
 
     fun kaufButton(name: String, kritalle: Int, aktion: (Button) -> Unit): Button =
@@ -131,7 +135,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     fun einmalKaufen(name: String, kritalle: Int, aktion: () -> Unit): Button =
         kaufButton(name, kritalle) {
             aktion()
-            buttonLeiste.children.remove(it)
+            buttonLeiste.remove(it)
         }
 
     override fun start(stage: Stage) {
@@ -139,14 +143,13 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
         spiel.einheitProduziert = { einheitUiErstellen(it) }
 
-        initSpieler(computer)
+        val hBox = HBox()
+        buttonLeiste = hBox.children
+        initSpieler(gegner)
         initSpieler(mensch)
 
-        mensch.kristalleText.x = 10.0
-        mensch.kristalleText.y = 950.0
-
-        mensch.minenText.x = 160.0
-        mensch.minenText.y = 950.0
+        buttonLeiste.add(kristalleText)
+        buttonLeiste.add(minenText)
 
         val vBox = VBox(10.0)
 
@@ -154,9 +157,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         scene.fill = null
 
         stage.scene = scene
-        stage.show()
 
-        buttonLeiste = HBox()
         kaufButton("Mine", 2000 + 400 * mensch.minen) {
             mensch.minen += 1
         }
@@ -182,7 +183,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
 
         vBox.children.add(scrollPane(vBox))
-        vBox.children.add(buttonLeiste)
+        vBox.children.add(hBox)
 
         karte.mausTaste(MouseButton.SECONDARY, consume = false) {
             if (kommandoWählen != null) {
@@ -258,6 +259,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             auswahlRechteck = null
         }
 
+        stage.show()
+
         Thread {
             while (true) {
 
@@ -329,7 +332,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             it.text = "LV " + (upgrades.schadensUpgrade + 1) + " Schaden"
 
             if (upgrades.schadensUpgrade == 5) {
-                buttonLeiste.children.remove(it)
+                buttonLeiste.remove(it)
             }
             spiel.multiplayer.upgrade(mensch)
         }
@@ -338,7 +341,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             it.text = "LV " + (upgrades.panzerungsUprade + 1) + " Panzerug"
 
             if (upgrades.panzerungsUprade == 5) {
-                buttonLeiste.children.remove(it)
+                buttonLeiste.remove(it)
             }
             spiel.multiplayer.upgrade(mensch)
         }
@@ -485,8 +488,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         spieler.einheiten.forEach {
             einheitUiErstellen(it)
         }
-        karte.children.add(spieler.kristalleText)
-        karte.children.add(spieler.minenText)
     }
 
     private fun einheitUiErstellen(einheit: Einheit) {
@@ -538,10 +539,10 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     fun male() {
-        computer.einheiten.toList().forEach { maleEinheit(it) }
+        gegner.einheiten.toList().forEach { maleEinheit(it) }
         mensch.einheiten.toList().forEach { maleEinheit(it) }
-        mensch.kristalleText.text = "Kristalle: " + mensch.kristalle.toInt().toString()
-        mensch.minenText.text = "Minen: " + mensch.minen.toString()
+        kristalleText.text = "Kristalle: " + mensch.kristalle.toInt().toString()
+        minenText.text = "Minen: " + mensch.minen.toString()
 
         ausgewaehlt.forEach { einheit ->
             einheit.auswahlkreis!!.centerX = einheit.bild.layoutX
