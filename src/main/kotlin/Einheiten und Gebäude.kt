@@ -1,4 +1,4 @@
-@file:Suppress("SpellCheckingInspection", "ObjectPropertyName")
+@file:Suppress("SpellCheckingInspection", "ObjectPropertyName", "NonAsciiCharacters")
 
 import javafx.scene.control.Button
 import javafx.scene.paint.Color
@@ -13,39 +13,41 @@ import kotlin.properties.Delegates
 @Serializable
 data class Gebäude(
     val name: String,
-    val kristalle: Int
-)
+    val kuerzel: String,
+    val kristalle: Int,
+    val punkt: Punkt,
+) {
+    init {
+        gebäude.add(this)
+    }
+}
 
-val kaserne = Gebäude(name = "Kaserne", kristalle = 1500)
-val fabrik = Gebäude(name = "Fabrik", kristalle = 2000)
-val raumhafen = Gebäude(name = "Raumhafen", kristalle = 2500)
-val brutstätte = Gebäude(name = "Brutstätte", kristalle = 2500)
-val prodoktionsgebäude = listOf(
-    kaserne,
-    fabrik,
-    raumhafen,
-    brutstätte
-)
+val gebäude = mutableListOf<Gebäude>()
+
+val kaserne = Gebäude(name = "Kaserne", kuerzel = "KAS", kristalle = 1500, punkt = Punkt(x = 1220.0, y = 940.0))
+val fabrik = Gebäude(name = "Fabrik", kuerzel = "FAB", kristalle = 2000, punkt = Punkt(x = 1470.0, y = 965.0))
+val raumhafen = Gebäude(name = "Raumhafen", kuerzel = "RAU", kristalle = 2500, punkt = Punkt(x = 1570.0, y = 955.0))
+val brutstätte = Gebäude(name = "Brutstätte", kuerzel = "BRU", kristalle = 2500, punkt = Punkt(x = 470.0, y = 945.0))
+val labor = Gebäude(name = "Labor", kuerzel = "LAB", kristalle = 2800, punkt = Punkt(x = 370.0, y = 955.0))
 
 @Serializable
 data class TechGebäude(
     val name: String,
     val kristalle: Int,
     val gebäude: Gebäude
-)
+) {
+    init {
+        techgebäude.add(this)
+    }
+}
+
+val techgebäude = mutableListOf<TechGebäude>()
 
 val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, gebäude = kaserne)
 val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, gebäude = raumhafen)
 val akademie = TechGebäude(name = "Akademie", kristalle = 2500, gebäude = kaserne)
 val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000, gebäude = fabrik)
 val vipernbau = TechGebäude(name = "Vipernbau", kristalle = 2000, gebäude = brutstätte)
-val techgebäude = listOf(
-    schmiede,
-    fusionskern,
-    akademie,
-    reaktor,
-    vipernbau
-)
 
 enum class KannAngreifen {
     alles, boden, luft, heilen
@@ -478,4 +480,104 @@ class Spieler(
         return "Spieler(typ=$spielerTyp)"
     }
 }
+
+data class Upgrade(
+    val gebäude: Gebäude,
+    val name: (SpielerUpgrades) -> String,
+    val kritalle: (SpielerUpgrades) -> Int,
+    val eiheitenUpgrades: Map<EinheitenTyp, EinheitenTyp.() -> Boolean> = emptyMap(),
+    val spielerUpgrade: SpielerUpgrades.() -> Boolean = { false }
+)
+
+val upgrades: List<Upgrade> = listOf(
+    Upgrade(
+        labor,
+        { "LV " + (it.schadensUpgrade + 1) + " Schaden" },
+        { 2000 + 400 * it.schadensUpgrade },
+        spielerUpgrade = {
+            schadensUpgrade += 1
+            schadensUpgrade == 5
+        }
+    ),
+    Upgrade(
+        labor,
+        { "LV " + (it.panzerungsUprade + 1) + " Panzerug" },
+        { 2000 + 400 * it.panzerungsUprade },
+        spielerUpgrade = {
+            panzerungsUprade += 1
+            panzerungsUprade == 5
+        }
+    ),
+    Upgrade(
+        labor,
+        { "Ansturm" },
+        { 1500 },
+        mapOf(berserker to {
+            laufweite = 1.0
+            springen = 150
+            true
+        })
+    ),
+    Upgrade(
+        labor,
+        { "Verbesserte Zielsysteme" },
+        { 1500 },
+        mapOf(panzer to {
+            reichweite = 500.0
+            true
+        })
+    ),
+    Upgrade(
+        labor,
+        { "Fusionsantrieb" },
+        { 1500 },
+        mapOf(
+            jäger to {
+                laufweite = 1.2
+                true
+            },
+            kampfschiff to {
+                laufweite = 0.3
+                true
+            },
+        )
+    ),
+    Upgrade(
+        labor,
+        { "Verstärkte Heilmittel" },
+        { 1500 },
+        mapOf(sanitäter to {
+            schaden = 3.0
+            true
+        }),
+        spielerUpgrade = {
+            vertärkteHeilmittel = true
+            true
+        },
+    ),
+    Upgrade(
+        labor,
+        { "Strahlungsheilung" },
+        { 1500 },
+        mapOf(sanitäter to {
+            reichweite = 140.01
+            true
+        }),
+        spielerUpgrade = {
+            strahlungsheilung = true
+            true
+        },
+    ),
+    Upgrade(
+        labor,
+        { "Flammenwurf" },
+        { 1500 },
+        mapOf(flammenwerfer to {
+            flächenschaden = 40.0
+            schaden = 2.5
+            true
+        })
+    )
+)
+
 

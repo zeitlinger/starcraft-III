@@ -94,6 +94,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     val kaufbareEinheiten = mensch.einheitenTypen.values
 
     lateinit var buttonLeiste: ObservableList<Node>
+    val basisButtons = mutableListOf<Button>()
     val kristalleText: Label = Label().apply { minWidth = 100.0 }
     val minenText: Label = Label().apply { minWidth = 100.0 }
     val kommandoAnzeige: Label = Label().apply { minWidth = 200.0 }
@@ -103,39 +104,39 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         this.mausTaste(MouseButton.PRIMARY) {
             aktion(this)
         }
-        buttonLeiste.add(this)
     }
 
-    fun kaufButton(name: String, kritalle: Int, aktion: (Button) -> Unit): Button =
-        button(name) {
-            kaufen(kritalle, mensch) {
+    fun kaufButton(leiste: MutableList<Button>, name: String, kritalle: Int, aktion: (Button) -> Unit): Button =
+        kaufButton(leiste, { name }, { kritalle }, aktion)
+
+    fun kaufButton(
+        leiste: MutableList<Button>,
+        name: () -> String,
+        kritalle: () -> Int,
+        aktion: (Button) -> Unit
+    ): Button =
+        button(name()) {
+            kaufen(kritalle(), mensch) {
                 aktion(it)
+                it.text = name()
             }
         }.apply {
-            mensch.addKristallObserver { this.isDisable = it < kritalle }
-        }
-
-    fun upgradeKaufen(
-        name: String,
-        kritalle: Int,
-        vararg upgrades: Pair<EinheitenTyp, EinheitenTyp.() -> Unit>,
-        spielerUpgrade: SpielerUpgrades.() -> Unit = {}
-    ): Button =
-        einmalKaufen(name, kritalle) {
-            upgrades.forEach { (neutralerTyp, aktion) ->
-                val value = mensch.einheitenTypen.getValue(neutralerTyp.name)
-                value.aktion()
-                spiel.multiplayer.upgrade(value)
+            mensch.addKristallObserver {
+                this.isDisable = it < kritalle()
             }
-            mensch.upgrades.spielerUpgrade()
-            spiel.multiplayer.upgrade(mensch)
+            leiste.add(this)
         }
 
-    fun einmalKaufen(name: String, kritalle: Int, aktion: () -> Unit): Button =
-        kaufButton(name, kritalle) {
+    fun einmalKaufen(leiste: MutableList<Button>, name: String, kritalle: Int, aktion: () -> Unit): Button =
+        kaufButton(leiste, name, kritalle) {
             aktion()
-            buttonLeiste.remove(it)
+            entfernen(leiste, it)
         }
+
+    private fun entfernen(leiste: MutableList<Button>, button: Button) {
+        (button.parent as Pane).children.remove(button)
+        leiste.remove(button)
+    }
 
     override fun start(stage: Stage) {
         val kartenPane = Pane().apply {
@@ -150,12 +151,18 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         spiel.kommandoEntfernt = { zeigeKommands() }
 
         val hBox = HBox()
-        buttonLeiste = hBox.children
+        val buttonLeiste = HBox().apply {
+            minWidth = 300.0
+        }
+        this.buttonLeiste = buttonLeiste.children
+
+        hBox.children.add(kristalleText)
+        hBox.children.add(minenText)
+        hBox.children.add(buttonLeiste)
+        hBox.children.add(kommandoAnzeige)
+
         initSpieler(gegner)
         initSpieler(mensch)
-
-        buttonLeiste.add(kristalleText)
-        buttonLeiste.add(minenText)
 
         val vBox = VBox(10.0)
 
@@ -164,28 +171,23 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
         stage.scene = scene
 
-        kaufButton("Mine", 2000 + 400 * mensch.minen) {
+
+        kaufButton(basisButtons, "Mine", 2000 + 400 * mensch.minen) {
             mensch.minen += 1
         }
-        kaufButton("Arbeiter", arbeiter.kristalle) {
+        kaufButton(basisButtons, "Arbeiter", arbeiter.kristalle) {
             spiel.neueEinheit(mensch, arbeiter)
         }
-        prodoktionsgebäude.forEach { gebäude ->
-            produktionsgebäude(gebäude)
-        }
+        gebäude.forEach { gebäude -> gebäudeButton(basisButtons, gebäude) }
 
         stage.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
-            if (ausgewaehlt.size == 1 && ausgewaehlt.iterator().next().typ.name == basis.name) {
+            if (nurBasisAusgewählt()) {
                 kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
             } else {
                 if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ.name == basis.name }) {
                     auswahlHotkeys(scene, event.text, event.isShiftDown)
                 }
             }
-        }
-
-        einmalKaufen("Labor", 2800) {
-            laborGekauft()
         }
 
         vBox.children.add(scrollPane(vBox, kartenPane))
@@ -260,8 +262,6 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             auswahlRechteck = null
         }
 
-        buttonLeiste.add(kommandoAnzeige)
-
         stage.isFullScreen = true
         stage.show()
 
@@ -284,6 +284,15 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }.start()
     }
 
+    private fun nurBasisAusgewählt() = ausgewaehlt.size == 1 && ausgewaehlt.iterator().next().typ.name == basis.name
+
+    private fun aktuelleButtons(
+        buttons: List<Button>
+    ) {
+        buttonLeiste.clear()
+        buttonLeiste.addAll(buttons)
+    }
+
     private fun scrollPane(vBox: VBox, kartenPane: Pane): ScrollPane {
         val scroll = ScrollPane(kartenPane)
         scroll.isPannable = false
@@ -302,7 +311,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             if (it.y <= sensitivity) {
                 scroll.vvalue -= v
             }
-            if (it.y >= scroll.height - sensitivity) {
+            if (it.y >= scroll.height - sensitivity && it.y <= scroll.height) {
                 scroll.vvalue += v
             }
         }
@@ -330,63 +339,25 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
     }
 
-    private fun laborGekauft() {
-        val upgrades = mensch.upgrades
-        kaufButton("LV " + (upgrades.schadensUpgrade + 1) + " Schaden", 2000 + 400 * upgrades.schadensUpgrade) {
-            upgrades.schadensUpgrade += 1
-            it.text = "LV " + (upgrades.schadensUpgrade + 1) + " Schaden"
+    private fun gebäudeButton(leiste: MutableList<Button>, gebäude: Gebäude): Button =
+        einmalKaufen(leiste, gebäude.name, gebäude.kristalle) {
+            val buttons = mutableListOf<Button>()
 
-            if (upgrades.schadensUpgrade == 5) {
-                buttonLeiste.remove(it)
-            }
-            spiel.multiplayer.upgrade(mensch)
-        }
-        kaufButton("LV " + (upgrades.panzerungsUprade + 1) + " Panzerug", 2000 + 400 * upgrades.panzerungsUprade) {
-            upgrades.panzerungsUprade += 1
-            it.text = "LV " + (upgrades.panzerungsUprade + 1) + " Panzerug"
+            karte.add(Circle(gebäude.punkt.x, gebäude.punkt.y, 23.0).apply {
+                fill = mensch.farbe
+                mausTaste(MouseButton.PRIMARY) {
+                    aktuelleButtons(buttons)
+                }
+            })
+            karte.add(Text(gebäude.punkt.x - 12, gebäude.punkt.y, gebäude.kuerzel))
 
-            if (upgrades.panzerungsUprade == 5) {
-                buttonLeiste.remove(it)
-            }
-            spiel.multiplayer.upgrade(mensch)
-        }
-        upgradeKaufen("Ansturm", 1500, berserker to {
-            laufweite = 1.0
-            springen = 150
-        })
-        upgradeKaufen("Verbesserte Zielsysteme", 1500, panzer to {
-            reichweite = 500.0
-        })
-        upgradeKaufen(
-            "Fusionsantrieb", 1500,
-            jäger to { laufweite = 1.2 },
-            kampfschiff to { laufweite = 0.3 },
-        )
-        upgradeKaufen(
-            "Verstärkte Heilmittel", 1500,
-            sanitäter to { schaden = 3.0 },
-            spielerUpgrade = { vertärkteHeilmittel = true },
-        )
-        upgradeKaufen(
-            "Strahlungsheilung", 1500,
-            sanitäter to { reichweite = 140.01 },
-            spielerUpgrade = { strahlungsheilung = true },
-        )
-        upgradeKaufen("Flammenwurf", 1500, flammenwerfer to {
-            flächenschaden = 40.0
-            schaden = 2.5
-        })
-    }
-
-    private fun produktionsgebäude(gebäude: Gebäude) {
-        einmalKaufen(gebäude.name, gebäude.kristalle) {
             techgebäude.filter { it.gebäude == gebäude }.forEach { gebäude ->
-                einmalKaufen(gebäude.name, gebäude.kristalle) {
+                einmalKaufen(buttons, gebäude.name, gebäude.kristalle) {
                     kaufbareEinheiten.filter { it.techGebäude == gebäude }.forEach { it.button!!.isDisable = false }
                 }
             }
             kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach { typ ->
-                val button = kaufButton(typ.name, typ.kristalle) {
+                val button = kaufButton(buttons, typ.name, typ.kristalle) {
                     spiel.neueEinheit(mensch, typ)
                 }
                 if (typ.techGebäude != null) {
@@ -394,13 +365,33 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                 }
                 typ.button = button
             }
+            upgrades.filter { it.gebäude == gebäude }.forEach { upgrade ->
+                kaufButton(buttons, { upgrade.name(mensch.upgrades) }, { upgrade.kritalle(mensch.upgrades) }) {
+                    var remove = false
+
+                    upgrade.eiheitenUpgrades.forEach { (neutralerTyp, aktion) ->
+                        val value = mensch.einheitenTypen.getValue(neutralerTyp.name)
+                        remove = remove || value.aktion()
+                        spiel.multiplayer.upgrade(value)
+                    }
+
+                    remove = remove || upgrade.spielerUpgrade(mensch.upgrades)
+                    spiel.multiplayer.upgrade(mensch)
+
+                    if (remove) {
+                        entfernen(buttons, it)
+                    }
+                }
+            }
         }
-    }
 
     private fun neueAuswahl(aktion: () -> Unit) {
         `auswahl löschen`()
         aktion()
         zeigeKommands()
+        if (nurBasisAusgewählt()) {
+            aktuelleButtons(basisButtons)
+        }
         ausgewaehlt.singleOrNull()?.let { einheit ->
             einheit.kommandoQueue.forEachIndexed { index, kommando ->
                 zielpunktUndKreisHinzufügen(einheit, kommando, einheit.kommandoQueue.getOrNull(index - 1))
@@ -648,7 +639,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
             val spielerTyp = multiplayer.spielerTyp
             val mensch = Spieler(
-                kristalle = 0.0,
+                kristalle = 30000.0,
                 minen = 0,
                 startpunkt = startPunkt(spielerTyp),
                 farbe = spielerFarbe(spielerTyp),
