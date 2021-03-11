@@ -23,7 +23,8 @@ class Spiel(
     var runde: Int = 0,
     val warteZeit: Long = 15,
     val multiplayer: Multiplayer,
-    var einheitProduziert: (Einheit) -> Unit = {}
+    var einheitProduziert: (Einheit) -> Unit = {},
+    var kommandoEntfernt: () -> Unit = {}
 ) {
     private var started = mensch.spielerTyp == SpielerTyp.mensch
 
@@ -299,6 +300,10 @@ class Spiel(
             return kommando.ziel
         }
 
+        if (einheit.spieler.spielerTyp == SpielerTyp.computer) {
+            return zielAuswählenKI(einheit.spieler, gegner, einheit)
+        }
+
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
             return `nächste Einheit zum Heilen`(gegner, einheit)
         }
@@ -310,10 +315,6 @@ class Spiel(
         val gEinheiten = `verbündetem helfen`(gegner, einheit)
         if (gEinheiten != null) {
             return gEinheiten
-        }
-
-        if (einheit.spieler.spielerTyp == SpielerTyp.computer) {
-            return zielAuswählenKI(mensch, einheit)
         }
         return null
     }
@@ -372,58 +373,15 @@ class Spiel(
             if (einheit.firstShotCooldown <= 0.0) {
                 einheit.schusscooldown = einheit.typ.schusscooldown
                 if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
-                    if ((ziel.heiler == null || ziel.heiler == einheit) &&
-                        (ziel.typ.typ == Typ.biologisch || !spieler.upgrades.vertärkteHeilmittel) && ziel.leben < ziel.typ.leben &&
-                        (ziel.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
-                    ) {
-                        ziel.leben = min(ziel.leben + einheit.typ.schaden, ziel.typ.leben)
-                        ziel.heiler = einheit
-                        if (spieler.upgrades.vertärkteHeilmittel) {
-                            ziel.vergiftet = 0.0
-                            ziel.verlangsamt = 0.0
-                        }
-                        ziel.wirdGeheilt = 2
-                    }
+                    heilen(einheit, ziel, spieler)
                 } else if (einheit.typ.flächenschaden == null) {
-                    ziel.leben -= max(
-                        (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
-                            ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
-                            0.0
-                        ))) * if (ziel.wirdGeheilt > 0 && gegner(
-                                spieler
-                            ).upgrades.strahlungsheilung
-                        ) {
-                            0.7
-                        } else 1.0, 0.5
-                    )
-                    ziel.zuletztGetroffen = 0.0
-                    if (einheit.typ.machtZustand == MachtZustand.vergiftung && ziel.vergiftet <= 0) {
-                        ziel.vergiftet = 10.0
-                    } else if (einheit.typ.machtZustand == MachtZustand.langsamkeit && ziel.verlangsamt <= 0) {
-                        ziel.verlangsamt = 10.0
-                    }
+                    schadenAusteilen(einheit, ziel, spieler)
                 } else {
                     val getroffeneEinheiten = gegner(spieler).einheiten.filter {
                         entfernung(it, ziel) <= einheit.typ.flächenschaden!!
                     }
                     getroffeneEinheiten.forEach {
-                        it.leben -= max(
-                            (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
-                                ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
-                                0.0
-                            ))) * if (ziel.wirdGeheilt > 0 && gegner(
-                                    spieler
-                                ).upgrades.strahlungsheilung
-                            ) {
-                                0.7
-                            } else 1.0, 0.5
-                        )
-                        it.zuletztGetroffen = 0.0
-                        if (einheit.typ.machtZustand == MachtZustand.vergiftung && ziel.vergiftet <= 0) {
-                            ziel.vergiftet = 10.0
-                        } else if (einheit.typ.machtZustand == MachtZustand.langsamkeit && ziel.verlangsamt <= 0) {
-                            ziel.verlangsamt = 10.0
-                        }
+                        schadenAusteilen(einheit, it, spieler)
                     }
                 }
             } else if (einheit.letzterAngriff == ziel) {
@@ -432,6 +390,41 @@ class Spiel(
                 einheit.firstShotCooldown = einheit.typ.firstShotDeley
                 einheit.letzterAngriff = ziel
             }
+        }
+    }
+
+    private fun schadenAusteilen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
+        ziel.leben -= max(
+            (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
+                ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
+                0.0
+            ))) * if (ziel.wirdGeheilt > 0 && gegner(
+                    spieler
+                ).upgrades.strahlungsheilung
+            ) {
+                0.7
+            } else 1.0, 0.5
+        )
+        ziel.zuletztGetroffen = 0.0
+        if (einheit.typ.machtZustand == MachtZustand.vergiftung && ziel.vergiftet <= 0) {
+            ziel.vergiftet = 10.0
+        } else if (einheit.typ.machtZustand == MachtZustand.langsamkeit && ziel.verlangsamt <= 0) {
+            ziel.verlangsamt = 10.0
+        }
+    }
+
+    private fun heilen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
+        if ((ziel.heiler == null || ziel.heiler == einheit) &&
+            (ziel.typ.typ == Typ.biologisch || !spieler.upgrades.vertärkteHeilmittel) && ziel.leben < ziel.typ.leben &&
+            (ziel.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
+        ) {
+            ziel.leben = min(ziel.leben + einheit.typ.schaden, ziel.typ.leben)
+            ziel.heiler = einheit
+            if (spieler.upgrades.vertärkteHeilmittel) {
+                ziel.vergiftet = 0.0
+                ziel.verlangsamt = 0.0
+            }
+            ziel.wirdGeheilt = 2
         }
     }
 
@@ -459,6 +452,12 @@ class Spiel(
                 kommandoEntfernen(einheit, it)
             }
         }
+    }
+
+    fun kommandoEntfernen(einheit: Einheit, kommando: EinheitenKommando) {
+        kommandoAnzeigeEntfernen(kommando)
+        einheit.kommandoQueue.remove(kommando)
+        kommandoEntfernt()
     }
 }
 
@@ -504,12 +503,6 @@ fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer
             .also { einheitenNummer[this.spielerTyp] = it + 1 }
     ).also { einheiten.add(it) }
 }
-
-fun kommandoEntfernen(einheit: Einheit, kommando: EinheitenKommando) {
-    kommandoAnzeigeEntfernen(kommando)
-    einheit.kommandoQueue.remove(kommando)
-}
-
 fun kommandoAnzeigeEntfernen(kommando: EinheitenKommando) {
     if (kommando.zielpunktLinie != null) {
         karte.remove(kommando.zielpunktLinie)
@@ -529,11 +522,14 @@ fun smaller(a: Double, b: Double): Double {
 }
 
 //Bugs:
+//wenn man holdposition mit shiftcomand ausführt, wird es sofort ausgeführt
+//wenn man mit zwei Einheiten unterschiedliche Kommandos ausführt und dann beide auswählt und mit shift ein neues Kommando gibt, werden die alten kommandos nicht vollständig angezeigt
+//Die Tests mit angreifen funktioieren nicht
 
 //Features:
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
+//Wenn eine Einheit ein automatisches Ziel hat und man mit shift ein anderes Ziel gibt soll das automatische Ziel zuerst ausgeführt werden
 //patrollieren
-//verbessertes Multiplayer
 //Chat
 //Kriegsnebel
 //Sichtweite für Einheiten
@@ -554,6 +550,7 @@ fun smaller(a: Double, b: Double): Double {
 //sound
 //Hintergrundmusik
 //totorial
+//verbessertes Multiplayer
 //kampagne
 //mehr Einheiten + Upgrades
 //balance

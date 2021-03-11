@@ -147,6 +147,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         stage.title = spiel.mensch.spielerTyp.name
 
         spiel.einheitProduziert = { einheitUiErstellen(it) }
+        spiel.kommandoEntfernt = { zeigeKommands() }
 
         val hBox = HBox()
         buttonLeiste = hBox.children
@@ -308,7 +309,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         return scroll
     }
 
-    private fun auswahlHotkeys(scene: Scene, text: String?, schift: Boolean) {
+    private fun auswahlHotkeys(scene: Scene, text: String?, shift: Boolean) {
         val wählen = KommandoWählen.values().singleOrNull { it.hotkey == text }
         if (wählen != null) {
             kommandoWählen = wählen
@@ -322,7 +323,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     neuesKommando(
                         einheit = it,
                         kommando = k(),
-                        shift = text != lowercase
+                        shift = shift
                     )
                 }
             }
@@ -445,8 +446,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
     private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, shift: Boolean) {
         einheit.kommandoQueue.toList().forEach {
-            if (!shift) {
-                kommandoEntfernen(einheit, it)
+            if (!shift || it is EinheitenKommando.HoldPosition || it is EinheitenKommando.Stopp) {
+                spiel.kommandoEntfernen(einheit, it)
             }
         }
         einheit.kommandoQueue.add(kommando)
@@ -502,13 +503,13 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     private fun kommandoPosition(letztesKommando: EinheitenKommando?, einheit: Einheit) = when (letztesKommando) {
-        null -> Punkt(einheit.x, einheit.y)
+        null -> einheit.punkt()
         is EinheitenKommando.Angriff -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
         is EinheitenKommando.Bewegen -> letztesKommando.zielPunkt
         is EinheitenKommando.Attackmove -> letztesKommando.zielPunkt
         is EinheitenKommando.Patrolieren -> letztesKommando.punkt2
-        is EinheitenKommando.HoldPosition -> throw AssertionError("kann nicht passieren")
-        is EinheitenKommando.Stopp -> throw AssertionError("kann nicht passieren")
+        is EinheitenKommando.HoldPosition -> einheit.punkt()
+        is EinheitenKommando.Stopp -> einheit.punkt()
     }
 
     private fun initSpieler(spieler: Spieler) {
