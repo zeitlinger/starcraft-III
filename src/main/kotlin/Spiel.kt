@@ -64,7 +64,7 @@ class Spiel(
         gegner.kristalle += 1.0 + 0.2 * gegner.minen
         mensch.kristalle += 1.0 + 0.2 * mensch.minen
         if (gegner.spielerTyp == SpielerTyp.computer) {
-            produzieren(spieler = gegner, einheitenProduzierenKI())
+            computerProduziert(spieler = gegner, einheitenProduzierenKI())
         }
         bewegeSpieler(gegner, mensch)
         bewegeSpieler(mensch, gegner)
@@ -138,7 +138,7 @@ class Spiel(
         }
     }
 
-    fun produzieren(spieler: Spieler, neutraleTyp: EinheitenTyp) {
+    fun computerProduziert(spieler: Spieler, neutraleTyp: EinheitenTyp) {
         val einheitenTyp = spieler.einheitenTypen.getValue(neutraleTyp.name)
         kaufen(einheitenTyp.kristalle, spieler) {
             neueEinheit(spieler, einheitenTyp)

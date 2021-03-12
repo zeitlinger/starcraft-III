@@ -87,6 +87,8 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
     Patrolieren(KommandoWählen.Patrolieren)
 }
 
+data class GebäudeInfo(val buttons: List<Button>, val sammelpunkt: Punkt)
+
 @Suppress("SpellCheckingInspection")
 class App : Application() {
     val gegner = spiel.gegner
@@ -96,7 +98,7 @@ class App : Application() {
     var gebäudePlazieren: Gebäude? = null
 
     lateinit var buttonLeiste: ObservableList<Node>
-    val gebäudeButtons = mutableMapOf<Gebäude, List<Button>>()
+    val gebäudeInfos = mutableMapOf<Gebäude, GebäudeInfo>()
     val kristalleText: Label = Label().apply { minWidth = 100.0 }
     val minenText: Label = Label().apply { minWidth = 100.0 }
     val kommandoAnzeige: Label = Label().apply { minWidth = 200.0 }
@@ -174,7 +176,7 @@ class App : Application() {
         stage.scene = scene
 
         val basisButtons = mutableListOf<Button>()
-        gebäudeButtons[basis] = basisButtons
+        gebäudeInfos[basis] = GebäudeInfo(basisButtons, mensch.startpunkt)
 
         kaufButton(basisButtons, "Mine", 2000 + 400 * mensch.minen) {
             mensch.minen += 1
@@ -221,19 +223,19 @@ class App : Application() {
         var auswahlStart: Punkt? = null
         var auswahlRechteck: Rectangle? = null
 
-        kartenPane.mausTaste(MouseButton.PRIMARY, consume = false) {
+        kartenPane.mausTaste(MouseButton.PRIMARY, consume = false) { event ->
             val laufbefehl = Laufbefehl.values().singleOrNull { it.wählen == kommandoWählen }
             if (laufbefehl != null) {
                 ausgewaehlt.forEach { einheit ->
                     laufBefehl(
                         einheit = einheit,
-                        event = it,
+                        event = event,
                         laufbefehl = laufbefehl,
-                        schiftcommand = it.isShiftDown
+                        schiftcommand = event.isShiftDown
                     )
                 }
             } else {
-                auswahlStart = Punkt(it.x, it.y)
+                auswahlStart = Punkt(event.x, event.y)
             }
             scene.cursor = Cursor.DEFAULT
             kommandoWählen = null
@@ -358,7 +360,6 @@ class App : Application() {
         spiel.neueEinheit(spieler, spieler.einheitenTypen.getValue(gebäude.name), punkt)
 
         val buttons = mutableListOf<Button>()
-        gebäudeButtons[gebäude] = buttons
 
         techgebäude.filter { it.gebäude == gebäude }.forEach { techGebäude ->
             einmalKaufen(buttons, techGebäude.name, techGebäude.kristalle) {
@@ -367,7 +368,7 @@ class App : Application() {
         }
         kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach { typ ->
             val button = kaufButton(buttons, typ.name, typ.kristalle) {
-                spiel.neueEinheit(mensch, typ)
+                spiel.neueEinheit(mensch, typ, gebäudeInfos.getValue(gebäude).sammelpunkt)
             }
             if (typ.techGebäude != null) {
                 button.isDisable = true
@@ -392,6 +393,7 @@ class App : Application() {
                 }
             }
         }
+        gebäudeInfos[gebäude] = GebäudeInfo(buttons, punkt.copy(y = punkt.y + 40 * nachVorne(spieler.spielerTyp)))
     }
 
     private fun neueAuswahl(aktion: () -> Unit) {
@@ -400,7 +402,7 @@ class App : Application() {
         zeigeKommands()
         ausgewaehlt.singleOrNull()?.let { einheit ->
             gebäude.singleOrNull { it.name == einheit.typ.name }
-                ?.let { aktuelleButtons(gebäudeButtons.getValue(it)) }
+                ?.let { aktuelleButtons(gebäudeInfos.getValue(it).buttons) }
                 ?: buttonLeiste.clear()
 
             einheit.kommandoQueue.forEachIndexed { index, kommando ->
@@ -459,8 +461,8 @@ class App : Application() {
     }
 
     private fun zeigeKommands() {
-        ausgewaehlt.singleOrNull()?.let {
-            kommandoAnzeige.text = it.kommandoQueue.map { it::class.simpleName }.joinToString(",")
+        ausgewaehlt.singleOrNull()?.let { einheit ->
+            kommandoAnzeige.text = einheit.kommandoQueue.map { it::class.simpleName }.joinToString(",")
         }
     }
 
@@ -520,8 +522,7 @@ class App : Application() {
             return
         }
 
-        val vorzeichen = if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) -1 else 1
-        plaziereGebäude(basis, Punkt(900.0, y = spieler.startpunkt.y + 60 * vorzeichen), spieler)
+        plaziereGebäude(basis, Punkt(900.0, y = spieler.startpunkt.y - 60 * nachVorne(spielerTyp)), spieler)
 
         fun neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) {
             spiel.neueEinheit(spieler, einheitenTyp, Punkt(x, y))
@@ -531,6 +532,10 @@ class App : Application() {
         neueEinheit(x = 750.0, y = spieler.startpunkt.y, einheitenTyp = arbeiter)
         neueEinheit(x = 850.0, y = spieler.startpunkt.y, einheitenTyp = infantrie)
         neueEinheit(x = 950.0, y = spieler.startpunkt.y, einheitenTyp = infantrie)
+    }
+
+    private fun nachVorne(spielerTyp: SpielerTyp): Int {
+        return if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) 1 else -1
     }
 
     private fun einheitUiErstellen(einheit: Einheit) {
