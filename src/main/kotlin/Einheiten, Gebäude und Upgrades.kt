@@ -140,6 +140,7 @@ data class Einheit(
     var panzerung: Double,
     var auswahlkreis: Arc? = null,
     var `springen cooldown`: Double = 0.0,
+    var `yamatokane cooldown`: Double = 0.0,
     var heiler: Einheit? = null,
     var wirdGeheilt: Int = 0,
     var zuletztGetroffen: Double = 0.0,
@@ -361,8 +362,7 @@ val späher = EinheitenTyp(
     gebäude = kaserne,
     hotkey = "g",
     typ = Typ.biologisch,
-    durchschlag = 0.0,
-    yamatokanone = 300
+    durchschlag = 0.0
 )
 val sonde = EinheitenTyp(
     name = "Sonde",

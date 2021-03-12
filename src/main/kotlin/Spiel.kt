@@ -115,6 +115,9 @@ class Spiel(
         if (it.`springen cooldown` > 0) {
             it.`springen cooldown` -= warteZeit.toDouble() / 1000.0
         }
+        if (it.`yamatokane cooldown` > 0) {
+            it.`yamatokane cooldown` -= warteZeit.toDouble() / 1000.0
+        }
         if (it.schusscooldown > 0) {
             it.schusscooldown -= warteZeit.toDouble() / 1000.0
         }
@@ -330,7 +333,9 @@ class Spiel(
         }
 
         if (einheit.spieler.spielerTyp == SpielerTyp.computer) {
-            return zielAuswählenKI(einheit.spieler, gegner, einheit)
+            if (zielAuswählenKI(einheit.spieler, gegner, einheit) != null) {
+                return zielAuswählenKI(einheit.spieler, gegner, einheit)
+            }
         }
 
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
@@ -468,6 +473,9 @@ class Spiel(
                     if (it is EinheitenKommando.Angriff && it.ziel == einheit) {
                         kommandoEntfernen(gegnerEinheit, it)
                     }
+                    if (it is EinheitenKommando.Yamatokanone && it.ziel == einheit) {
+                        kommandoEntfernen(gegnerEinheit, it)
+                    }
                 }
             }
             karte.remove(einheit.bild)
@@ -552,12 +560,12 @@ fun smaller(a: Double, b: Double): Double {
 //Die Tests mit angreifen funktioieren nicht
 //Wenn man ein Gebäude abwählt werden die Buttons nicht entfernt
 //Die Ressoursen für Gebäude werden auch weggenommen wenn man das Gebäude nicht platiert
+//KI-Einheiten machen keinen autoangriff
 
 //Features:
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
 //Wenn eine Einheit ein automatisches Ziel hat und man mit shift ein anderes Ziel gibt soll das automatische Ziel zuerst ausgeführt werden
 //patrollieren
-//spells
 //Chat
 //Kriegsnebel
 //Sichtweite für Einheiten
