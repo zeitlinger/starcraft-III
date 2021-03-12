@@ -515,6 +515,11 @@ class App : Application() {
 
     private fun initSpieler(spieler: Spieler) {
         val spielerTyp = spieler.spielerTyp
+        if (spieler == spiel.gegner && spielerTyp != SpielerTyp.computer) {
+            //gegner schickt einheiten
+            return
+        }
+
         val vorzeichen = if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) -1 else 1
         plaziereGebäude(basis, Punkt(900.0, y = spieler.startpunkt.y + 60 * vorzeichen), spieler)
 

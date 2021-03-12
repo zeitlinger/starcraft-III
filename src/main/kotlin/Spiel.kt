@@ -44,7 +44,11 @@ class Spiel(
                         clear()
                         addAll(kommando.kommandos)
                     }
-                ClientJoined -> started = true
+                ClientJoined -> {
+                    started = true
+                    multiplayer.sendeStartAnClient()
+                }
+                ServerJoined -> started = true
                 is NeueSpielerUpgrades -> gegner.upgrades = kommando.spielerUpgrades
                 is NeueUpgrades -> gegner.einheitenTypen[kommando.einheitenTyp.name] = kommando.einheitenTyp
             }
@@ -52,11 +56,9 @@ class Spiel(
         if (!started) {
             if (mensch.spielerTyp == SpielerTyp.client) {
                 multiplayer.sendeStartAnServer()
-                started = true
-            } else {
-                //auf client warten
-                return
             }
+            //auf client oder server warten
+            return
         }
 
         gegner.kristalle += 1.0 + 0.2 * gegner.minen
@@ -351,8 +353,8 @@ class Spiel(
                     entfernung(einheit, it) <= 300 &&
                     einheit != it &&
                     (it.heiler == null || it.heiler == einheit) &&
-                        (it.typ.typ == Typ.biologisch || !gegner(gegner).upgrades.vertärkteHeilmittel) &&
-                        (it.zuletztGetroffen > 1 || gegner(gegner).upgrades.strahlungsheilung)
+                    (it.typ.typ == Typ.biologisch || !gegner(gegner).upgrades.vertärkteHeilmittel) &&
+                    (it.zuletztGetroffen > 1 || gegner(gegner).upgrades.strahlungsheilung)
             }
             .minByOrNull { entfernung(einheit, it) }
         if (ziel != null) {
@@ -503,6 +505,7 @@ fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer
             .also { einheitenNummer[this.spielerTyp] = it + 1 }
     ).also { einheiten.add(it) }
 }
+
 fun kommandoAnzeigeEntfernen(kommando: EinheitenKommando) {
     if (kommando.zielpunktLinie != null) {
         karte.remove(kommando.zielpunktLinie)

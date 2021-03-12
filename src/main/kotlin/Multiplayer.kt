@@ -66,7 +66,10 @@ class NeueSpielerUpgrades(val spielerUpgrades: SpielerUpgrades) : MultiplayerKom
 @Serializable
 object ClientJoined : MultiplayerKommando()
 
-class Multiplayer(private val client: Client?, val server: Server?) {
+@Serializable
+object ServerJoined : MultiplayerKommando()
+
+class Multiplayer(private val client: Client?, private val server: Server?) {
 
     val spielerTyp: SpielerTyp = when {
         client == null && server == null -> SpielerTyp.mensch
@@ -83,11 +86,16 @@ class Multiplayer(private val client: Client?, val server: Server?) {
     fun empfangeneKommandosVerarbeiten(handler: (MultiplayerKommando) -> Unit) {
         fun empfange(l: ConcurrentLinkedDeque<MultiplayerKommando>) {
             val kommando = l.pollFirst() ?: return
+//            println("empfange ${kommando::class.simpleName}")
             handler(kommando)
             empfange(l)
         }
         server?.empfangen?.let { empfange(it) }
         client?.empfangen?.let { empfange(it) }
+    }
+
+    fun sendeStartAnClient() {
+        neuesKommando(ServerJoined)
     }
 
     fun sendeStartAnServer() {
