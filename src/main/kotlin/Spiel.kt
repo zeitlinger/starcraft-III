@@ -69,6 +69,9 @@ class Spiel(
         bewegeSpieler(gegner, mensch)
         bewegeSpieler(mensch, gegner)
 
+        spells(gegner)
+        spells(mensch)
+
         schiessen(gegner, mensch)
         schiessen(mensch, gegner)
 
@@ -138,6 +141,21 @@ class Spiel(
         }
     }
 
+    private fun spells(spieler: Spieler) {
+        spieler.einheiten.forEach {
+            val kommando = it.kommandoQueue.getOrNull(0)
+            if (kommando is EinheitenKommando.Yamatokanone) {
+                spellsAusführen(it, kommando.ziel)
+            }
+        }
+    }
+
+    private fun spellsAusführen(einheit: Einheit, ziel: Einheit) {
+        if (einheit.typ.yamatokanone!! <= entfernung(einheit, ziel) && !einheit.hatSichBewegt) {
+            ziel.leben -= 800
+        }
+    }
+
     fun computerProduziert(spieler: Spieler, neutraleTyp: EinheitenTyp) {
         val einheitenTyp = spieler.einheitenTypen.getValue(neutraleTyp.name)
         kaufen(einheitenTyp.kristalle, spieler) {
@@ -186,20 +204,28 @@ class Spiel(
             return
         }
 
-        val e = entfernung(einheit, ziel.punkt())
+        val e = entfernung(einheit, ziel)
 
-        if (e > einheit.typ.reichweite) {
-            val springen = einheit.typ.springen
-            val mindestabstand = e - 40
-            val `max laufweite` = if (einheit.`springen cooldown` <= 0 && springen != null && e <= springen + 40) {
-                ziel.leben -= einheit.typ.schaden * 3
-                einheit.`springen cooldown` = 10.0
-                springen.toDouble()
-            } else {
-                laufweite
+        if (kommando is EinheitenKommando.Angriff) {
+            if (e > einheit.typ.reichweite) {
+                val springen = einheit.typ.springen
+                val mindestabstand = e - 40
+                val `max laufweite` = if (einheit.`springen cooldown` <= 0 && springen != null && e <= springen + 40) {
+                    ziel.leben -= einheit.typ.schaden * 3
+                    einheit.`springen cooldown` = 10.0
+                    springen.toDouble()
+                } else {
+                    laufweite
+                }
+
+                bewege(einheit, ziel.punkt(), min(mindestabstand, `max laufweite`))
             }
-
-            bewege(einheit, ziel.punkt(), min(mindestabstand, `max laufweite`))
+        }
+        if (einheit.typ.yamatokanone != null) {
+            if (e > einheit.typ.yamatokanone!!) {
+                val mindestabstand = e - einheit.typ.yamatokanone!!
+                bewege(einheit, ziel.punkt(), min(mindestabstand, laufweite))
+            }
         }
     }
 
@@ -249,10 +275,7 @@ class Spiel(
     }
 
     private fun angriffspriorität(einheit: Einheit, ziel: Einheit): Int {
-        if (kannAngreifen(ziel, einheit) && (ziel.typ.reichweite >= entfernung(
-                einheit,
-                ziel
-            ) || (ziel.typ.reichweite < einheit.typ.reichweite && entfernung(einheit, ziel) >= einheit.typ.reichweite))
+        if (kannAngreifen(ziel, einheit) && (ziel.typ.reichweite >= entfernung(einheit, ziel) || (ziel.typ.reichweite < einheit.typ.reichweite && entfernung(einheit, ziel) >= einheit.typ.reichweite))
             && !ziel.typ.zivileEinheit
         ) {
             return 1
@@ -302,6 +325,10 @@ class Spiel(
             return kommando.ziel
         }
 
+        if (kommando is EinheitenKommando.Yamatokanone) {
+            return kommando.ziel
+        }
+
         if (einheit.spieler.spielerTyp == SpielerTyp.computer) {
             return zielAuswählenKI(einheit.spieler, gegner, einheit)
         }
@@ -331,11 +358,7 @@ class Spiel(
         val liste = mutableListOf<Einheit>()
         l.forEach {
             gegner.einheiten.forEach { gEinheit ->
-                if ((`ist in Reichweite`(gEinheit, it) || `ist in Reichweite`(it, gEinheit) || (!kannAngreifen(
-                        gEinheit,
-                        it
-                    ) && entfernung(gEinheit, it) <= 300)) && kannAngreifen(einheit, gEinheit)
-                ) {
+                if ((`ist in Reichweite`(gEinheit, it) || entfernung(gEinheit, it) <= 300) && kannAngreifen(einheit, gEinheit)) {
                     liste.add(gEinheit)
                 }
             }
@@ -525,29 +548,29 @@ fun smaller(a: Double, b: Double): Double {
 }
 
 //Bugs:
-//wenn man holdposition mit shiftcomand ausführt, wird es sofort ausgeführt
 //wenn man mit zwei Einheiten unterschiedliche Kommandos ausführt und dann beide auswählt und mit shift ein neues Kommando gibt, werden die alten kommandos nicht vollständig angezeigt
 //Die Tests mit angreifen funktioieren nicht
+//Wenn man ein Gebäude abwählt werden die Buttons nicht entfernt
+//Die Ressoursen für Gebäude werden auch weggenommen wenn man das Gebäude nicht platiert
 
 //Features:
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
 //Wenn eine Einheit ein automatisches Ziel hat und man mit shift ein anderes Ziel gibt soll das automatische Ziel zuerst ausgeführt werden
 //patrollieren
+//spells
 //Chat
 //Kriegsnebel
 //Sichtweite für Einheiten
 //Minnimap
 //kontrollgruppen
-//spells
 //Konsole
 //lebensanzeige(lebensbalken)
-//Gebäude platzieren
-//gebäude auswählen
+//Einheiten spawnen bei dem Produktionsgebäude
 //produktionszeit
 //recourssen auf der Karte (wissenschafts-und produktionsressoursen)
 //arbeiter und wissenschafter können ressoursen abbauen bzw. erforschen und zu außenposten bringen
 //Einheitengröße anpassen
-//Physik (Einheiten nicht übereinander)
+//Physik-Angin
 //Wasser + Schiffe
 //bessere Grafik mit 3D-Moddelen und Animationen
 //sound

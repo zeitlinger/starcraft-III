@@ -109,6 +109,7 @@ data class EinheitenTyp(
     @Transient
     var button: Button? = null,
     var springen: Int? = null,
+    var yamatokanone: Int? = null,
     val typ: Typ,
     var flächenschaden: Double? = null,
     var schusscooldown: Double = 1.0,
@@ -191,6 +192,9 @@ sealed class EinheitenKommando(
 
     @Serializable
     class Stopp : EinheitenKommando()
+
+    @Serializable
+    class Yamatokanone(val ziel: Einheit) : EinheitenKommando()
 }
 
 val kommandoHotKeys = mapOf(
@@ -357,7 +361,8 @@ val späher = EinheitenTyp(
     gebäude = kaserne,
     hotkey = "g",
     typ = Typ.biologisch,
-    durchschlag = 0.0
+    durchschlag = 0.0,
+    yamatokanone = 300
 )
 val sonde = EinheitenTyp(
     name = "Sonde",

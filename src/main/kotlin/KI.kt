@@ -5,7 +5,7 @@ fun zielAuswählenKI(spieler: Spieler, gegner: Spieler, einheit: Einheit): Einhe
 
     val einheitenAnzahl = spieler.einheiten.size
 
-    if (einheitenAnzahl > 5) {
+    if (einheitenAnzahl > 20) {
         return nächsteEinheit
     } else {
         return null

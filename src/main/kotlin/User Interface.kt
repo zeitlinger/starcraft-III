@@ -344,6 +344,7 @@ class App : Application() {
         } else {
             val lowercase = text?.toLowerCase()
             val k = kommandoHotKeys[lowercase]
+
             if (k != null) {
                 ausgewaehlt.forEach {
                     neuesKommando(
@@ -513,6 +514,7 @@ class App : Application() {
         is EinheitenKommando.Patrolieren -> letztesKommando.punkt2
         is EinheitenKommando.HoldPosition -> einheit.punkt()
         is EinheitenKommando.Stopp -> einheit.punkt()
+        is EinheitenKommando.Yamatokanone -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
     }
 
     private fun initSpieler(spieler: Spieler) {
@@ -557,6 +559,10 @@ class App : Application() {
             `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
         }
 
+        imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Yamatokanone }) {
+            `spell ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
+        }
+
         if (spieler == spiel.mensch) {
             imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == null }) {
                 neueAuswahl {
@@ -574,6 +580,14 @@ class App : Application() {
         ausgewaehlt.forEach {
             val kommando = EinheitenKommando.Angriff(ziel = ziel)
             neuesKommando(einheit = it, kommando = kommando, shift = schiftcommand)
+            zielpunktKreisUndLinieHinzufügen(kommando, it)
+        }
+    }
+
+    private fun `spell ziel auswählen`(ziel: Einheit, schiftcommand: Boolean) {
+        ausgewaehlt.forEach {
+            val kommando = EinheitenKommando.Yamatokanone(ziel)
+            neuesKommando(it, kommando, schiftcommand)
             zielpunktKreisUndLinieHinzufügen(kommando, it)
         }
     }
