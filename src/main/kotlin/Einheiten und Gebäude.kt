@@ -10,25 +10,50 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 import kotlin.properties.Delegates
 
+
+fun gebäudeEinheitenTyp(gebäude: Gebäude) = EinheitenTyp(
+    name = gebäude.name,
+    reichweite = 0.0,
+    leben = 3000.0,
+    schaden = 0.0,
+    laufweite = 0.0,
+    kristalle = gebäude.kristalle,
+    kuerzel = gebäude.kuerzel,
+    panzerung = 5.0,
+    kannAngreifen = KannAngreifen.alles,
+    gebäude = null,
+    hotkey = null,
+    typ = Typ.struktur,
+    durchschlag = 0.0
+)
+
+val neutraleEinheitenTypen: MutableMap<String, EinheitenTyp> = mutableMapOf()
+
 @Serializable
 data class Gebäude(
     val name: String,
     val kuerzel: String,
     val kristalle: Int,
-    val punkt: Punkt,
 ) {
     init {
         gebäude.add(this)
+        gebäudeEinheitenTyp(this)
     }
 }
 
 val gebäude = mutableListOf<Gebäude>()
 
-val kaserne = Gebäude(name = "Kaserne", kuerzel = "KAS", kristalle = 1500, punkt = Punkt(x = 1220.0, y = 940.0))
-val fabrik = Gebäude(name = "Fabrik", kuerzel = "FAB", kristalle = 2000, punkt = Punkt(x = 1470.0, y = 965.0))
-val raumhafen = Gebäude(name = "Raumhafen", kuerzel = "RAU", kristalle = 2500, punkt = Punkt(x = 1570.0, y = 955.0))
-val brutstätte = Gebäude(name = "Brutstätte", kuerzel = "BRU", kristalle = 2500, punkt = Punkt(x = 470.0, y = 945.0))
-val labor = Gebäude(name = "Labor", kuerzel = "LAB", kristalle = 2800, punkt = Punkt(x = 370.0, y = 955.0))
+val basis = Gebäude(
+    name = "Basis",
+    kristalle = 0,
+    kuerzel = "BAS",
+)
+
+val kaserne = Gebäude(name = "Kaserne", kuerzel = "KAS", kristalle = 1500)
+val fabrik = Gebäude(name = "Fabrik", kuerzel = "FAB", kristalle = 2000)
+val raumhafen = Gebäude(name = "Raumhafen", kuerzel = "RAU", kristalle = 2500)
+val brutstätte = Gebäude(name = "Brutstätte", kuerzel = "BRU", kristalle = 2500)
+val labor = Gebäude(name = "Labor", kuerzel = "LAB", kristalle = 2800)
 
 @Serializable
 data class TechGebäude(
@@ -173,8 +198,6 @@ val kommandoHotKeys = mapOf(
     "h" to { EinheitenKommando.HoldPosition() }
 )
 
-val neutraleEinheitenTypen: MutableMap<String, EinheitenTyp> = mutableMapOf()
-
 val infantrie = EinheitenTyp(
     name = "Infantrie",
     reichweite = 150.0,
@@ -254,21 +277,7 @@ val panzer = EinheitenTyp(
     flächenschaden = 25.0,
     durchschlag = 0.0
 )
-val basis = EinheitenTyp(
-    name = "Basis",
-    reichweite = 0.0,
-    leben = 3000.0,
-    schaden = 0.0,
-    laufweite = 0.0,
-    kristalle = 0,
-    kuerzel = "BAS",
-    panzerung = 5.0,
-    kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
-    hotkey = null,
-    typ = Typ.struktur,
-    durchschlag = 0.0
-)
+
 val jäger = EinheitenTyp(
     name = "Jäger",
     reichweite = 120.0,

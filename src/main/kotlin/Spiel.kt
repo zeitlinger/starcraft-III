@@ -143,10 +143,10 @@ class Spiel(
         }
     }
 
-    fun neueEinheit(spieler: Spieler, einheitenTyp: EinheitenTyp) {
+    fun neueEinheit(spieler: Spieler, einheitenTyp: EinheitenTyp, punkt: Punkt = spieler.startpunkt) {
         val einheit = spieler.neueEinheit(
-            x = spieler.startpunkt.x,
-            y = spieler.startpunkt.y,
+            x = punkt.x,
+            y = punkt.y,
             einheitenTyp = einheitenTyp
         )
         multiplayer.neueEinheit(einheit.x, einheit.y, einheit)

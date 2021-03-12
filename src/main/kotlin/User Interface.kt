@@ -88,13 +88,15 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
 }
 
 @Suppress("SpellCheckingInspection")
-class App(var kommandoWählen: KommandoWählen? = null) : Application() {
+class App : Application() {
     val gegner = spiel.gegner
     val mensch = spiel.mensch
     val kaufbareEinheiten = mensch.einheitenTypen.values
+    var kommandoWählen: KommandoWählen? = null
+    var gebäudePlazieren: Gebäude? = null
 
     lateinit var buttonLeiste: ObservableList<Node>
-    val basisButtons = mutableListOf<Button>()
+    val gebäudeButtons = mutableMapOf<Gebäude, List<Button>>()
     val kristalleText: Label = Label().apply { minWidth = 100.0 }
     val minenText: Label = Label().apply { minWidth = 100.0 }
     val kommandoAnzeige: Label = Label().apply { minWidth = 200.0 }
@@ -171,6 +173,8 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
 
         stage.scene = scene
 
+        val basisButtons = mutableListOf<Button>()
+        gebäudeButtons[basis] = basisButtons
 
         kaufButton(basisButtons, "Mine", 2000 + 400 * mensch.minen) {
             mensch.minen += 1
@@ -178,7 +182,12 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         kaufButton(basisButtons, "Arbeiter", arbeiter.kristalle) {
             spiel.neueEinheit(mensch, arbeiter)
         }
-        gebäude.forEach { gebäude -> gebäudeButton(basisButtons, gebäude) }
+        gebäude.filter { it != basis }.forEach { gebäude ->
+            einmalKaufen(basisButtons, gebäude.name, gebäude.kristalle) {
+                gebäudePlazieren = gebäude
+                scene.cursor = Cursor.HAND
+            }
+        }
 
         stage.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
             if (nurBasisAusgewählt()) {
@@ -201,6 +210,12 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     laufBefehl(einheit, it, laufbefehl = Laufbefehl.Bewegen, schiftcommand = it.isShiftDown)
                 }
             }
+        }
+
+        kartenPane.mausTaste(MouseButton.PRIMARY, filter = { gebäudePlazieren != null }) {
+            plaziereGebäude(gebäudePlazieren!!, Punkt(it.x, it.y), mensch)
+            gebäudePlazieren = null
+            scene.cursor = Cursor.DEFAULT
         }
 
         var auswahlStart: Punkt? = null
@@ -339,60 +354,55 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
         }
     }
 
-    private fun gebäudeButton(leiste: MutableList<Button>, gebäude: Gebäude): Button =
-        einmalKaufen(leiste, gebäude.name, gebäude.kristalle) {
-            val buttons = mutableListOf<Button>()
+    private fun plaziereGebäude(gebäude: Gebäude, punkt: Punkt, spieler: Spieler) {
+        spiel.neueEinheit(spieler, spieler.einheitenTypen.getValue(gebäude.name), punkt)
 
-            karte.add(Circle(gebäude.punkt.x, gebäude.punkt.y, 23.0).apply {
-                fill = mensch.farbe
-                mausTaste(MouseButton.PRIMARY) {
-                    aktuelleButtons(buttons)
-                }
-            })
-            karte.add(Text(gebäude.punkt.x - 12, gebäude.punkt.y, gebäude.kuerzel))
+        val buttons = mutableListOf<Button>()
+        gebäudeButtons[gebäude] = buttons
 
-            techgebäude.filter { it.gebäude == gebäude }.forEach { gebäude ->
-                einmalKaufen(buttons, gebäude.name, gebäude.kristalle) {
-                    kaufbareEinheiten.filter { it.techGebäude == gebäude }.forEach { it.button!!.isDisable = false }
-                }
+        techgebäude.filter { it.gebäude == gebäude }.forEach { techGebäude ->
+            einmalKaufen(buttons, techGebäude.name, techGebäude.kristalle) {
+                kaufbareEinheiten.filter { it.techGebäude == techGebäude }.forEach { it.button!!.isDisable = false }
             }
-            kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach { typ ->
-                val button = kaufButton(buttons, typ.name, typ.kristalle) {
-                    spiel.neueEinheit(mensch, typ)
-                }
-                if (typ.techGebäude != null) {
-                    button.isDisable = true
-                }
-                typ.button = button
+        }
+        kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach { typ ->
+            val button = kaufButton(buttons, typ.name, typ.kristalle) {
+                spiel.neueEinheit(mensch, typ)
             }
-            upgrades.filter { it.gebäude == gebäude }.forEach { upgrade ->
-                kaufButton(buttons, { upgrade.name(mensch.upgrades) }, { upgrade.kritalle(mensch.upgrades) }) {
-                    var remove = false
+            if (typ.techGebäude != null) {
+                button.isDisable = true
+            }
+            typ.button = button
+        }
+        upgrades.filter { it.gebäude == gebäude }.forEach { upgrade ->
+            kaufButton(buttons, { upgrade.name(mensch.upgrades) }, { upgrade.kritalle(mensch.upgrades) }) {
+                var remove = false
 
-                    upgrade.eiheitenUpgrades.forEach { (neutralerTyp, aktion) ->
-                        val value = mensch.einheitenTypen.getValue(neutralerTyp.name)
-                        remove = remove || value.aktion()
-                        spiel.multiplayer.upgrade(value)
-                    }
+                upgrade.eiheitenUpgrades.forEach { (neutralerTyp, aktion) ->
+                    val value = mensch.einheitenTypen.getValue(neutralerTyp.name)
+                    remove = remove || value.aktion()
+                    spiel.multiplayer.upgrade(value)
+                }
 
-                    remove = remove || upgrade.spielerUpgrade(mensch.upgrades)
-                    spiel.multiplayer.upgrade(mensch)
+                remove = remove || upgrade.spielerUpgrade(mensch.upgrades)
+                spiel.multiplayer.upgrade(mensch)
 
-                    if (remove) {
-                        entfernen(buttons, it)
-                    }
+                if (remove) {
+                    entfernen(buttons, it)
                 }
             }
         }
+    }
 
     private fun neueAuswahl(aktion: () -> Unit) {
         `auswahl löschen`()
         aktion()
         zeigeKommands()
-        if (nurBasisAusgewählt()) {
-            aktuelleButtons(basisButtons)
-        }
         ausgewaehlt.singleOrNull()?.let { einheit ->
+            gebäude.singleOrNull { it.name == einheit.typ.name }?.let {
+                aktuelleButtons(gebäudeButtons.getValue(it))
+            }
+
             einheit.kommandoQueue.forEachIndexed { index, kommando ->
                 zielpunktUndKreisHinzufügen(einheit, kommando, einheit.kommandoQueue.getOrNull(index - 1))
             }
@@ -504,9 +514,18 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
     }
 
     private fun initSpieler(spieler: Spieler) {
-        spieler.einheiten.forEach {
-            einheitUiErstellen(it)
+        val spielerTyp = spieler.spielerTyp
+        val vorzeichen = if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) -1 else 1
+        plaziereGebäude(basis, Punkt(900.0, y = spieler.startpunkt.y + 60 * vorzeichen), spieler)
+
+        fun neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp) {
+            spiel.neueEinheit(spieler, einheitenTyp, Punkt(x, y))
         }
+
+        neueEinheit(x = 1050.0, y = spieler.startpunkt.y, einheitenTyp = späher)
+        neueEinheit(x = 750.0, y = spieler.startpunkt.y, einheitenTyp = arbeiter)
+        neueEinheit(x = 850.0, y = spieler.startpunkt.y, einheitenTyp = infantrie)
+        neueEinheit(x = 950.0, y = spieler.startpunkt.y, einheitenTyp = infantrie)
     }
 
     private fun einheitUiErstellen(einheit: Einheit) {
@@ -633,9 +652,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     schadensUpgrade = 0,
                     panzerungsUprade = 0,
                 )
-            ).apply {
-                startEinheiten(gegnerTyp)
-            }
+            )
 
             val spielerTyp = multiplayer.spielerTyp
             val mensch = Spieler(
@@ -650,9 +667,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
                     schadensUpgrade = 0,
                     panzerungsUprade = 0
                 )
-            ).apply {
-                startEinheiten(spielerTyp)
-            }
+            )
 
             spiel = Spiel(mensch, gegner, multiplayer = multiplayer)
 
@@ -666,15 +681,7 @@ class App(var kommandoWählen: KommandoWählen? = null) : Application() {
             if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer)
                 Punkt(x = 900.0, y = 115.0) else Punkt(x = 900.0, y = 905.0)
 
-        private fun Spieler.startEinheiten(spielerTyp: SpielerTyp) {
-            val vorzeichen = if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) -1 else 1
 
-            neueEinheit(x = 1050.0, y = startpunkt.y, einheitenTyp = späher)
-            neueEinheit(x = 750.0, y = startpunkt.y, einheitenTyp = arbeiter)
-            neueEinheit(x = 850.0, y = startpunkt.y, einheitenTyp = infantrie)
-            neueEinheit(x = 900.0, y = startpunkt.y + 60 * vorzeichen, einheitenTyp = basis)
-            neueEinheit(x = 950.0, y = startpunkt.y, einheitenTyp = infantrie)
-        }
     }
 }
 
