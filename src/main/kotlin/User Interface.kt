@@ -399,9 +399,9 @@ class App : Application() {
         aktion()
         zeigeKommands()
         ausgewaehlt.singleOrNull()?.let { einheit ->
-            gebäude.singleOrNull { it.name == einheit.typ.name }?.let {
-                aktuelleButtons(gebäudeButtons.getValue(it))
-            }
+            gebäude.singleOrNull { it.name == einheit.typ.name }
+                ?.let { aktuelleButtons(gebäudeButtons.getValue(it)) }
+                ?: buttonLeiste.clear()
 
             einheit.kommandoQueue.forEachIndexed { index, kommando ->
                 zielpunktUndKreisHinzufügen(einheit, kommando, einheit.kommandoQueue.getOrNull(index - 1))
