@@ -74,11 +74,17 @@ private fun kreis(x: Double, y: Double, radius: Double): Arc {
     }
 }
 
-enum class KommandoWählen(val hotkey: String) {
+enum class KommandoWählen(val hotkey: String, val filter: (Punkt) -> Set<Einheit> = {ausgewaehlt}) {
     Bewegen("b"),
     Attackmove("a"),
     Patrolieren("p"),
-    Yamatokanone("y")
+    Yamatokanone("y", { ziel ->
+        setOfNotNull(
+            ausgewaehlt
+            .filter {it.typ.yamatokanone != null && it.`yamatokane cooldown` == 0.0}
+            .minByOrNull { entfernung(it, ziel) }
+        )
+    })
 }
 
 enum class Laufbefehl(val wählen: KommandoWählen) {
@@ -91,6 +97,7 @@ data class GebäudeInfo(val buttons: List<Button>, val sammelpunkt: Punkt)
 
 @Suppress("SpellCheckingInspection")
 class App : Application() {
+    lateinit var scene: Scene
     val gegner = spiel.gegner
     val mensch = spiel.mensch
     val kaufbareEinheiten = mensch.einheitenTypen.values
@@ -170,7 +177,7 @@ class App : Application() {
 
         val vBox = VBox(10.0)
 
-        val scene = Scene(vBox, 1850.0, 1000.0)
+        scene = Scene(vBox, 1850.0, 1000.0)
         scene.fill = null
 
         stage.scene = scene
@@ -338,6 +345,9 @@ class App : Application() {
     private fun auswahlHotkeys(scene: Scene, text: String?, shift: Boolean) {
         val wählen = KommandoWählen.values().singleOrNull { it.hotkey == text }
         if (wählen != null) {
+            if (wählen.filter (Punkt(0.0, 0.0)).isEmpty()) {
+                return
+            }
             kommandoWählen = wählen
             scene.cursor = Cursor.CROSSHAIR
             return
@@ -556,11 +566,16 @@ class App : Application() {
 
     private fun einheitMouseHandler(spieler: Spieler, imageView: Node, einheit: Einheit) {
         imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Attackmove }) {
-            `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
+            `angriffsziel auswählen`(einheit, schiftcommand = it.isShiftDown)
+            scene.cursor = Cursor.DEFAULT
+            kommandoWählen = null
         }
 
         imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Yamatokanone }) {
-            `spell ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
+            val angreifer = kommandoWählen!!.filter(einheit.punkt()).singleOrNull()
+            if (angreifer != null) {
+                kommandoMitZielpunktKreis(angreifer, EinheitenKommando.Yamatokanone(einheit), it.isShiftDown)
+            }
         }
 
         if (spieler == spiel.mensch) {
@@ -572,24 +587,21 @@ class App : Application() {
         }
 
         imageView.mausTaste(MouseButton.SECONDARY, filter = { kommandoWählen == null }) {
-            `ziel auswählen`(einheit, schiftcommand = it.isShiftDown)
+            `angriffsziel auswählen`(einheit, schiftcommand = it.isShiftDown)
         }
     }
 
-    private fun `ziel auswählen`(ziel: Einheit, schiftcommand: Boolean) {
+    private fun `angriffsziel auswählen`(ziel: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
-            val kommando = EinheitenKommando.Angriff(ziel = ziel)
-            neuesKommando(einheit = it, kommando = kommando, shift = schiftcommand)
-            zielpunktKreisUndLinieHinzufügen(kommando, it)
+            kommandoMitZielpunktKreis(it, EinheitenKommando.Angriff(ziel = ziel), schiftcommand)
         }
     }
 
-    private fun `spell ziel auswählen`(ziel: Einheit, schiftcommand: Boolean) {
-        ausgewaehlt.forEach {
-            val kommando = EinheitenKommando.Yamatokanone(ziel)
-            neuesKommando(it, kommando, schiftcommand)
-            zielpunktKreisUndLinieHinzufügen(kommando, it)
-        }
+    private fun kommandoMitZielpunktKreis(it: Einheit, kommando: EinheitenKommando, schiftcommand: Boolean) {
+        neuesKommando(einheit = it, kommando = kommando, shift = schiftcommand)
+        zielpunktKreisUndLinieHinzufügen(kommando, it)
+        scene.cursor = Cursor.DEFAULT
+        kommandoWählen = null
     }
 
     private fun auswählen(einheit: Einheit) {
