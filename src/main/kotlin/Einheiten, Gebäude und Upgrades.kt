@@ -90,8 +90,10 @@ enum class MachtZustand {
     langsamkeit, vergiftung
 }
 
+typealias ZeitInSec = Double
+
 @Serializable
-data class EinheitenTyp(
+data class EinheitenTyp constructor(
     var schaden: Double,
     var reichweite: Double,
     val leben: Double,
@@ -112,11 +114,12 @@ data class EinheitenTyp(
     var yamatokanone: Int? = null,
     val einheitenArt: EinheitenArt,
     var flächenschaden: Double? = null,
-    var schusscooldown: Double = 1.0,
-    val firstShotDelay: Double = 0.5,
+    var schusscooldown: ZeitInSec = 1.0,
+    val firstShotDelay: ZeitInSec = 0.5,
     var machtZustand: MachtZustand? = null,
     val zivileEinheit: Boolean = false,
-    val spielerTyp: SpielerTyp = SpielerTyp.mensch
+    val produktionsZeit: ZeitInSec = 5.0,
+    val spielerTyp: SpielerTyp = SpielerTyp.mensch,
 ) {
     init {
         if (spielerTyp == SpielerTyp.mensch) {
@@ -138,16 +141,16 @@ data class Einheit(
     var lebenText: Text? = null,
     var panzerung: Double,
     var auswahlkreis: Arc? = null,
-    var `springen cooldown`: Double = 0.0,
-    var `yamatokane cooldown`: Double = 0.0,
+    var `springen cooldown`: ZeitInSec = 0.0,
+    var `yamatokane cooldown`: ZeitInSec = 0.0,
     var heiler: Einheit? = null,
     var wirdGeheilt: Int = 0,
-    var zuletztGetroffen: Double = 0.0,
-    var schusscooldown: Double = 0.0,
-    var firstShotCooldown: Double = 0.0,
+    var zuletztGetroffen: ZeitInSec = 0.0,
+    var schusscooldown: ZeitInSec = 0.0,
+    var firstShotCooldown: ZeitInSec = 0.0,
     var hatSichBewegt: Boolean = false,
-    var vergiftet: Double = 0.0,
-    var verlangsamt: Double = 0.0,
+    var vergiftet: ZeitInSec = 0.0,
+    var verlangsamt: ZeitInSec = 0.0,
     val kommandoQueue: MutableList<EinheitenKommando> = mutableListOf(),
     val nummer: Int,
     var letzterAngriff: Einheit? = null
@@ -344,7 +347,7 @@ val arbeiter = EinheitenTyp(
     kuerzel = "ARB",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäudeTyp = null,
+    gebäudeTyp = basis,
     hotkey = "f",
     einheitenArt = EinheitenArt.biologisch,
     zivileEinheit = true,
@@ -497,7 +500,7 @@ class Spieler(
         return gebäude[nummer]
     }
 
-    fun gebäude(gebäudeTyp: GebäudeTyp) = einheitenTypen.getValue(gebäudeTyp.name)
+    fun gebäudeEinheitenTyp(gebäudeTyp: GebäudeTyp) = einheitenTypen.getValue(gebäudeTyp.name)
 
     override fun toString(): String {
         return "Spieler(typ=$spielerTyp)"

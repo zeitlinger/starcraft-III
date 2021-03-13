@@ -22,38 +22,19 @@ class Spiel(
     val gegner: Spieler,
     val rundenLimit: Int? = null,
     var runde: Int = 0,
-    val warteZeit: Long = 15,
+    val warteZeit: ZeitInSec = 0.015,
     val multiplayer: Multiplayer,
     var einheitProduziert: (Einheit) -> Unit = {},
     var einheitEntfernt: (Einheit) -> Unit = {},
-    var kommandoEntfernt: (EinheitenKommando) -> Unit = {}
+    var kommandoEntfernt: (EinheitenKommando) -> Unit = {},
+    val rundeVorbei: MutableList<() -> Unit> = mutableListOf()
 ) {
     private var started = mensch.spielerTyp == SpielerTyp.mensch
 
     fun spieler(typ: SpielerTyp): Spieler = if (typ == mensch.spielerTyp) mensch else gegner
 
     fun runde() {
-        multiplayer.empfangeneKommandosVerarbeiten { kommando ->
-            when (kommando) {
-                is NeueEinheit ->
-                    gegner.neueEinheit(
-                        kommando.punkt,
-                        neutraleEinheitenTypen.getValue(kommando.einheitenTyp)
-                    ).also { einheitProduziert(it) }
-                is NeueKommandos ->
-                    kommando.einheit.kommandoQueue.apply {
-                        clear()
-                        addAll(kommando.kommandos)
-                    }
-                ClientJoined -> {
-                    started = true
-                    multiplayer.sendeStartAnClient()
-                }
-                ServerJoined -> started = true
-                is NeueSpielerUpgrades -> gegner.upgrades = kommando.spielerUpgrades
-                is NeueUpgrades -> gegner.einheitenTypen[kommando.einheitenTyp.name] = kommando.einheitenTyp
-            }
-        }
+        multiplayer.empfangeneKommandosVerarbeiten(this::verarbeiteMultiplayerKommando)
         if (!started) {
             if (mensch.spielerTyp == SpielerTyp.client) {
                 multiplayer.sendeStartAnServer()
@@ -67,6 +48,21 @@ class Spiel(
         if (gegner.spielerTyp == SpielerTyp.computer) {
             computerProduziert(spieler = gegner, einheitenProduzierenKI())
         }
+
+        mensch.gebäude.values.filter { it.produktionsQueue.isNotEmpty() }.forEach { gebäude ->
+            if (gebäude.produktionsZeit <= 0) {
+                val typ = gebäude.produktionsQueue.removeAt(0)
+                val einheit = neueEinheit(mensch, typ, gebäude.einheit.punkt)
+                neuesKommando(einheit, Bewegen(gebäude.sammelpunkt.punkt))
+
+                gebäude.produktionsQueue.getOrNull(0)?.let {
+                    gebäude.produktionsZeit = it.produktionsZeit
+                }
+            } else {
+                gebäude.produktionsZeit -= warteZeit
+            }
+        }
+
         bewegeSpieler(gegner, mensch)
         bewegeSpieler(mensch, gegner)
 
@@ -99,6 +95,35 @@ class Spiel(
         gegner.einheiten.forEach {
             rundenende(it)
         }
+
+        rundeVorbei.forEach { it() }
+    }
+
+    fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando) {
+        einheit.kommandoQueue.add(kommando)
+        multiplayer.neueKommandos(einheit)
+    }
+
+    private fun verarbeiteMultiplayerKommando(kommando: MultiplayerKommando) {
+        when (kommando) {
+            is NeueEinheit ->
+                gegner.neueEinheit(
+                    kommando.punkt,
+                    neutraleEinheitenTypen.getValue(kommando.einheitenTyp)
+                ).also { einheitProduziert(it) }
+            is NeueKommandos ->
+                kommando.einheit.kommandoQueue.apply {
+                    clear()
+                    addAll(kommando.kommandos)
+                }
+            ClientJoined -> {
+                started = true
+                multiplayer.sendeStartAnClient()
+            }
+            ServerJoined -> started = true
+            is NeueSpielerUpgrades -> gegner.upgrades = kommando.spielerUpgrades
+            is NeueUpgrades -> gegner.einheitenTypen[kommando.einheitenTyp.name] = kommando.einheitenTyp
+        }
     }
 
     private fun rundenende(it: Einheit) {
@@ -114,25 +139,25 @@ class Spiel(
             it.wirdGeheilt -= 1
         }
         if (it.`springen cooldown` > 0) {
-            it.`springen cooldown` -= warteZeit.toDouble() / 1000.0
+            it.`springen cooldown` -= warteZeit
         }
         if (it.`yamatokane cooldown` > 0) {
-            it.`yamatokane cooldown` -= warteZeit.toDouble() / 1000.0
+            it.`yamatokane cooldown` -= warteZeit
         }
         if (it.schusscooldown > 0) {
-            it.schusscooldown -= warteZeit.toDouble() / 1000.0
+            it.schusscooldown -= warteZeit
         }
         it.heiler = null
         if (it.typ.einheitenArt == EinheitenArt.biologisch && it.leben < it.typ.leben && it.zuletztGetroffen >= 10) {
             it.leben = min(it.typ.leben, it.leben + 0.5)
         }
-        it.zuletztGetroffen += warteZeit.toDouble() / 1000.0
+        it.zuletztGetroffen += warteZeit
         it.hatSichBewegt = false
         if (it.verlangsamt > 0) {
-            it.verlangsamt -= warteZeit.toDouble() / 1000.0
+            it.verlangsamt -= warteZeit
         }
         if (it.vergiftet > 0) {
-            it.vergiftet -= warteZeit.toDouble() / 1000.0
+            it.vergiftet -= warteZeit
         }
     }
 
@@ -177,10 +202,10 @@ class Spiel(
         }
 
     fun neuesGebäude(spieler: Spieler, gebäudeTyp: GebäudeTyp, buttons: List<Button>, punkt: Punkt): Gebäude {
-        val einheit = neueEinheit(spieler, spieler.gebäude(gebäudeTyp), punkt)
+        val einheit = neueEinheit(spieler, spieler.gebäudeEinheitenTyp(gebäudeTyp), punkt)
         val sammelpunkt = punkt.copy(y = punkt.y + 70 * nachVorne(spieler.spielerTyp))
 
-        val gebäude = Gebäude(buttons, kreis(sammelpunkt, radius = 5.0))
+        val gebäude = Gebäude(einheit, buttons, kreis(sammelpunkt, radius = 5.0))
         spieler.gebäude[einheit.nummer] = gebäude
         return gebäude
     }
@@ -273,7 +298,7 @@ class Spiel(
         }
 
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
-            return heilen(gegner, einheit)
+            return heilen(einheit)
         }
 
         return bestesZiel(gegner.einheiten.filter { `ist in Reichweite`(einheit, it) }, einheit)
@@ -315,8 +340,8 @@ class Spiel(
         return 3
     }
 
-    private fun heilen(gegner: Spieler, einheit: Einheit): Einheit? {
-        val naechsteEinheit = `nächste Einheit zum Heilen`(gegner, einheit)
+    private fun heilen(einheit: Einheit): Einheit? {
+        val naechsteEinheit = `nächste Einheit zum Heilen`(einheit)
 
         if (naechsteEinheit != null) {
             if (`ist in Reichweite`(einheit, naechsteEinheit)) {
@@ -344,7 +369,7 @@ class Spiel(
         }
 
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
-            return `nächste Einheit zum Heilen`(gegner, einheit)
+            return `nächste Einheit zum Heilen`(einheit)
         }
 
         if (einheit.typ.zivileEinheit) {
@@ -386,7 +411,7 @@ class Spiel(
         liste.minWithOrNull(compareBy({ angriffspriorität(einheit, it) }, { entfernung(einheit, it) }))
 
 
-    private fun `nächste Einheit zum Heilen`(gegner: Spieler, einheit: Einheit): Einheit? {
+    private fun `nächste Einheit zum Heilen`(einheit: Einheit): Einheit? {
         val spieler = einheit.spieler
         val ziel = spieler.einheiten
             .filter {
@@ -434,7 +459,7 @@ class Spiel(
                     }
                 }
                 einheit.letzterAngriff == ziel -> {
-                    einheit.firstShotCooldown -= warteZeit.toDouble()
+                    einheit.firstShotCooldown -= warteZeit
                 }
                 else -> {
                     einheit.firstShotCooldown = einheit.typ.firstShotDelay
@@ -532,10 +557,12 @@ fun entfernung(einheit: Einheit, ziel: Punkt): Double {
     return sqrt(a.pow(2) + b.pow(2))
 }
 
-fun kaufen(kristalle: Int, spieler: Spieler, aktion: () -> Unit) {
+fun kaufen(kristalle: Int, spieler: Spieler, bezahlen: Boolean = true, aktion: () -> Unit) {
     if (spieler.kristalle >= kristalle) {
         aktion()
-        spieler.kristalle -= kristalle
+        if (bezahlen) {
+            spieler.kristalle -= kristalle
+        }
     }
 }
 
@@ -570,8 +597,6 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //Bugs:
 //wenn man mit zwei Einheiten unterschiedliche Kommandos ausführt und dann beide auswählt und mit shift ein neues Kommando gibt, werden die alten kommandos nicht vollständig angezeigt
 //Die Tests mit angreifen funktioieren nicht
-//Wenn man ein Gebäude abwählt werden die Buttons nicht entfernt
-//Die Ressoursen für Gebäude werden auch weggenommen wenn man das Gebäude nicht platiert
 //KI-Einheiten machen keinen autoangriff
 
 //Features:
@@ -585,8 +610,6 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //kontrollgruppen
 //Konsole
 //lebensanzeige(lebensbalken)
-//Einheiten spawnen bei dem Produktionsgebäude
-//produktionszeit
 //recourssen auf der Karte (wissenschafts-und produktionsressoursen)
 //arbeiter und wissenschafter können ressoursen abbauen bzw. erforschen und zu außenposten bringen
 //Einheitengröße anpassen

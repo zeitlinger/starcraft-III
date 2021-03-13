@@ -5,7 +5,7 @@
     "NonAsciiCharacters",
     "PropertyName",
     "EnumEntryName",
-    "SpellCheckingInspection", "FunctionName", "ClassName", "LocalVariableName"
+    "SpellCheckingInspection", "FunctionName", "ClassName", "LocalVariableName", "ObjectPropertyName"
 )
 
 import javafx.application.Application
@@ -81,11 +81,11 @@ var Arc.punkt: Punkt
         centerY = value.y
     }
 
-enum class KommandoWählen(val hotkey: String, val filter: (Punkt) -> Set<Einheit> = { ausgewaehlt }) {
-    Bewegen("b"),
-    Attackmove("a"),
-    Patrolieren("p"),
-    Yamatokanone("y", { ziel ->
+sealed class KommandoWählen(val hotkey: String, val filter: (Punkt) -> Set<Einheit> = { ausgewaehlt }) {
+    object Bewegen : KommandoWählen("b")
+    object Attackmove : KommandoWählen("a")
+    object Patrolieren : KommandoWählen("p")
+    object Yamatokanone : KommandoWählen("y", { ziel ->
         setOfNotNull(
             ausgewaehlt
                 .filter { it.typ.yamatokanone != null && it.`yamatokane cooldown` == 0.0 }
@@ -94,13 +94,23 @@ enum class KommandoWählen(val hotkey: String, val filter: (Punkt) -> Set<Einhei
     })
 }
 
+class GebäudePlazieren(val gebäudeTyp: GebäudeTyp) : KommandoWählen("")
+
+val einheitenKommandoWählen = KommandoWählen::class.sealedSubclasses.mapNotNull { k -> k.objectInstance }
+
 enum class Laufbefehl(val wählen: KommandoWählen) {
     Bewegen(KommandoWählen.Bewegen),
     Attackmove(KommandoWählen.Attackmove),
     Patrolieren(KommandoWählen.Patrolieren)
 }
 
-data class Gebäude(val buttons: List<Button>, val sammelpunkt: Arc)
+data class Gebäude(
+    val einheit: Einheit,
+    val buttons: List<Button>,
+    val sammelpunkt: Arc,
+    val produktionsQueue: MutableList<EinheitenTyp> = mutableListOf(),
+    var produktionsZeit: ZeitInSec = 0.0
+)
 
 @Suppress("SpellCheckingInspection")
 class App : Application() {
@@ -109,10 +119,10 @@ class App : Application() {
     val mensch = spiel.mensch
     val kaufbareEinheiten = mensch.einheitenTypen.values
     var kommandoWählen: KommandoWählen? = null
-    var gebäudePlazieren: GebäudeTyp? = null
 
     lateinit var buttonLeiste: ObservableList<Node>
     var sammelpunkt: Arc? = null
+    var produktionsUpdate: (() -> Unit)? = null
     val kristalleText: Label = Label().apply { minWidth = 100.0 }
     val minenText: Label = Label().apply { minWidth = 100.0 }
     val kommandoAnzeige: Label = Label().apply { minWidth = 200.0 }
@@ -125,16 +135,17 @@ class App : Application() {
     }
 
     fun kaufButton(leiste: MutableList<Button>, name: String, kritalle: Int, aktion: (Button) -> Unit): Button =
-        kaufButton(leiste, { name }, { kritalle }, aktion)
+        kaufButton(leiste, { name }, { kritalle }, aktion = aktion)
 
     fun kaufButton(
         leiste: MutableList<Button>,
         name: () -> String,
         kritalle: () -> Int,
-        aktion: (Button) -> Unit
+        bezahlen: Boolean = true,
+        aktion: (Button) -> Unit,
     ): Button =
         button(name()) {
-            kaufen(kritalle(), mensch) {
+            kaufen(kritalle(), mensch, bezahlen = bezahlen) {
                 aktion(it)
                 it.text = name()
             }
@@ -232,28 +243,34 @@ class App : Application() {
             }
         }
 
-        kartenPane.mausTaste(MouseButton.PRIMARY, filter = { gebäudePlazieren != null }) {
-            plaziereGebäude(gebäudePlazieren!!, Punkt(it.x, it.y), mensch)
-            gebäudePlazieren = null
-            scene.cursor = Cursor.DEFAULT
-        }
-
         var auswahlStart: Punkt? = null
         var auswahlRechteck: Rectangle? = null
 
         kartenPane.mausTaste(MouseButton.PRIMARY) { event ->
             val laufbefehl = Laufbefehl.values().singleOrNull { it.wählen == kommandoWählen }
-            if (laufbefehl != null) {
-                ausgewaehlt.forEach { einheit ->
-                    laufBefehl(
-                        einheit = einheit,
-                        laufbefehl = laufbefehl,
-                        schiftcommand = event.isShiftDown,
-                        punkt = event.punkt
-                    )
+            val wählen = kommandoWählen
+            when {
+                laufbefehl != null -> {
+                    ausgewaehlt.forEach { einheit ->
+                        laufBefehl(
+                            einheit = einheit,
+                            laufbefehl = laufbefehl,
+                            schiftcommand = event.isShiftDown,
+                            punkt = event.punkt
+                        )
+                    }
                 }
-            } else {
-                auswahlStart = Punkt(event.x, event.y)
+                wählen is GebäudePlazieren -> {
+                    val typ = wählen.gebäudeTyp
+                    kaufen(typ.kristalle, mensch) {
+                        plaziereGebäude(typ, event.punkt, mensch)
+                    }
+                    scene.cursor = Cursor.DEFAULT
+
+                }
+                else -> {
+                    auswahlStart = Punkt(event.x, event.y)
+                }
             }
             scene.cursor = Cursor.DEFAULT
             kommandoWählen = null
@@ -314,7 +331,7 @@ class App : Application() {
                     spiel.runde()
                     male()
                 }
-                Thread.sleep(spiel.warteZeit)
+                Thread.sleep((spiel.warteZeit * 1000).toLong())
             }
         }.start()
     }
@@ -354,7 +371,7 @@ class App : Application() {
     }
 
     private fun auswahlHotkeys(scene: Scene, text: String?, shift: Boolean) {
-        val wählen = KommandoWählen.values().singleOrNull { it.hotkey == text }
+        val wählen = einheitenKommandoWählen.singleOrNull { it.hotkey == text }
         if (wählen != null) {
             if (wählen.filter(Punkt(0.0, 0.0)).isEmpty()) {
                 return
@@ -386,12 +403,9 @@ class App : Application() {
             kaufButton(buttons, "Mine", 2000 + 400 * mensch.minen) {
                 mensch.minen += 1
             }
-            kaufButton(buttons, "Arbeiter", arbeiter.kristalle) {
-                spiel.neueEinheit(mensch, arbeiter)
-            }
             gebäudeTypen.filter { it != basis }.forEach { typ ->
-                einmalKaufen(buttons, typ.name, typ.kristalle) {
-                    gebäudePlazieren = typ
+                kaufButton(buttons, { typ.name }, { typ.kristalle }, bezahlen = false) {
+                    kommandoWählen = GebäudePlazieren(typ)
                     scene.cursor = Cursor.HAND
                 }
             }
@@ -404,13 +418,11 @@ class App : Application() {
         }
         kaufbareEinheiten.filter { it.gebäudeTyp == gebäudeTyp }.forEach { typ ->
             val button = kaufButton(buttons, typ.name, typ.kristalle) {
-                spiel.neueEinheit(mensch, typ, punkt).apply {
-                    neuesKommando(
-                        this,
-                        Bewegen(gebäude.sammelpunkt.punkt),
-                        false
-                    )
+                if (gebäude.produktionsQueue.isEmpty()) {
+                    gebäude.produktionsZeit = typ.produktionsZeit
                 }
+                gebäude.produktionsQueue.add(typ)
+                produktionsUpdate!!()
             }
             if (typ.techGebäude != null) {
                 button.isDisable = true
@@ -441,13 +453,28 @@ class App : Application() {
         `auswahl löschen`()
         aktion()
         zeigeKommands()
+        produktionsUpdate?.let {
+            spiel.rundeVorbei.remove(it)
+            produktionsUpdate = null
+        }
+
         ausgewaehlt.singleOrNull()?.let { einheit ->
             löscheSammelpunkt()
             buttonLeiste.clear()
 
             val gebäude = einheit.gebäude
             if (gebäude != null) {
-                aktuelleButtons(gebäude.buttons)
+                buttonLeiste.clear()
+                buttonLeiste.addAll(gebäude.buttons)
+
+                produktionsUpdate = {
+                    kommandoAnzeige.text = gebäude.produktionsQueue.joinToString { it.name } +
+                        if (gebäude.produktionsZeit > 0) " ${gebäude.produktionsZeit}" else ""
+                }.also {
+                    it()
+                    spiel.rundeVorbei.add(it)
+                }
+
                 zeigeSammelpunkt(gebäude)
             }
 
@@ -509,8 +536,7 @@ class App : Application() {
                 spiel.kommandoEntfernen(einheit, it)
             }
         }
-        einheit.kommandoQueue.add(kommando)
-        spiel.multiplayer.neueKommandos(einheit)
+        spiel.neuesKommando(einheit, kommando)
         if (ausgewaehlt.singleOrNull() == einheit) {
             zeigeKommands()
         }

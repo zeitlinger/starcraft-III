@@ -678,7 +678,7 @@ private fun neuesSpiel(): Spiel {
             panzerungsUprade = 0
         )
     ).apply {
-        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = gebäude(basis))
+        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = gebäudeEinheitenTyp(basis))
     }
 
     val mensch = Spieler(
@@ -694,7 +694,7 @@ private fun neuesSpiel(): Spiel {
             panzerungsUprade = 0
         )
     ).apply {
-        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = gebäude(basis))
+        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = gebäudeEinheitenTyp(basis))
     }
 
     return Spiel(mensch, computer, rundenLimit = 1, multiplayer = Multiplayer(null, null))
