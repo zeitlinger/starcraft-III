@@ -166,7 +166,16 @@ class App : Application() {
         stage.title = spiel.mensch.spielerTyp.name
 
         spiel.einheitProduziert = { einheitUiErstellen(it) }
-        spiel.kommandoEntfernt = { zeigeKommands() }
+        spiel.einheitEntfernt = { einheit ->
+            karte.remove(einheit.bild)
+            karte.remove(einheit.lebenText)
+            karte.remove(einheit.kuerzel)
+            einheit.auswahlkreis?.let { karte.remove(it) }
+        }
+        spiel.kommandoEntfernt = {
+            zeigeKommands()
+            kommandoAnzeigeEntfernen(it)
+        }
 
         val hBox = HBox()
         val buttonLeiste = HBox().apply {
@@ -398,7 +407,7 @@ class App : Application() {
                 spiel.neueEinheit(mensch, typ, punkt).apply {
                     neuesKommando(
                         this,
-                        EinheitenKommando.Bewegen(gebäude.sammelpunkt.punkt),
+                        Bewegen(gebäude.sammelpunkt.punkt),
                         false
                     )
                 }
@@ -478,13 +487,13 @@ class App : Application() {
 
         val kommando = when (laufbefehl) {
             Laufbefehl.Attackmove -> {
-                EinheitenKommando.Attackmove(zielPunkt = punkt)
+                Attackmove(zielPunkt = punkt)
             }
             Laufbefehl.Bewegen -> {
-                EinheitenKommando.Bewegen(punkt)
+                Bewegen(punkt)
             }
             else -> {
-                EinheitenKommando.Patrolieren(letzterPunkt, punkt)
+                Patrolieren(letzterPunkt, punkt)
             }
         }
         neuesKommando(einheit, kommando, schiftcommand)
@@ -496,7 +505,7 @@ class App : Application() {
 
     private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, shift: Boolean) {
         einheit.kommandoQueue.toList().forEach {
-            if (!shift || it is EinheitenKommando.HoldPosition || it is EinheitenKommando.Stopp) {
+            if (!shift || it is HoldPosition || it is Stopp) {
                 spiel.kommandoEntfernen(einheit, it)
             }
         }
@@ -554,13 +563,13 @@ class App : Application() {
 
     private fun kommandoPosition(letztesKommando: EinheitenKommando?, einheit: Einheit) = when (letztesKommando) {
         null -> einheit.punkt
-        is EinheitenKommando.Angriff -> letztesKommando.ziel.punkt
-        is EinheitenKommando.Bewegen -> letztesKommando.zielPunkt
-        is EinheitenKommando.Attackmove -> letztesKommando.zielPunkt
-        is EinheitenKommando.Patrolieren -> letztesKommando.punkt2
-        is EinheitenKommando.HoldPosition -> einheit.punkt
-        is EinheitenKommando.Stopp -> einheit.punkt
-        is EinheitenKommando.Yamatokanone -> letztesKommando.ziel.punkt
+        is Angriff -> letztesKommando.ziel.punkt
+        is Bewegen -> letztesKommando.zielPunkt
+        is Attackmove -> letztesKommando.zielPunkt
+        is Patrolieren -> letztesKommando.punkt2
+        is HoldPosition -> einheit.punkt
+        is Stopp -> einheit.punkt
+        is Yamatokanone -> letztesKommando.ziel.punkt
     }
 
     private fun initSpieler(spieler: Spieler) {
@@ -606,7 +615,7 @@ class App : Application() {
         imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Yamatokanone }) {
             val angreifer = kommandoWählen!!.filter(einheit.punkt).singleOrNull()
             if (angreifer != null) {
-                kommandoMitZielpunktKreis(angreifer, EinheitenKommando.Yamatokanone(einheit), it.isShiftDown)
+                kommandoMitZielpunktKreis(angreifer, Yamatokanone(einheit), it.isShiftDown)
             }
         }
 
@@ -625,7 +634,7 @@ class App : Application() {
 
     private fun `angriffsziel auswählen`(ziel: Einheit, schiftcommand: Boolean) {
         ausgewaehlt.forEach {
-            kommandoMitZielpunktKreis(it, EinheitenKommando.Angriff(ziel = ziel), schiftcommand)
+            kommandoMitZielpunktKreis(it, Angriff(ziel = ziel), schiftcommand)
         }
     }
 
@@ -681,7 +690,7 @@ class App : Application() {
         }
 
         queue.forEachIndexed { index, kommando ->
-            if (kommando is EinheitenKommando.Angriff) {
+            if (kommando is Angriff) {
                 val ziel = kommando.ziel
 
                 kommando.zielpunktLinie?.apply {
@@ -766,3 +775,15 @@ private fun leseMultiplayerModus(args: Array<String>): Multiplayer {
     }
     return Multiplayer(client, server)
 }
+
+fun kommandoAnzeigeEntfernen(kommando: EinheitenKommando) {
+    if (kommando.zielpunktLinie != null) {
+        karte.remove(kommando.zielpunktLinie)
+        kommando.zielpunktLinie = null
+    }
+    if (kommando.zielpunktkreis != null) {
+        karte.remove(kommando.zielpunktkreis)
+        kommando.zielpunktkreis = null
+    }
+}
+

@@ -25,7 +25,8 @@ class Spiel(
     val warteZeit: Long = 15,
     val multiplayer: Multiplayer,
     var einheitProduziert: (Einheit) -> Unit = {},
-    var kommandoEntfernt: () -> Unit = {}
+    var einheitEntfernt: (Einheit) -> Unit = {},
+    var kommandoEntfernt: (EinheitenKommando) -> Unit = {}
 ) {
     private var started = mensch.spielerTyp == SpielerTyp.mensch
 
@@ -101,7 +102,7 @@ class Spiel(
     }
 
     private fun rundenende(it: Einheit) {
-        if (erstesKommandoIst<EinheitenKommando.Stopp>(it)) {
+        if (erstesKommandoIst<Stopp>(it)) {
             it.kommandoQueue.toList().forEach { kommando ->
                 kommandoEntfernen(it, kommando)
             }
@@ -147,7 +148,7 @@ class Spiel(
     private fun spells(spieler: Spieler) {
         spieler.einheiten.forEach {
             val kommando = it.kommandoQueue.getOrNull(0)
-            if (kommando is EinheitenKommando.Yamatokanone) {
+            if (kommando is Yamatokanone) {
                 spellsAusführen(it, kommando.ziel)
             }
         }
@@ -189,12 +190,12 @@ class Spiel(
     }
 
     fun bewege(einheit: Einheit, gegner: Spieler) {
-        if (erstesKommandoIst<EinheitenKommando.HoldPosition>(einheit)) {
+        if (erstesKommandoIst<HoldPosition>(einheit)) {
             return
         }
         val kommando = einheit.kommandoQueue.getOrNull(0)
         val laufweite = richtigeLaufweite(einheit)
-        if (kommando is EinheitenKommando.Bewegen) {
+        if (kommando is Bewegen) {
             val zielPunkt = kommando.zielPunkt
             bewege(einheit, zielPunkt, laufweite)
 
@@ -206,7 +207,7 @@ class Spiel(
 
         val ziel = zielauswaehlenBewegen(gegner, einheit)
         if (ziel == null) {
-            if (kommando is EinheitenKommando.Attackmove) {
+            if (kommando is Attackmove) {
                 bewege(einheit, kommando.zielPunkt, laufweite)
                 if (kommando.zielPunkt == einheit.punkt) {
                     kommandoEntfernen(einheit, kommando)
@@ -217,26 +218,22 @@ class Spiel(
 
         val e = entfernung(einheit, ziel)
 
-        if (kommando is EinheitenKommando.Angriff) {
-            if (e > einheit.typ.reichweite) {
-                val springen = einheit.typ.springen
-                val mindestabstand = e - 40
-                val `max laufweite` = if (einheit.`springen cooldown` <= 0 && springen != null && e <= springen + 40) {
-                    ziel.leben -= einheit.typ.schaden * 3
-                    einheit.`springen cooldown` = 10.0
-                    springen.toDouble()
-                } else {
-                    laufweite
-                }
-
-                bewege(einheit, ziel.punkt, min(mindestabstand, `max laufweite`))
-            }
+        val reichweite = when (kommando) {
+            is Yamatokanone -> einheit.typ.yamatokanone!!.toDouble()
+            else -> einheit.typ.reichweite
         }
-        if (einheit.typ.yamatokanone != null) {
-            if (e > einheit.typ.yamatokanone!!) {
-                val mindestabstand = e - einheit.typ.yamatokanone!!
-                bewege(einheit, ziel.punkt, min(mindestabstand, laufweite))
+        if (e > reichweite) {
+            val springen = einheit.typ.springen
+            val mindestabstand = e - 40
+            val `max laufweite` = if (einheit.`springen cooldown` <= 0 && springen != null && e <= springen + 40) {
+                ziel.leben -= einheit.typ.schaden * 3
+                einheit.`springen cooldown` = 10.0
+                springen.toDouble()
+            } else {
+                laufweite
             }
+
+            bewege(einheit, ziel.punkt, min(mindestabstand, `max laufweite`))
         }
     }
 
@@ -271,7 +268,7 @@ class Spiel(
 
     private fun zielauswaehlenSchießen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
-        if (kommando is EinheitenKommando.Angriff) {
+        if (kommando is Angriff) {
             return kommando.ziel
         }
 
@@ -279,13 +276,7 @@ class Spiel(
             return heilen(gegner, einheit)
         }
 
-        val l = gegner.einheiten.filter { `ist in Reichweite`(einheit, it) }.sortedBy { angriffspriorität(einheit, it) }
-        if (l.isNotEmpty()) {
-            val p = angriffspriorität(einheit, l.first())
-            return l.filter { angriffspriorität(einheit, it) == p }.minByOrNull { entfernung(einheit, it) }
-            //automatisch auf Einheiten in Reichweite mit der höchsten Angriffspriorität schiessen
-        }
-        return null
+        return bestesZiel(gegner.einheiten.filter { `ist in Reichweite`(einheit, it) }, einheit)
     }
 
     private fun angriffspriorität(einheit: Einheit, ziel: Einheit): Int {
@@ -338,11 +329,11 @@ class Spiel(
 
     private fun zielauswaehlenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
-        if (kommando is EinheitenKommando.Angriff) {
+        if (kommando is Angriff) {
             return kommando.ziel
         }
 
-        if (kommando is EinheitenKommando.Yamatokanone) {
+        if (kommando is Yamatokanone) {
             return kommando.ziel
         }
 
@@ -369,7 +360,7 @@ class Spiel(
 
     private fun `verbündetem helfen`(gegner: Spieler, einheit: Einheit): Einheit? {
         val l = mutableListOf<Einheit>()
-        gegner(gegner).einheiten.forEach {
+        einheit.spieler.einheiten.forEach {
             if (entfernung(einheit, it) <= 300) {
                 l.add(it)
             }
@@ -387,20 +378,24 @@ class Spiel(
             }
         }
 
-        return liste.minWithOrNull(compareBy({ angriffspriorität(einheit, it) }, { entfernung(einheit, it) }))
+        return bestesZiel(liste, einheit)
 
     }
 
+    private fun bestesZiel(liste: Collection<Einheit>, einheit: Einheit) =
+        liste.minWithOrNull(compareBy({ angriffspriorität(einheit, it) }, { entfernung(einheit, it) }))
+
 
     private fun `nächste Einheit zum Heilen`(gegner: Spieler, einheit: Einheit): Einheit? {
-        val ziel = gegner(gegner).einheiten
+        val spieler = einheit.spieler
+        val ziel = spieler.einheiten
             .filter {
                 it.leben < it.typ.leben &&
                     entfernung(einheit, it) <= 300 &&
                     einheit != it &&
                     (it.heiler == null || it.heiler == einheit) &&
-                    (it.typ.einheitenArt == EinheitenArt.biologisch || !gegner(gegner).upgrades.vertärkteHeilmittel) &&
-                    (it.zuletztGetroffen > 1 || gegner(gegner).upgrades.strahlungsheilung)
+                    (it.typ.einheitenArt == EinheitenArt.biologisch || !spieler.upgrades.vertärkteHeilmittel) &&
+                    (it.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
             }
             .minByOrNull { entfernung(einheit, it) }
         if (ziel != null) {
@@ -442,7 +437,7 @@ class Spiel(
                     einheit.firstShotCooldown -= warteZeit.toDouble()
                 }
                 else -> {
-                    einheit.firstShotCooldown = einheit.typ.firstShotDeley
+                    einheit.firstShotCooldown = einheit.typ.firstShotDelay
                     einheit.letzterAngriff = ziel
                 }
             }
@@ -489,34 +484,29 @@ class Spiel(
             spieler.einheiten.remove(einheit)
 
             if (ausgewaehlt.contains(einheit)) {
-                val kreis = einheit.auswahlkreis
                 ausgewaehlt.remove(einheit)
-                karte.remove(kreis)
             }
 
             gegner.einheiten.forEach { gegnerEinheit ->
                 gegnerEinheit.kommandoQueue.toList().forEach {
-                    if (it is EinheitenKommando.Angriff && it.ziel == einheit) {
+                    if (it is Angriff && it.ziel == einheit) {
                         kommandoEntfernen(gegnerEinheit, it)
                     }
-                    if (it is EinheitenKommando.Yamatokanone && it.ziel == einheit) {
+                    if (it is Yamatokanone && it.ziel == einheit) {
                         kommandoEntfernen(gegnerEinheit, it)
                     }
                 }
             }
-            karte.remove(einheit.bild)
-            karte.remove(einheit.lebenText)
-            karte.remove(einheit.kuerzel)
             einheit.kommandoQueue.toList().forEach {
                 kommandoEntfernen(einheit, it)
             }
+            einheitEntfernt(einheit)
         }
     }
 
     fun kommandoEntfernen(einheit: Einheit, kommando: EinheitenKommando) {
-        kommandoAnzeigeEntfernen(kommando)
         einheit.kommandoQueue.remove(kommando)
-        kommandoEntfernt()
+        kommandoEntfernt(kommando)
     }
 }
 
@@ -564,17 +554,6 @@ fun Spieler.neueEinheit(punkt: Punkt, einheitenTyp: EinheitenTyp, nummer: Int? =
         nummer = nummer ?: einheitenNummer.getOrDefault(this.spielerTyp, 0)
             .also { einheitenNummer[this.spielerTyp] = it + 1 }
     ).also { einheiten.add(it) }
-}
-
-fun kommandoAnzeigeEntfernen(kommando: EinheitenKommando) {
-    if (kommando.zielpunktLinie != null) {
-        karte.remove(kommando.zielpunktLinie)
-        kommando.zielpunktLinie = null
-    }
-    if (kommando.zielpunktkreis != null) {
-        karte.remove(kommando.zielpunktkreis)
-        kommando.zielpunktkreis = null
-    }
 }
 
 fun smaller(a: Double, b: Double): Double {

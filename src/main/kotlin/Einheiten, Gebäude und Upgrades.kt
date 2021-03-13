@@ -113,7 +113,7 @@ data class EinheitenTyp(
     val einheitenArt: EinheitenArt,
     var flächenschaden: Double? = null,
     var schusscooldown: Double = 1.0,
-    val firstShotDeley: Double = 0.5,
+    val firstShotDelay: Double = 0.5,
     var machtZustand: MachtZustand? = null,
     val zivileEinheit: Boolean = false,
     val spielerTyp: SpielerTyp = SpielerTyp.mensch
@@ -176,32 +176,32 @@ sealed class EinheitenKommando(
     var zielpunktLinie: Line? = null,
     @Transient
     var zielpunktkreis: Arc? = null
-) {
-    @Serializable
-    class Bewegen(val zielPunkt: Punkt) : EinheitenKommando()
+)
 
-    @Serializable
-    class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
+@Serializable
+class Bewegen(val zielPunkt: Punkt) : EinheitenKommando()
 
-    @Serializable
-    class Angriff(val ziel: Einheit) : EinheitenKommando()
+@Serializable
+class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
 
-    @Serializable
-    class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : EinheitenKommando()
+@Serializable
+class Angriff(val ziel: Einheit) : EinheitenKommando()
 
-    @Serializable
-    class HoldPosition : EinheitenKommando()
+@Serializable
+class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : EinheitenKommando()
 
-    @Serializable
-    class Stopp : EinheitenKommando()
+@Serializable
+class HoldPosition : EinheitenKommando()
 
-    @Serializable
-    class Yamatokanone(val ziel: Einheit) : EinheitenKommando()
-}
+@Serializable
+class Stopp : EinheitenKommando()
+
+@Serializable
+class Yamatokanone(val ziel: Einheit) : EinheitenKommando()
 
 val kommandoHotKeys = mapOf(
-    "s" to { EinheitenKommando.Stopp() },
-    "h" to { EinheitenKommando.HoldPosition() }
+    "s" to { Stopp() },
+    "h" to { HoldPosition() }
 )
 
 val infantrie = EinheitenTyp(
