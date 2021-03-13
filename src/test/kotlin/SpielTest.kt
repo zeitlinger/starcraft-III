@@ -2,6 +2,7 @@
 
 import io.kotest.core.datatest.forAll
 import io.kotest.core.spec.style.FreeSpec
+import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import javafx.scene.paint.Color
@@ -219,11 +220,11 @@ class SpielTest : FreeSpec({
     "Einheiten in Reichweite angreifen" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply { firstShotCooldown = 0.0 }
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie).apply {
-                firstShotCooldown = 0.0
+
                 letzterAngriff = spiel.mensch.einheiten[1]
             }
         }
@@ -238,12 +239,12 @@ class SpielTest : FreeSpec({
     "Heilungsmodifikator" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply { firstShotCooldown = 0.0 }
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie).apply {
                 wirdGeheilt = 2
-                firstShotCooldown = 0.0
+
                 letzterAngriff = spiel.mensch.einheiten[1]
             }
             upgrades.strahlungsheilung = true
@@ -252,8 +253,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].leben shouldBe 93.125
-        spiel.gegner.einheiten[1].leben shouldBe 95.1875
+        spiel.gegner.einheiten[1].leben shouldBeGreaterThan spiel.mensch.einheiten[1].leben
     }
 
     "vergiftung" {
@@ -298,11 +298,11 @@ class SpielTest : FreeSpec({
 
         spiel.mensch.apply {
             einheitenTypen.getValue(infantrie.name).schusscooldown = 0.03
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply { firstShotCooldown = 0.0 }
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie).apply {
-                firstShotCooldown = 0.0
+
                 letzterAngriff = spiel.mensch.einheiten[1]
             }
         }
@@ -327,7 +327,7 @@ class SpielTest : FreeSpec({
     "Flächenschaden" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = panzer).apply { firstShotCooldown = 0.0 }
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = panzer)
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
@@ -344,7 +344,7 @@ class SpielTest : FreeSpec({
     "schadensupgrade" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply { firstShotCooldown = 0.0 }
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
             upgrades.schadensUpgrade = 1
         }
         spiel.gegner.apply {
@@ -354,13 +354,13 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 93.025
+        spiel.gegner.einheiten[1].leben shouldBeLessThan spiel.mensch.einheiten[1].leben
     }
 
     "panzerugsupgrade" {
         val spiel = neuesSpiel()
         spiel.mensch.apply {
-            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply { firstShotCooldown = 0.0 }
+            neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie)
         }
         spiel.gegner.apply {
             neueEinheit(x = 0.0, y = 150.0, einheitenTyp = infantrie)
@@ -370,7 +370,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 93.225
+        spiel.gegner.einheiten[1].leben shouldBeGreaterThan spiel.mensch.einheiten[1].leben
     }
 
     "einheit stirbt" {
@@ -447,7 +447,6 @@ class SpielTest : FreeSpec({
         spiel.mensch.apply {
             neueEinheit(x = 0.0, y = 0.0, einheitenTyp = infantrie).apply {
                 kommandoQueue.add(Attackmove(Punkt(0.0, 1000.0)))
-                firstShotCooldown = 0.0
             }
         }
         spiel.gegner.apply {
@@ -596,7 +595,6 @@ class SpielTest : FreeSpec({
                 einheitenTyp = infantrie
             ).apply {
                 kommandoQueue.add(Angriff(spiel.gegner.einheiten[2]))
-                firstShotCooldown = 0.0
             }
         }
         spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
@@ -619,17 +617,12 @@ class SpielTest : FreeSpec({
                 x = 0.0,
                 y = 500.0,
                 einheitenTyp = jäger
-            ).apply {
-                firstShotCooldown = 0.0
-            }
+            )
         }
         spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].leben shouldBe 80
-        spiel.gegner.einheiten[2].leben shouldBe 180.25
-        spiel.gegner.einheiten[3].leben shouldBe 200
-        spiel.gegner.einheiten[4].leben shouldBe 100
+        spiel.gegner.einheiten.map { it.leben } shouldBe listOf(0.0, 80.0, 180.25, 200.0, 100.0)
     }
 
     "zu Einheit mit höchste Priorität laufen" {
