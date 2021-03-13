@@ -191,7 +191,7 @@ class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
 class Angriff(val ziel: Einheit) : EinheitenKommando()
 
 @Serializable
-class Patrolieren(val punkt1: Punkt, val punkt2: Punkt) : EinheitenKommando()
+class Patrolieren(val punkt1: Punkt, val punkt2: Punkt, var nächsterPunkt: Punkt) : EinheitenKommando()
 
 @Serializable
 class HoldPosition : EinheitenKommando()

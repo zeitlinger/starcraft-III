@@ -238,6 +238,16 @@ class Spiel(
                     kommandoEntfernen(einheit, kommando)
                 }
             }
+            if (kommando is Patrolieren) {
+                bewege(einheit, kommando.nächsterPunkt, laufweite)
+                if (kommando.nächsterPunkt == einheit.punkt) {
+                    kommando.nächsterPunkt = if (kommando.nächsterPunkt == kommando.punkt1) {
+                        kommando.punkt2
+                    } else {
+                        kommando.punkt1
+                    }
+                }
+            }
             return
         }
 
@@ -305,10 +315,7 @@ class Spiel(
     }
 
     private fun angriffspriorität(einheit: Einheit, ziel: Einheit): Int {
-        if (kannAngreifen(ziel, einheit) && (ziel.typ.reichweite >= entfernung(
-                einheit,
-                ziel
-            ) || (ziel.typ.reichweite < einheit.typ.reichweite && entfernung(einheit, ziel) >= einheit.typ.reichweite))
+        if (kannAngreifen(ziel, einheit) && (kannAngreifen(einheit, ziel) || (ziel.typ.reichweite < einheit.typ.reichweite && `ist in Reichweite`(einheit, ziel)))
             && !ziel.typ.zivileEinheit
         ) {
             return 1
@@ -326,13 +333,7 @@ class Spiel(
             }
         }
         l.forEach {
-            if (kannAngreifen(ziel, it) && (ziel.typ.reichweite >= entfernung(
-                    it,
-                    ziel
-                ) || (ziel.typ.reichweite < it.typ.reichweite && entfernung(
-                    einheit,
-                    ziel
-                ) >= einheit.typ.reichweite) && !ziel.typ.zivileEinheit)
+            if (kannAngreifen(ziel, it) && (`ist in Reichweite`(ziel, it) || (ziel.typ.reichweite < it.typ.reichweite && `ist in Reichweite`(it, ziel)) && !ziel.typ.zivileEinheit)
             ) {
                 return 2
             }
@@ -471,8 +472,8 @@ class Spiel(
 
     private fun schadenAusteilen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
         ziel.leben -= max(
-            (einheit.typ.schaden + spieler.upgrades.schadensUpgrade / 10.0 - (max(
-                ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade / 10.0,
+            (einheit.typ.schaden + spieler.upgrades.schadensUpgrade - (max(
+                ziel.panzerung + gegner(spieler).upgrades.panzerungsUprade - einheit.typ.durchschlag,
                 0.0
             ))) * if (ziel.wirdGeheilt > 0 && gegner(
                     spieler
@@ -596,13 +597,13 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 
 //Bugs:
 //wenn man mit zwei Einheiten unterschiedliche Kommandos ausführt und dann beide auswählt und mit shift ein neues Kommando gibt, werden die alten kommandos nicht vollständig angezeigt
-//Die Tests mit angreifen funktioieren nicht
-//KI-Einheiten machen keinen autoangriff
+//yamatokanone wird nicht ausgeführt wenn das Ziel schon in reichweite ist
+//bei Patrolieren wird nur ein Zielpunktkreis gemalt
+//wenn man zwei Einheiten ausgewählt hat werden die Zielpunkte der Einheiten nicht angezeigt (auch wenn alle den gleichen Zielpunkt haben)
 
 //Features:
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
 //Wenn eine Einheit ein automatisches Ziel hat und man mit shift ein anderes Ziel gibt soll das automatische Ziel zuerst ausgeführt werden
-//patrollieren
 //Chat
 //Kriegsnebel
 //Sichtweite für Einheiten
@@ -621,6 +622,7 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //totorial
 //verbessertes Multiplayer
 //kampagne
+//Einheiteneditor
 //mehr Einheiten + Upgrades
 //balance
 //KI
@@ -638,3 +640,5 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //unerfahrene Einheiten können nur einfache; Entscheidungen über tech tree für Upgrades
 //Alkari:
 //Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen
+//meklars (KI):
+//

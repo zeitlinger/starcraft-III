@@ -520,7 +520,7 @@ class App : Application() {
                 Bewegen(punkt)
             }
             else -> {
-                Patrolieren(letzterPunkt, punkt)
+                Patrolieren(letzterPunkt, punkt, punkt)
             }
         }
         neuesKommando(einheit, kommando, schiftcommand)
