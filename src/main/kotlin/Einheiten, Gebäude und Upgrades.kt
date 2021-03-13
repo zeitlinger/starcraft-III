@@ -1,4 +1,4 @@
-@file:Suppress("SpellCheckingInspection", "ObjectPropertyName", "NonAsciiCharacters")
+@file:Suppress("SpellCheckingInspection", "ObjectPropertyName", "NonAsciiCharacters", "PropertyName", "FunctionName")
 
 import javafx.scene.control.Button
 import javafx.scene.paint.Color
@@ -11,55 +11,55 @@ import kotlinx.serialization.Transient
 import kotlin.properties.Delegates
 
 
-fun gebäudeEinheitenTyp(gebäude: Gebäude) = EinheitenTyp(
-    name = gebäude.name,
+fun gebäudeEinheitenTyp(gebäudeTyp: GebäudeTyp) = EinheitenTyp(
+    name = gebäudeTyp.name,
     reichweite = 0.0,
     leben = 3000.0,
     schaden = 0.0,
     laufweite = 0.0,
-    kristalle = gebäude.kristalle,
-    kuerzel = gebäude.kuerzel,
+    kristalle = gebäudeTyp.kristalle,
+    kuerzel = gebäudeTyp.kuerzel,
     panzerung = 5.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
+    gebäudeTyp = null,
     hotkey = null,
-    typ = Typ.struktur,
+    einheitenArt = EinheitenArt.struktur,
     durchschlag = 0.0
 )
 
 val neutraleEinheitenTypen: MutableMap<String, EinheitenTyp> = mutableMapOf()
 
 @Serializable
-data class Gebäude(
+data class GebäudeTyp(
     val name: String,
     val kuerzel: String,
     val kristalle: Int,
 ) {
     init {
-        gebäude.add(this)
+        gebäudeTypen.add(this)
         gebäudeEinheitenTyp(this)
     }
 }
 
-val gebäude = mutableListOf<Gebäude>()
+val gebäudeTypen = mutableListOf<GebäudeTyp>()
 
-val basis = Gebäude(
+val basis = GebäudeTyp(
     name = "Basis",
     kristalle = 0,
     kuerzel = "BAS",
 )
 
-val kaserne = Gebäude(name = "Kaserne", kuerzel = "KAS", kristalle = 1500)
-val fabrik = Gebäude(name = "Fabrik", kuerzel = "FAB", kristalle = 2000)
-val raumhafen = Gebäude(name = "Raumhafen", kuerzel = "RAU", kristalle = 2500)
-val brutstätte = Gebäude(name = "Brutstätte", kuerzel = "BRU", kristalle = 2500)
-val labor = Gebäude(name = "Labor", kuerzel = "LAB", kristalle = 2800)
+val kaserne = GebäudeTyp(name = "Kaserne", kuerzel = "KAS", kristalle = 1500)
+val fabrik = GebäudeTyp(name = "Fabrik", kuerzel = "FAB", kristalle = 2000)
+val raumhafen = GebäudeTyp(name = "Raumhafen", kuerzel = "RAU", kristalle = 2500)
+val brutstätte = GebäudeTyp(name = "Brutstätte", kuerzel = "BRU", kristalle = 2500)
+val labor = GebäudeTyp(name = "Labor", kuerzel = "LAB", kristalle = 2800)
 
 @Serializable
 data class TechGebäude(
     val name: String,
     val kristalle: Int,
-    val gebäude: Gebäude
+    val gebäudeTyp: GebäudeTyp
 ) {
     init {
         techgebäude.add(this)
@@ -68,11 +68,11 @@ data class TechGebäude(
 
 val techgebäude = mutableListOf<TechGebäude>()
 
-val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, gebäude = kaserne)
-val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, gebäude = raumhafen)
-val akademie = TechGebäude(name = "Akademie", kristalle = 2500, gebäude = kaserne)
-val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000, gebäude = fabrik)
-val vipernbau = TechGebäude(name = "Vipernbau", kristalle = 2000, gebäude = brutstätte)
+val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, gebäudeTyp = kaserne)
+val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, gebäudeTyp = raumhafen)
+val akademie = TechGebäude(name = "Akademie", kristalle = 2500, gebäudeTyp = kaserne)
+val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000, gebäudeTyp = fabrik)
+val vipernbau = TechGebäude(name = "Vipernbau", kristalle = 2000, gebäudeTyp = brutstätte)
 
 enum class KannAngreifen {
     alles, boden, luft, heilen
@@ -82,7 +82,7 @@ enum class LuftBoden {
     luft, boden, wasser
 }
 
-enum class Typ {
+enum class EinheitenArt {
     biologisch, mechanisch, psionisch, struktur
 }
 
@@ -102,7 +102,7 @@ data class EinheitenTyp(
     var durchschlag: Double,
     val kannAngreifen: KannAngreifen,
     val luftBoden: LuftBoden = LuftBoden.boden,
-    val gebäude: Gebäude?,
+    val gebäudeTyp: GebäudeTyp?,
     val techGebäude: TechGebäude? = null,
     val name: String,
     val hotkey: String?,
@@ -110,7 +110,7 @@ data class EinheitenTyp(
     var button: Button? = null,
     var springen: Int? = null,
     var yamatokanone: Int? = null,
-    val typ: Typ,
+    val einheitenArt: EinheitenArt,
     var flächenschaden: Double? = null,
     var schusscooldown: Double = 1.0,
     val firstShotDeley: Double = 0.5,
@@ -132,8 +132,7 @@ data class Einheit(
     val spieler: Spieler,
     val typ: EinheitenTyp,
     var leben: Double,
-    var x: Double,
-    var y: Double,
+    val punkt: Punkt,
     val bild: Circle = einheitenBild(),
     var kuerzel: Text? = null,
     var lebenText: Text? = null,
@@ -153,9 +152,11 @@ data class Einheit(
     val nummer: Int,
     var letzterAngriff: Einheit? = null
 ) {
-    fun punkt() = Punkt(x = x, y = y)
+    val gebäude: Gebäude?
+        get() = spieler.gebäude(nummer)
+
     override fun toString(): String {
-        return "Einheit(spieler=$spieler, typ=${typ.kuerzel}, x=$x, y=$y)"
+        return "Einheit(spieler=$spieler, typ=${typ.kuerzel}, punkt=$punkt)"
     }
 }
 
@@ -213,9 +214,9 @@ val infantrie = EinheitenTyp(
     kuerzel = "INF",
     panzerung = 1.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäude = kaserne,
+    gebäudeTyp = kaserne,
     hotkey = "q",
-    typ = Typ.biologisch,
+    einheitenArt = EinheitenArt.biologisch,
     durchschlag = 0.0
 )
 val eliteInfantrie = EinheitenTyp(
@@ -228,10 +229,10 @@ val eliteInfantrie = EinheitenTyp(
     kuerzel = "ELI",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäude = kaserne,
+    gebäudeTyp = kaserne,
     techGebäude = akademie,
     hotkey = "w",
-    typ = Typ.biologisch,
+    einheitenArt = EinheitenArt.biologisch,
     durchschlag = 0.0
 )
 val berserker = EinheitenTyp(
@@ -244,10 +245,10 @@ val berserker = EinheitenTyp(
     kuerzel = "BER",
     panzerung = 2.0,
     kannAngreifen = KannAngreifen.boden,
-    gebäude = kaserne,
+    gebäudeTyp = kaserne,
     techGebäude = schmiede,
     hotkey = "e",
-    typ = Typ.biologisch,
+    einheitenArt = EinheitenArt.biologisch,
     durchschlag = 0.0
 )
 val flammenwerfer = EinheitenTyp(
@@ -260,9 +261,9 @@ val flammenwerfer = EinheitenTyp(
     kuerzel = "FLA",
     panzerung = 2.0,
     kannAngreifen = KannAngreifen.boden,
-    gebäude = fabrik,
+    gebäudeTyp = fabrik,
     hotkey = "r",
-    typ = Typ.mechanisch,
+    einheitenArt = EinheitenArt.mechanisch,
     durchschlag = 0.0
 )
 val panzer = EinheitenTyp(
@@ -275,10 +276,10 @@ val panzer = EinheitenTyp(
     kuerzel = "PAN",
     panzerung = 0.4,
     kannAngreifen = KannAngreifen.boden,
-    gebäude = fabrik,
+    gebäudeTyp = fabrik,
     techGebäude = reaktor,
     hotkey = "t",
-    typ = Typ.mechanisch,
+    einheitenArt = EinheitenArt.mechanisch,
     flächenschaden = 25.0,
     durchschlag = 0.0
 )
@@ -294,9 +295,9 @@ val jäger = EinheitenTyp(
     panzerung = 2.0,
     kannAngreifen = KannAngreifen.alles,
     luftBoden = LuftBoden.luft,
-    gebäude = raumhafen,
+    gebäudeTyp = raumhafen,
     hotkey = "a",
-    typ = Typ.mechanisch,
+    einheitenArt = EinheitenArt.mechanisch,
     durchschlag = 0.0
 )
 val sanitäter = EinheitenTyp(
@@ -309,10 +310,10 @@ val sanitäter = EinheitenTyp(
     kuerzel = "SAN",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.heilen,
-    gebäude = kaserne,
+    gebäudeTyp = kaserne,
     techGebäude = akademie,
     hotkey = "s",
-    typ = Typ.biologisch,
+    einheitenArt = EinheitenArt.biologisch,
     zivileEinheit = true,
     durchschlag = 0.0
 )
@@ -327,10 +328,10 @@ val kampfschiff = EinheitenTyp(
     panzerung = 4.0,
     kannAngreifen = KannAngreifen.alles,
     luftBoden = LuftBoden.luft,
-    gebäude = raumhafen,
+    gebäudeTyp = raumhafen,
     techGebäude = fusionskern,
     hotkey = "d",
-    typ = Typ.mechanisch,
+    einheitenArt = EinheitenArt.mechanisch,
     durchschlag = 0.0
 )
 val arbeiter = EinheitenTyp(
@@ -343,9 +344,9 @@ val arbeiter = EinheitenTyp(
     kuerzel = "ARB",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
+    gebäudeTyp = null,
     hotkey = "f",
-    typ = Typ.biologisch,
+    einheitenArt = EinheitenArt.biologisch,
     zivileEinheit = true,
     durchschlag = 0.0
 )
@@ -359,9 +360,9 @@ val späher = EinheitenTyp(
     kuerzel = "SPÄ",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäude = kaserne,
+    gebäudeTyp = kaserne,
     hotkey = "g",
-    typ = Typ.biologisch,
+    einheitenArt = EinheitenArt.biologisch,
     durchschlag = 0.0,
     yamatokanone = 300
 )
@@ -375,9 +376,9 @@ val sonde = EinheitenTyp(
     kuerzel = "SON",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
+    gebäudeTyp = null,
     hotkey = "y",
-    typ = Typ.mechanisch,
+    einheitenArt = EinheitenArt.mechanisch,
     zivileEinheit = true,
     durchschlag = 0.0
 )
@@ -391,9 +392,9 @@ val wissenschaftler = EinheitenTyp(
     kuerzel = "WIS",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
+    gebäudeTyp = null,
     hotkey = "x",
-    typ = Typ.biologisch,
+    einheitenArt = EinheitenArt.biologisch,
     zivileEinheit = true,
     durchschlag = 0.0
 )
@@ -407,9 +408,9 @@ val kreuzschiff = EinheitenTyp(
     kuerzel = "KSF",
     panzerung = 3.0,
     kannAngreifen = KannAngreifen.boden,
-    gebäude = null,
+    gebäudeTyp = null,
     hotkey = "c",
-    typ = Typ.mechanisch,
+    einheitenArt = EinheitenArt.mechanisch,
     luftBoden = LuftBoden.wasser,
     durchschlag = 0.0
 )
@@ -423,9 +424,9 @@ val forschungsschiff = EinheitenTyp(
     kuerzel = "FSF",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.alles,
-    gebäude = null,
+    gebäudeTyp = null,
     hotkey = "v",
-    typ = Typ.mechanisch,
+    einheitenArt = EinheitenArt.mechanisch,
     luftBoden = LuftBoden.wasser,
     zivileEinheit = true,
     durchschlag = 0.0
@@ -440,10 +441,10 @@ val viper = EinheitenTyp(
     kuerzel = "VIP",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.boden,
-    gebäude = brutstätte,
+    gebäudeTyp = brutstätte,
     techGebäude = vipernbau,
     hotkey = "b",
-    typ = Typ.mechanisch,
+    einheitenArt = EinheitenArt.mechanisch,
     luftBoden = LuftBoden.boden,
     machtZustand = MachtZustand.vergiftung,
     durchschlag = 0.0
@@ -468,6 +469,7 @@ data class SpielerUpgrades(
 
 class Spieler(
     val einheiten: MutableList<Einheit> = mutableListOf(),
+    val gebäude: MutableMap<Int, Gebäude> = mutableMapOf(),
     private val kristallObservers: MutableList<DoubleObserver> = mutableListOf(),
     kristalle: Double,
     var upgrades: SpielerUpgrades,
@@ -491,13 +493,17 @@ class Spieler(
         return einheiten.single { it.nummer == nummer }
     }
 
+    fun gebäude(nummer: Int): Gebäude? {
+        return gebäude[nummer]
+    }
+
     override fun toString(): String {
         return "Spieler(typ=$spielerTyp)"
     }
 }
 
 data class Upgrade(
-    val gebäude: Gebäude,
+    val gebäudeTyp: GebäudeTyp,
     val name: (SpielerUpgrades) -> String,
     val kritalle: (SpielerUpgrades) -> Int,
     val eiheitenUpgrades: Map<EinheitenTyp, EinheitenTyp.() -> Boolean> = emptyMap(),

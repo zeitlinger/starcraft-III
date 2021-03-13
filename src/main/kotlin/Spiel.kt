@@ -8,6 +8,7 @@
     "SpellCheckingInspection", "FunctionName", "LocalVariableName", "FunctionName",
 )
 
+import javafx.scene.control.Button
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import kotlin.math.absoluteValue
@@ -35,8 +36,7 @@ class Spiel(
             when (kommando) {
                 is NeueEinheit ->
                     gegner.neueEinheit(
-                        kommando.x,
-                        kommando.y,
+                        kommando.punkt,
                         neutraleEinheitenTypen.getValue(kommando.einheitenTyp)
                     ).also { einheitProduziert(it) }
                 is NeueKommandos ->
@@ -122,7 +122,7 @@ class Spiel(
             it.schusscooldown -= warteZeit.toDouble() / 1000.0
         }
         it.heiler = null
-        if (it.typ.typ == Typ.biologisch && it.leben < it.typ.leben && it.zuletztGetroffen >= 10) {
+        if (it.typ.einheitenArt == EinheitenArt.biologisch && it.leben < it.typ.leben && it.zuletztGetroffen >= 10) {
             it.leben = min(it.typ.leben, it.leben + 0.5)
         }
         it.zuletztGetroffen += warteZeit.toDouble() / 1000.0
@@ -166,14 +166,22 @@ class Spiel(
         }
     }
 
-    fun neueEinheit(spieler: Spieler, einheitenTyp: EinheitenTyp, punkt: Punkt = spieler.startpunkt) {
-        val einheit = spieler.neueEinheit(
-            x = punkt.x,
-            y = punkt.y,
+    fun neueEinheit(spieler: Spieler, einheitenTyp: EinheitenTyp, punkt: Punkt = spieler.startpunkt): Einheit =
+        spieler.neueEinheit(
+            punkt,
             einheitenTyp = einheitenTyp
-        )
-        multiplayer.neueEinheit(einheit.x, einheit.y, einheit)
-        einheitProduziert(einheit)
+        ).also {
+            multiplayer.neueEinheit(it.punkt, it)
+            einheitProduziert(it)
+        }
+
+    fun neuesGebäude(spieler: Spieler, gebäudeTyp: GebäudeTyp, buttons: List<Button>, punkt: Punkt): Gebäude {
+        val einheit = neueEinheit(spieler, spieler.einheitenTypen.getValue(gebäudeTyp.name), punkt)
+        val sammelpunkt = punkt.copy(y = punkt.y + 70 * nachVorne(spieler.spielerTyp))
+
+        val gebäude = Gebäude(buttons, kreis(sammelpunkt, radius = 5.0))
+        spieler.gebäude[einheit.nummer] = gebäude
+        return gebäude
     }
 
     fun bewegeSpieler(spieler: Spieler, gegner: Spieler) {
@@ -190,7 +198,7 @@ class Spiel(
             val zielPunkt = kommando.zielPunkt
             bewege(einheit, zielPunkt, laufweite)
 
-            if (zielPunkt == einheit.punkt()) {
+            if (zielPunkt == einheit.punkt) {
                 kommandoEntfernen(einheit, kommando)
             }
             return
@@ -200,7 +208,7 @@ class Spiel(
         if (ziel == null) {
             if (kommando is EinheitenKommando.Attackmove) {
                 bewege(einheit, kommando.zielPunkt, laufweite)
-                if (kommando.zielPunkt == einheit.punkt()) {
+                if (kommando.zielPunkt == einheit.punkt) {
                     kommandoEntfernen(einheit, kommando)
                 }
             }
@@ -221,13 +229,13 @@ class Spiel(
                     laufweite
                 }
 
-                bewege(einheit, ziel.punkt(), min(mindestabstand, `max laufweite`))
+                bewege(einheit, ziel.punkt, min(mindestabstand, `max laufweite`))
             }
         }
         if (einheit.typ.yamatokanone != null) {
             if (e > einheit.typ.yamatokanone!!) {
                 val mindestabstand = e - einheit.typ.yamatokanone!!
-                bewege(einheit, ziel.punkt(), min(mindestabstand, laufweite))
+                bewege(einheit, ziel.punkt, min(mindestabstand, laufweite))
             }
         }
     }
@@ -250,10 +258,10 @@ class Spiel(
             return
         }
 
-        val y = zielPunkt.y - einheit.y
-        val x = zielPunkt.x - einheit.x
-        einheit.x += smaller(x, x * laufweite / entfernung)
-        einheit.y += smaller(y, y * laufweite / entfernung)
+        val y = zielPunkt.y - einheit.punkt.y
+        val x = zielPunkt.x - einheit.punkt.x
+        einheit.punkt.x += smaller(x, x * laufweite / entfernung)
+        einheit.punkt.y += smaller(y, y * laufweite / entfernung)
         einheit.hatSichBewegt = true
         einheit.letzterAngriff = null
     }
@@ -278,7 +286,10 @@ class Spiel(
     }
 
     private fun angriffspriorität(einheit: Einheit, ziel: Einheit): Int {
-        if (kannAngreifen(ziel, einheit) && (ziel.typ.reichweite >= entfernung(einheit, ziel) || (ziel.typ.reichweite < einheit.typ.reichweite && entfernung(einheit, ziel) >= einheit.typ.reichweite))
+        if (kannAngreifen(ziel, einheit) && (ziel.typ.reichweite >= entfernung(
+                einheit,
+                ziel
+            ) || (ziel.typ.reichweite < einheit.typ.reichweite && entfernung(einheit, ziel) >= einheit.typ.reichweite))
             && !ziel.typ.zivileEinheit
         ) {
             return 1
@@ -286,7 +297,7 @@ class Spiel(
         if (ziel.typ.zivileEinheit) {
             return 4
         }
-        if (ziel.typ.typ == Typ.struktur) {
+        if (ziel.typ.einheitenArt == EinheitenArt.struktur) {
             return 5
         }
         val l = mutableListOf<Einheit>()
@@ -363,7 +374,11 @@ class Spiel(
         val liste = mutableListOf<Einheit>()
         l.forEach {
             gegner.einheiten.forEach { gEinheit ->
-                if ((`ist in Reichweite`(gEinheit, it) || entfernung(gEinheit, it) <= 300) && kannAngreifen(einheit, gEinheit)) {
+                if ((`ist in Reichweite`(gEinheit, it) || entfernung(gEinheit, it) <= 300) && kannAngreifen(
+                        einheit,
+                        gEinheit
+                    )
+                ) {
                     liste.add(gEinheit)
                 }
             }
@@ -381,7 +396,7 @@ class Spiel(
                     entfernung(einheit, it) <= 300 &&
                     einheit != it &&
                     (it.heiler == null || it.heiler == einheit) &&
-                    (it.typ.typ == Typ.biologisch || !gegner(gegner).upgrades.vertärkteHeilmittel) &&
+                    (it.typ.einheitenArt == EinheitenArt.biologisch || !gegner(gegner).upgrades.vertärkteHeilmittel) &&
                     (it.zuletztGetroffen > 1 || gegner(gegner).upgrades.strahlungsheilung)
             }
             .minByOrNull { entfernung(einheit, it) }
@@ -400,25 +415,33 @@ class Spiel(
 
     private fun schiessen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
         if (`ist in Reichweite`(einheit, ziel) && einheit.schusscooldown <= 0.0 && !einheit.hatSichBewegt) {
-            if (einheit.firstShotCooldown <= 0.0) {
-                einheit.schusscooldown = einheit.typ.schusscooldown
-                if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
-                    heilen(einheit, ziel, spieler)
-                } else if (einheit.typ.flächenschaden == null) {
-                    schadenAusteilen(einheit, ziel, spieler)
-                } else {
-                    val getroffeneEinheiten = gegner(spieler).einheiten.filter {
-                        entfernung(it, ziel) <= einheit.typ.flächenschaden!!
-                    }
-                    getroffeneEinheiten.forEach {
-                        schadenAusteilen(einheit, it, spieler)
+            when {
+                einheit.firstShotCooldown <= 0.0 -> {
+                    einheit.schusscooldown = einheit.typ.schusscooldown
+                    when {
+                        einheit.typ.kannAngreifen == KannAngreifen.heilen -> {
+                            heilen(einheit, ziel, spieler)
+                        }
+                        einheit.typ.flächenschaden == null -> {
+                            schadenAusteilen(einheit, ziel, spieler)
+                        }
+                        else -> {
+                            val getroffeneEinheiten = gegner(spieler).einheiten.filter {
+                                entfernung(it, ziel) <= einheit.typ.flächenschaden!!
+                            }
+                            getroffeneEinheiten.forEach {
+                                schadenAusteilen(einheit, it, spieler)
+                            }
+                        }
                     }
                 }
-            } else if (einheit.letzterAngriff == ziel) {
-                einheit.firstShotCooldown -= warteZeit.toDouble()
-            } else {
-                einheit.firstShotCooldown = einheit.typ.firstShotDeley
-                einheit.letzterAngriff = ziel
+                einheit.letzterAngriff == ziel -> {
+                    einheit.firstShotCooldown -= warteZeit.toDouble()
+                }
+                else -> {
+                    einheit.firstShotCooldown = einheit.typ.firstShotDeley
+                    einheit.letzterAngriff = ziel
+                }
             }
         }
     }
@@ -445,7 +468,7 @@ class Spiel(
 
     private fun heilen(einheit: Einheit, ziel: Einheit, spieler: Spieler) {
         if ((ziel.heiler == null || ziel.heiler == einheit) &&
-            (ziel.typ.typ == Typ.biologisch || !spieler.upgrades.vertärkteHeilmittel) && ziel.leben < ziel.typ.leben &&
+            (ziel.typ.einheitenArt == EinheitenArt.biologisch || !spieler.upgrades.vertärkteHeilmittel) && ziel.leben < ziel.typ.leben &&
             (ziel.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
         ) {
             ziel.leben = min(ziel.leben + einheit.typ.schaden, ziel.typ.leben)
@@ -503,15 +526,15 @@ fun entfernung(einheit: Einheit, ziel: Einheit): Double {
         return 7000000000000000000.0
     }
 
-    return entfernung(einheit, ziel.punkt())
+    return entfernung(einheit, ziel.punkt)
 }
 
 fun kannAngreifen(einheit: Einheit, ziel: Einheit) =
     !(ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden)
 
 fun entfernung(einheit: Einheit, ziel: Punkt): Double {
-    val a = ziel.y - einheit.y
-    val b = ziel.x - einheit.x
+    val a = ziel.y - einheit.punkt.y
+    val b = ziel.x - einheit.punkt.x
 
     return sqrt(a.pow(2) + b.pow(2))
 }
@@ -523,13 +546,12 @@ fun kaufen(kristalle: Int, spieler: Spieler, aktion: () -> Unit) {
     }
 }
 
-fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {
+fun Spieler.neueEinheit(punkt: Punkt, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {
     val spielerTyp = einheitenTypen.getValue(einheitenTyp.name)
     return Einheit(
         spieler = this,
         leben = spielerTyp.leben,
-        x = x,
-        y = y,
+        punkt = punkt,
         panzerung = spielerTyp.panzerung,
         typ = spielerTyp,
         nummer = nummer ?: einheitenNummer.getOrDefault(this.spielerTyp, 0)
@@ -553,6 +575,10 @@ fun smaller(a: Double, b: Double): Double {
         return a
     }
     return b
+}
+
+fun nachVorne(spielerTyp: SpielerTyp): Int {
+    return if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) 1 else -1
 }
 
 //Bugs:

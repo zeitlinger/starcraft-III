@@ -52,7 +52,7 @@ data class MultiplayerKommandos(val data: List<MultiplayerKommando>)
 sealed class MultiplayerKommando
 
 @Serializable
-class NeueEinheit(val x: Double, val y: Double, val einheitenTyp: String, val nummer: Int) : MultiplayerKommando()
+class NeueEinheit(val punkt: Punkt, val einheitenTyp: String, val nummer: Int) : MultiplayerKommando()
 
 @Serializable
 class NeueKommandos(val einheit: Einheit, val kommandos: List<EinheitenKommando>) : MultiplayerKommando()
@@ -102,8 +102,8 @@ class Multiplayer(private val client: Client?, private val server: Server?) {
         neuesKommando(ClientJoined)
     }
 
-    fun neueEinheit(x: Double, y: Double, einheit: Einheit) {
-        neuesKommando(NeueEinheit(x, y, einheit.typ.name, einheit.nummer))
+    fun neueEinheit(punkt: Punkt, einheit: Einheit) {
+        neuesKommando(NeueEinheit(punkt, einheit.typ.name, einheit.nummer))
     }
 
     fun neueKommandos(einheit: Einheit) {

@@ -85,7 +85,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[2].punkt() shouldBe Punkt(x = 299.55278640450007, y = 0.22360679774997896)
+        spiel.mensch.einheiten[2].punkt shouldBe Punkt(x = 299.55278640450007, y = 0.22360679774997896)
     }
 
     "hold Position" {
@@ -104,7 +104,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x = 200.0, y = 0.0)
+        spiel.mensch.einheiten[1].punkt shouldBe Punkt(x = 200.0, y = 0.0)
     }
 
     "Einheiten in Reichweite angreifen" {
@@ -298,7 +298,7 @@ class SpielTest : FreeSpec({
 
             spielen(spiel)
 
-            spiel.mensch.einheiten[1].punkt() shouldBe testFall.ziel
+            spiel.mensch.einheiten[1].punkt shouldBe testFall.ziel
         }
     }
 
@@ -320,7 +320,7 @@ class SpielTest : FreeSpec({
 
             spielen(spiel)
 
-            spiel.mensch.einheiten[1].punkt() shouldBe testFall.ziel
+            spiel.mensch.einheiten[1].punkt shouldBe testFall.ziel
         }
     }
 
@@ -338,7 +338,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x = 0.0, y = 0.0)
+        spiel.mensch.einheiten[1].punkt shouldBe Punkt(x = 0.0, y = 0.0)
         spiel.gegner.einheiten[1].leben shouldBe 93.125
     }
 
@@ -353,7 +353,7 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.gegner.einheiten[1].punkt() shouldBe Punkt(x = 0.0, y = 199.5)
+        spiel.gegner.einheiten[1].punkt shouldBe Punkt(x = 0.0, y = 199.5)
     }
 
     "springen" - {
@@ -384,7 +384,7 @@ class SpielTest : FreeSpec({
             }
             spielen(spiel)
 
-            spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x = 0.0, y = testFall.ziel)
+            spiel.mensch.einheiten[1].punkt shouldBe Punkt(x = 0.0, y = testFall.ziel)
             spiel.gegner.einheiten[1].leben shouldBe testFall.leben
             spiel.mensch.einheiten[1].`springen cooldown` shouldBe testFall.`neuer cooldown`
         }
@@ -407,7 +407,7 @@ class SpielTest : FreeSpec({
         spielen(spiel)
 
         spiel.gegner.einheiten[1].leben shouldBe 100.0
-        spiel.mensch.einheiten[1].punkt() shouldBe Punkt(x = 0.0, y = 500.5)
+        spiel.mensch.einheiten[1].punkt shouldBe Punkt(x = 0.0, y = 500.5)
     }
 
     "kommando entfernen (bewegen)" {

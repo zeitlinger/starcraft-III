@@ -61,28 +61,35 @@ fun Node.mausTaste(
 
 var ausgewaehlt: MutableSet<Einheit> = Collections.newSetFromMap(IdentityHashMap())
 
-private fun kreis(x: Double, y: Double, radius: Double): Arc {
+fun kreis(punkt: Punkt, radius: Double): Arc {
     return Arc().apply {
-        centerX = x
-        centerY = y
         radiusX = radius
         radiusY = radius
         fill = Color.TRANSPARENT
         stroke = Color.BLACK
         type = ArcType.OPEN
         length = 360.0
+    }.apply {
+        this.punkt = punkt
     }
 }
 
-enum class KommandoWählen(val hotkey: String, val filter: (Punkt) -> Set<Einheit> = {ausgewaehlt}) {
+var Arc.punkt: Punkt
+    get() = Punkt(centerX, centerY)
+    set(value) {
+        centerX = value.x
+        centerY = value.y
+    }
+
+enum class KommandoWählen(val hotkey: String, val filter: (Punkt) -> Set<Einheit> = { ausgewaehlt }) {
     Bewegen("b"),
     Attackmove("a"),
     Patrolieren("p"),
     Yamatokanone("y", { ziel ->
         setOfNotNull(
             ausgewaehlt
-            .filter {it.typ.yamatokanone != null && it.`yamatokane cooldown` == 0.0}
-            .minByOrNull { entfernung(it, ziel) }
+                .filter { it.typ.yamatokanone != null && it.`yamatokane cooldown` == 0.0 }
+                .minByOrNull { entfernung(it, ziel) }
         )
     })
 }
@@ -93,7 +100,7 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
     Patrolieren(KommandoWählen.Patrolieren)
 }
 
-data class GebäudeInfo(val buttons: List<Button>, val sammelpunkt: Punkt)
+data class Gebäude(val buttons: List<Button>, val sammelpunkt: Arc)
 
 @Suppress("SpellCheckingInspection")
 class App : Application() {
@@ -102,10 +109,10 @@ class App : Application() {
     val mensch = spiel.mensch
     val kaufbareEinheiten = mensch.einheitenTypen.values
     var kommandoWählen: KommandoWählen? = null
-    var gebäudePlazieren: Gebäude? = null
+    var gebäudePlazieren: GebäudeTyp? = null
 
     lateinit var buttonLeiste: ObservableList<Node>
-    val gebäudeInfos = mutableMapOf<Gebäude, GebäudeInfo>()
+    var sammelpunkt: Arc? = null
     val kristalleText: Label = Label().apply { minWidth = 100.0 }
     val minenText: Label = Label().apply { minWidth = 100.0 }
     val kommandoAnzeige: Label = Label().apply { minWidth = 200.0 }
@@ -182,27 +189,11 @@ class App : Application() {
 
         stage.scene = scene
 
-        val basisButtons = mutableListOf<Button>()
-        gebäudeInfos[basis] = GebäudeInfo(basisButtons, mensch.startpunkt)
-
-        kaufButton(basisButtons, "Mine", 2000 + 400 * mensch.minen) {
-            mensch.minen += 1
-        }
-        kaufButton(basisButtons, "Arbeiter", arbeiter.kristalle) {
-            spiel.neueEinheit(mensch, arbeiter)
-        }
-        gebäude.filter { it != basis }.forEach { gebäude ->
-            einmalKaufen(basisButtons, gebäude.name, gebäude.kristalle) {
-                gebäudePlazieren = gebäude
-                scene.cursor = Cursor.HAND
-            }
-        }
-
         stage.addEventFilter(KeyEvent.KEY_PRESSED) { event ->
             if (nurBasisAusgewählt()) {
                 kaufbareEinheiten.singleOrNull { event.text == it.hotkey }?.button?.fire()
             } else {
-                if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ.name == basis.name }) {
+                if (ausgewaehlt.size > 0 && ausgewaehlt.none { it.typ.einheitenArt == EinheitenArt.struktur }) {
                     auswahlHotkeys(scene, event.text, event.isShiftDown)
                 }
             }
@@ -210,13 +201,24 @@ class App : Application() {
 
         vBox.children.add(scrollPane(vBox, kartenPane))
         vBox.children.add(hBox)
-        kartenPane.mausTaste(MouseButton.SECONDARY, consume = false) {
+        kartenPane.mausTaste(MouseButton.SECONDARY) {
             if (kommandoWählen != null) {
                 scene.cursor = Cursor.DEFAULT
                 kommandoWählen = null
             } else {
                 ausgewaehlt.forEach { einheit ->
-                    laufBefehl(einheit, it, laufbefehl = Laufbefehl.Bewegen, schiftcommand = it.isShiftDown)
+                    val gebäude = einheit.gebäude
+                    if (gebäude != null) {
+                        gebäude.sammelpunkt.punkt = it.punkt
+                        zeigeSammelpunkt(gebäude)
+                    } else {
+                        laufBefehl(
+                            einheit,
+                            laufbefehl = Laufbefehl.Bewegen,
+                            schiftcommand = it.isShiftDown,
+                            punkt = it.punkt
+                        )
+                    }
                 }
             }
         }
@@ -230,15 +232,15 @@ class App : Application() {
         var auswahlStart: Punkt? = null
         var auswahlRechteck: Rectangle? = null
 
-        kartenPane.mausTaste(MouseButton.PRIMARY, consume = false) { event ->
+        kartenPane.mausTaste(MouseButton.PRIMARY) { event ->
             val laufbefehl = Laufbefehl.values().singleOrNull { it.wählen == kommandoWählen }
             if (laufbefehl != null) {
                 ausgewaehlt.forEach { einheit ->
                     laufBefehl(
                         einheit = einheit,
-                        event = event,
                         laufbefehl = laufbefehl,
-                        schiftcommand = event.isShiftDown
+                        schiftcommand = event.isShiftDown,
+                        punkt = event.punkt
                     )
                 }
             } else {
@@ -345,7 +347,7 @@ class App : Application() {
     private fun auswahlHotkeys(scene: Scene, text: String?, shift: Boolean) {
         val wählen = KommandoWählen.values().singleOrNull { it.hotkey == text }
         if (wählen != null) {
-            if (wählen.filter (Punkt(0.0, 0.0)).isEmpty()) {
+            if (wählen.filter(Punkt(0.0, 0.0)).isEmpty()) {
                 return
             }
             kommandoWählen = wählen
@@ -367,26 +369,46 @@ class App : Application() {
         }
     }
 
-    private fun plaziereGebäude(gebäude: Gebäude, punkt: Punkt, spieler: Spieler) {
-        spiel.neueEinheit(spieler, spieler.einheitenTypen.getValue(gebäude.name), punkt)
-
+    private fun plaziereGebäude(gebäudeTyp: GebäudeTyp, punkt: Punkt, spieler: Spieler) {
         val buttons = mutableListOf<Button>()
+        val gebäude = spiel.neuesGebäude(spieler, gebäudeTyp, buttons, punkt)
 
-        techgebäude.filter { it.gebäude == gebäude }.forEach { techGebäude ->
+        if (gebäudeTyp == basis) {
+            kaufButton(buttons, "Mine", 2000 + 400 * mensch.minen) {
+                mensch.minen += 1
+            }
+            kaufButton(buttons, "Arbeiter", arbeiter.kristalle) {
+                spiel.neueEinheit(mensch, arbeiter)
+            }
+            gebäudeTypen.filter { it != basis }.forEach { typ ->
+                einmalKaufen(buttons, typ.name, typ.kristalle) {
+                    gebäudePlazieren = typ
+                    scene.cursor = Cursor.HAND
+                }
+            }
+        }
+
+        techgebäude.filter { it.gebäudeTyp == gebäudeTyp }.forEach { techGebäude ->
             einmalKaufen(buttons, techGebäude.name, techGebäude.kristalle) {
                 kaufbareEinheiten.filter { it.techGebäude == techGebäude }.forEach { it.button!!.isDisable = false }
             }
         }
-        kaufbareEinheiten.filter { it.gebäude == gebäude }.forEach { typ ->
+        kaufbareEinheiten.filter { it.gebäudeTyp == gebäudeTyp }.forEach { typ ->
             val button = kaufButton(buttons, typ.name, typ.kristalle) {
-                spiel.neueEinheit(mensch, typ, gebäudeInfos.getValue(gebäude).sammelpunkt)
+                spiel.neueEinheit(mensch, typ, punkt).apply {
+                    neuesKommando(
+                        this,
+                        EinheitenKommando.Bewegen(gebäude.sammelpunkt.punkt),
+                        false
+                    )
+                }
             }
             if (typ.techGebäude != null) {
                 button.isDisable = true
             }
             typ.button = button
         }
-        upgrades.filter { it.gebäude == gebäude }.forEach { upgrade ->
+        upgrades.filter { it.gebäudeTyp == gebäudeTyp }.forEach { upgrade ->
             kaufButton(buttons, { upgrade.name(mensch.upgrades) }, { upgrade.kritalle(mensch.upgrades) }) {
                 var remove = false
 
@@ -404,7 +426,6 @@ class App : Application() {
                 }
             }
         }
-        gebäudeInfos[gebäude] = GebäudeInfo(buttons, punkt.copy(y = punkt.y + 40 * nachVorne(spieler.spielerTyp)))
     }
 
     private fun neueAuswahl(aktion: () -> Unit) {
@@ -412,14 +433,29 @@ class App : Application() {
         aktion()
         zeigeKommands()
         ausgewaehlt.singleOrNull()?.let { einheit ->
-            gebäude.singleOrNull { it.name == einheit.typ.name }
-                ?.let { aktuelleButtons(gebäudeInfos.getValue(it).buttons) }
-                ?: buttonLeiste.clear()
+            löscheSammelpunkt()
+            buttonLeiste.clear()
+
+            val gebäude = einheit.gebäude
+            if (gebäude != null) {
+                aktuelleButtons(gebäude.buttons)
+                zeigeSammelpunkt(gebäude)
+            }
 
             einheit.kommandoQueue.forEachIndexed { index, kommando ->
                 zielpunktUndKreisHinzufügen(einheit, kommando, einheit.kommandoQueue.getOrNull(index - 1))
             }
         }
+    }
+
+    private fun löscheSammelpunkt() {
+        sammelpunkt?.let { karte.remove(it) }
+    }
+
+    private fun zeigeSammelpunkt(gebäude: Gebäude) {
+        löscheSammelpunkt()
+        karte.add(gebäude.sammelpunkt)
+        sammelpunkt = gebäude.sammelpunkt
     }
 
     private fun `auswahl löschen`() {
@@ -433,30 +469,30 @@ class App : Application() {
         ausgewaehlt.clear()
     }
 
-    private fun laufBefehl(einheit: Einheit, event: MouseEvent, laufbefehl: Laufbefehl, schiftcommand: Boolean) {
-
-        val x = event.x
-        val y = event.y
+    private fun laufBefehl(einheit: Einheit, laufbefehl: Laufbefehl, schiftcommand: Boolean, punkt: Punkt) {
         val letzterPunkt = if (!schiftcommand || einheit.kommandoQueue.isEmpty()) {
-            einheit.punkt()
+            einheit.punkt
         } else {
-            einheit.punkt()
+            einheit.punkt
         }
 
         val kommando = when (laufbefehl) {
             Laufbefehl.Attackmove -> {
-                EinheitenKommando.Attackmove(zielPunkt = Punkt(x, y))
+                EinheitenKommando.Attackmove(zielPunkt = punkt)
             }
             Laufbefehl.Bewegen -> {
-                EinheitenKommando.Bewegen(Punkt(x, y))
+                EinheitenKommando.Bewegen(punkt)
             }
             else -> {
-                EinheitenKommando.Patrolieren(letzterPunkt, Punkt(x, y))
+                EinheitenKommando.Patrolieren(letzterPunkt, punkt)
             }
         }
         neuesKommando(einheit, kommando, schiftcommand)
         zielpunktKreisUndLinieHinzufügen(kommando, einheit)
     }
+
+    val MouseEvent.punkt: Punkt
+        get() = Punkt(x, y)
 
     private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, shift: Boolean) {
         einheit.kommandoQueue.toList().forEach {
@@ -489,7 +525,7 @@ class App : Application() {
         letztesKommando: EinheitenKommando?
     ) {
         val zielPunkt = kommandoPosition(kommando, einheit)
-        kommando.zielpunktkreis = kreis(x = zielPunkt.x, y = zielPunkt.y, radius = 5.0).apply {
+        kommando.zielpunktkreis = kreis(zielPunkt, radius = 5.0).apply {
             karte.add(this)
         }
 
@@ -500,7 +536,7 @@ class App : Application() {
         val startPunkt = kommandoPosition(letztesKommando, einheit)
 
         if (einheit.kommandoQueue.size == 2) {
-            linieHinzufügen(einheit.kommandoQueue.first(), einheit.punkt(), startPunkt)
+            linieHinzufügen(einheit.kommandoQueue.first(), einheit.punkt, startPunkt)
         }
 
         linieHinzufügen(kommando, startPunkt, zielPunkt)
@@ -517,14 +553,14 @@ class App : Application() {
     }
 
     private fun kommandoPosition(letztesKommando: EinheitenKommando?, einheit: Einheit) = when (letztesKommando) {
-        null -> einheit.punkt()
-        is EinheitenKommando.Angriff -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
+        null -> einheit.punkt
+        is EinheitenKommando.Angriff -> letztesKommando.ziel.punkt
         is EinheitenKommando.Bewegen -> letztesKommando.zielPunkt
         is EinheitenKommando.Attackmove -> letztesKommando.zielPunkt
         is EinheitenKommando.Patrolieren -> letztesKommando.punkt2
-        is EinheitenKommando.HoldPosition -> einheit.punkt()
-        is EinheitenKommando.Stopp -> einheit.punkt()
-        is EinheitenKommando.Yamatokanone -> Punkt(letztesKommando.ziel.x, letztesKommando.ziel.y)
+        is EinheitenKommando.HoldPosition -> einheit.punkt
+        is EinheitenKommando.Stopp -> einheit.punkt
+        is EinheitenKommando.Yamatokanone -> letztesKommando.ziel.punkt
     }
 
     private fun initSpieler(spieler: Spieler) {
@@ -544,10 +580,6 @@ class App : Application() {
         neueEinheit(x = 750.0, y = spieler.startpunkt.y, einheitenTyp = arbeiter)
         neueEinheit(x = 850.0, y = spieler.startpunkt.y, einheitenTyp = infantrie)
         neueEinheit(x = 950.0, y = spieler.startpunkt.y, einheitenTyp = infantrie)
-    }
-
-    private fun nachVorne(spielerTyp: SpielerTyp): Int {
-        return if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) 1 else -1
     }
 
     private fun einheitUiErstellen(einheit: Einheit) {
@@ -572,7 +604,7 @@ class App : Application() {
         }
 
         imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Yamatokanone }) {
-            val angreifer = kommandoWählen!!.filter(einheit.punkt()).singleOrNull()
+            val angreifer = kommandoWählen!!.filter(einheit.punkt).singleOrNull()
             if (angreifer != null) {
                 kommandoMitZielpunktKreis(angreifer, EinheitenKommando.Yamatokanone(einheit), it.isShiftDown)
             }
@@ -606,7 +638,7 @@ class App : Application() {
 
     private fun auswählen(einheit: Einheit) {
         if (einheit.leben > 0 && einheit.auswahlkreis == null) {
-            val auswahlKreis: Arc = kreis(x = -100.0, y = -100.0, radius = 25.0)
+            val auswahlKreis: Arc = kreis(Punkt(-100.0, -100.0), radius = 25.0)
             karte.add(auswahlKreis)
             einheit.auswahlkreis = auswahlKreis
             ausgewaehlt.add(einheit)
@@ -628,23 +660,23 @@ class App : Application() {
     fun maleEinheit(einheit: Einheit) {
         val kreis = einheit.bild
 
-        kreis.layoutX = einheit.x
-        kreis.layoutY = einheit.y
+        kreis.layoutX = einheit.punkt.x
+        kreis.layoutY = einheit.punkt.y
 
         val lebenText = einheit.lebenText!!
-        lebenText.x = einheit.x - 10
-        lebenText.y = einheit.y - 30
+        lebenText.x = einheit.punkt.x - 10
+        lebenText.y = einheit.punkt.y - 30
         lebenText.text = einheit.leben.toInt().toString()
 
-        einheit.kuerzel!!.x = einheit.x - 12
-        einheit.kuerzel!!.y = einheit.y
+        einheit.kuerzel!!.x = einheit.punkt.x - 12
+        einheit.kuerzel!!.y = einheit.punkt.y
 
 
         val queue = einheit.kommandoQueue
         if (queue.size >= 1) {
             queue[0].zielpunktLinie?.apply {
-                startX = einheit.x
-                startY = einheit.y
+                startX = einheit.punkt.x
+                startY = einheit.punkt.y
             }
         }
 
@@ -653,18 +685,17 @@ class App : Application() {
                 val ziel = kommando.ziel
 
                 kommando.zielpunktLinie?.apply {
-                    endX = ziel.x
-                    endY = ziel.y
+                    endX = ziel.punkt.x
+                    endY = ziel.punkt.y
                 }
                 if (index < queue.size - 1) {
                     queue[index + 1].zielpunktLinie?.apply {
-                        startX = ziel.x
-                        startY = ziel.y
+                        startX = ziel.punkt.x
+                        startY = ziel.punkt.y
                     }
                 }
                 kommando.zielpunktkreis?.apply {
-                    centerX = ziel.x
-                    centerY = ziel.y
+                    punkt = ziel.punkt
                 }
             }
         }
