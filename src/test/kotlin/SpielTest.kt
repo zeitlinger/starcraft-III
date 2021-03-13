@@ -69,8 +69,8 @@ class SpielTest : FreeSpec({
 
         spielen(spiel)
 
-        spiel.mensch.einheiten[2].x shouldBe 199.3
-        spiel.mensch.einheiten[3].x shouldBe 200.0
+        spiel.mensch.einheiten[2].punkt.x shouldBe 199.3
+        spiel.mensch.einheiten[3].punkt.x shouldBe 200.0
     }
 
     "beschützen" {
@@ -163,7 +163,7 @@ class SpielTest : FreeSpec({
         }
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].x shouldBe 0.25
+        spiel.mensch.einheiten[1].punkt.x shouldBe 0.25
     }
 
     "Nicht in einer Runde laufen und angreifen" {
@@ -526,7 +526,7 @@ class SpielTest : FreeSpec({
         }
         spielen(spiel)
 
-        spiel.mensch.einheiten[1].y shouldBe 500.5
+        spiel.mensch.einheiten[1].punkt.y shouldBe 500.5
     }
 
     "kann Lufteinheit nicht angreifen" {
@@ -563,7 +563,7 @@ private fun neuesSpiel(): Spiel {
             panzerungsUprade = 0
         )
     ).apply {
-        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = basis)
+        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = gebäude(basis))
     }
 
     val mensch = Spieler(
@@ -579,7 +579,7 @@ private fun neuesSpiel(): Spiel {
             panzerungsUprade = 0
         )
     ).apply {
-        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = basis)
+        neueEinheit(x = 900.0, y = 970.0, einheitenTyp = gebäude(basis))
     }
 
     return Spiel(mensch, computer, rundenLimit = 1, multiplayer = Multiplayer(null, null))

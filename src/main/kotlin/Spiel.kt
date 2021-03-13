@@ -176,7 +176,7 @@ class Spiel(
         }
 
     fun neuesGebäude(spieler: Spieler, gebäudeTyp: GebäudeTyp, buttons: List<Button>, punkt: Punkt): Gebäude {
-        val einheit = neueEinheit(spieler, spieler.einheitenTypen.getValue(gebäudeTyp.name), punkt)
+        val einheit = neueEinheit(spieler, spieler.gebäude(gebäudeTyp), punkt)
         val sammelpunkt = punkt.copy(y = punkt.y + 70 * nachVorne(spieler.spielerTyp))
 
         val gebäude = Gebäude(buttons, kreis(sammelpunkt, radius = 5.0))
@@ -258,10 +258,13 @@ class Spiel(
             return
         }
 
-        val y = zielPunkt.y - einheit.punkt.y
-        val x = zielPunkt.x - einheit.punkt.x
-        einheit.punkt.x += smaller(x, x * laufweite / entfernung)
-        einheit.punkt.y += smaller(y, y * laufweite / entfernung)
+        val punkt = einheit.punkt
+        val y = zielPunkt.y - punkt.y
+        val x = zielPunkt.x - punkt.x
+        einheit.punkt = Punkt(
+            punkt.x + smaller(x, x * laufweite / entfernung),
+            punkt.y + smaller(y, y * laufweite / entfernung),
+        )
         einheit.hatSichBewegt = true
         einheit.letzterAngriff = null
     }
@@ -544,6 +547,10 @@ fun kaufen(kristalle: Int, spieler: Spieler, aktion: () -> Unit) {
         aktion()
         spieler.kristalle -= kristalle
     }
+}
+
+fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {
+    return neueEinheit(Punkt(x, y), einheitenTyp, nummer)
 }
 
 fun Spieler.neueEinheit(punkt: Punkt, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {

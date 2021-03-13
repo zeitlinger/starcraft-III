@@ -132,7 +132,7 @@ data class Einheit(
     val spieler: Spieler,
     val typ: EinheitenTyp,
     var leben: Double,
-    val punkt: Punkt,
+    var punkt: Punkt,
     val bild: Circle = einheitenBild(),
     var kuerzel: Text? = null,
     var lebenText: Text? = null,
@@ -162,8 +162,8 @@ data class Einheit(
 
 @Serializable
 data class Punkt(
-    var x: Double,
-    var y: Double
+    val x: Double,
+    val y: Double
 )
 
 
@@ -496,6 +496,8 @@ class Spieler(
     fun gebäude(nummer: Int): Gebäude? {
         return gebäude[nummer]
     }
+
+    fun gebäude(gebäudeTyp: GebäudeTyp) = einheitenTypen.getValue(gebäudeTyp.name)
 
     override fun toString(): String {
         return "Spieler(typ=$spielerTyp)"
