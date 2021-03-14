@@ -180,8 +180,11 @@ class Spiel(
     }
 
     private fun spellsAusführen(einheit: Einheit, ziel: Einheit) {
-        if (einheit.typ.yamatokanone!! <= entfernung(einheit, ziel) && !einheit.hatSichBewegt) {
+        if (einheit.typ.yamatokanone!! >= entfernung(einheit, ziel) && !einheit.hatSichBewegt && einheit.`yamatokane cooldown` <= 0.0) {
             ziel.leben -= 800
+            val kommando = einheit.kommandoQueue[0]
+            kommandoEntfernen(einheit, kommando)
+            einheit.`yamatokane cooldown` = 5.0
         }
     }
 
@@ -241,10 +244,14 @@ class Spiel(
             if (kommando is Patrolieren) {
                 bewege(einheit, kommando.nächsterPunkt, laufweite)
                 if (kommando.nächsterPunkt == einheit.punkt) {
-                    kommando.nächsterPunkt = if (kommando.nächsterPunkt == kommando.punkt1) {
-                        kommando.punkt2
+                    if (einheit.kommandoQueue.size > 1) {
+                        kommandoEntfernen(einheit, kommando)
                     } else {
-                        kommando.punkt1
+                        kommando.nächsterPunkt = if (kommando.nächsterPunkt == kommando.punkt1) {
+                            kommando.punkt2
+                        } else {
+                            kommando.punkt1
+                        }
                     }
                 }
             }
@@ -597,11 +604,14 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 
 //Bugs:
 //wenn man mit zwei Einheiten unterschiedliche Kommandos ausführt und dann beide auswählt und mit shift ein neues Kommando gibt, werden die alten kommandos nicht vollständig angezeigt
-//yamatokanone wird nicht ausgeführt wenn das Ziel schon in reichweite ist
 //bei Patrolieren wird nur ein Zielpunktkreis gemalt
 //wenn man zwei Einheiten ausgewählt hat werden die Zielpunkte der Einheiten nicht angezeigt (auch wenn alle den gleichen Zielpunkt haben)
+//wenn man eine Einheit mit Zielpunklinie abwählt und dann wieder auswählt wird die Zielpunktlinie nicht mehr aktualisiert
 
 //Features:
+//wenn man nichts mit einem Auswahlrechteck auswählt sollen die ausgewählten Einheiten nicht abgewählt werden (außer wenn man shift drückt)
+//Wenn man shift drückt und Einheiten auswählt sollen die alten Einheiten nicht abewählt werden
+//wenn man mit shift Einheiten auswähl, die schon ausgewählt sind sollen diese abgewählt werden
 //Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
 //Wenn eine Einheit ein automatisches Ziel hat und man mit shift ein anderes Ziel gibt soll das automatische Ziel zuerst ausgeführt werden
 //Chat
@@ -617,6 +627,7 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //Physik-Angin
 //Wasser + Schiffe
 //bessere Grafik mit 3D-Moddelen und Animationen
+//tooltips
 //sound
 //Hintergrundmusik
 //totorial
@@ -631,14 +642,14 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 
 //Rassen:
 //Silikoiden:
-//Eine Ressource mehr als die anderen Rassen (silizium); high tech; teure, große, schnelle Einheiten;
+//Eine Ressource mehr als die anderen Rassen (silizium); high tech; teure, große, schnelle Einheiten; kosteneffizente Einheiten
 //Punkte auf der Karte die nur für eine Rasse sichtbar sind (Siliziumvorkommen) die durch eine Rafinerie abbauen können; Einheiten fusionieren; viele Upgrades
 //Terraner:
-//Mechs, Infantrie, Panzer; “vanilla”; Heimatwelt-boni
+//Mechs, Infantrie
 //Psilons:
 //psionische Einheiten; Templer; Helden-Einheiten; Mana für Zaubersprüche; Archiv um Zaubersprüche um für die Templer zu erlernen; XP für Einheiten;
 //unerfahrene Einheiten können nur einfache; Entscheidungen über tech tree für Upgrades
 //Alkari:
-//Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen
+//Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen; kostenineffiziente Einheiten
 //meklars (KI):
 //

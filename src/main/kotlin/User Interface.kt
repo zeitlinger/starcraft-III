@@ -88,7 +88,7 @@ sealed class KommandoWählen(val hotkey: String, val filter: (Punkt) -> Set<Einh
     object Yamatokanone : KommandoWählen("y", { ziel ->
         setOfNotNull(
             ausgewaehlt
-                .filter { it.typ.yamatokanone != null && it.`yamatokane cooldown` == 0.0 }
+                .filter { it.typ.yamatokanone != null && it.`yamatokane cooldown` <= 0.0 }
                 .minByOrNull { entfernung(it, ziel) }
         )
     })
@@ -592,7 +592,7 @@ class App : Application() {
         is Angriff -> letztesKommando.ziel.punkt
         is Bewegen -> letztesKommando.zielPunkt
         is Attackmove -> letztesKommando.zielPunkt
-        is Patrolieren -> letztesKommando.punkt2
+        is Patrolieren -> letztesKommando.nächsterPunkt
         is HoldPosition -> einheit.punkt
         is Stopp -> einheit.punkt
         is Yamatokanone -> letztesKommando.ziel.punkt
@@ -733,6 +733,23 @@ class App : Application() {
                     punkt = ziel.punkt
                 }
             }
+            if (kommando is Yamatokanone) {
+                val ziel = kommando.ziel
+
+                kommando.zielpunktLinie?.apply {
+                    endX = ziel.punkt.x
+                    endY = ziel.punkt.y
+                }
+                if (index < queue.size - 1) {
+                    queue[index + 1].zielpunktLinie?.apply {
+                        startX = ziel.punkt.x
+                        startY = ziel.punkt.y
+                    }
+                }
+                kommando.zielpunktkreis?.apply {
+                    punkt = ziel.punkt
+                }
+            }
         }
     }
 
@@ -758,7 +775,7 @@ class App : Application() {
 
             val spielerTyp = multiplayer.spielerTyp
             val mensch = Spieler(
-                kristalle = 30000.0,
+                kristalle = 0.0,
                 minen = 0,
                 startpunkt = startPunkt(spielerTyp),
                 farbe = spielerFarbe(spielerTyp),

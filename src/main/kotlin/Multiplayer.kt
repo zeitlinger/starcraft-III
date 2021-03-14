@@ -150,7 +150,7 @@ class Server(
     }
 
     private fun server() {
-        val server = embeddedServer(Netty, port = 8080) {
+        val server = embeddedServer(Netty, port = 80, host = "192.168.178.28") {
             install(ContentNegotiation) {
                 json(Json {
                     serializersModule =

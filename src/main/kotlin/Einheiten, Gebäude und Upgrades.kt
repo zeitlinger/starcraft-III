@@ -178,7 +178,9 @@ sealed class EinheitenKommando(
     @Transient
     var zielpunktLinie: Line? = null,
     @Transient
-    var zielpunktkreis: Arc? = null
+    var zielpunktkreis: Arc? = null,
+    @Transient
+    var zielpunktkreis2: Arc? = null
 )
 
 @Serializable
