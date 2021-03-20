@@ -8,7 +8,6 @@
     "SpellCheckingInspection", "FunctionName", "ClassName", "LocalVariableName", "ObjectPropertyName"
 )
 
-import javafx.application.Application
 import javafx.application.Platform
 import javafx.collections.ObservableList
 import javafx.event.EventType
@@ -113,7 +112,7 @@ data class Gebäude(
 )
 
 @Suppress("SpellCheckingInspection")
-class App : Application() {
+class App {
     lateinit var scene: Scene
     val gegner = spiel.gegner
     val mensch = spiel.mensch
@@ -167,7 +166,7 @@ class App : Application() {
         leiste.remove(button)
     }
 
-    override fun start(stage: Stage) {
+    fun start(stage: Stage) {
         val kartenPane = Pane().apply {
             prefWidth = 3850.0
             prefHeight = 2950.0
@@ -337,13 +336,6 @@ class App : Application() {
     }
 
     private fun nurBasisAusgewählt() = ausgewaehlt.size == 1 && ausgewaehlt.iterator().next().typ.name == basis.name
-
-    private fun aktuelleButtons(
-        buttons: List<Button>
-    ) {
-        buttonLeiste.clear()
-        buttonLeiste.addAll(buttons)
-    }
 
     private fun scrollPane(vBox: VBox, kartenPane: Pane): ScrollPane {
         val scroll = ScrollPane(kartenPane)
@@ -752,72 +744,12 @@ class App : Application() {
             }
         }
     }
-
-    companion object {
-        @JvmStatic
-        fun main(args: Array<String>) {
-            val multiplayer = leseMultiplayerModus(args)
-
-            val gegnerTyp = multiplayer.gegnerTyp
-            val gegner = Spieler(
-                kristalle = 0.0,
-                minen = 0,
-                startpunkt = startPunkt(gegnerTyp),
-                farbe = spielerFarbe(gegnerTyp),
-                spielerTyp = gegnerTyp,
-                upgrades = SpielerUpgrades(
-                    angriffspunkte = 20,
-                    verteidiegungspunkte = 10,
-                    schadensUpgrade = 0,
-                    panzerungsUprade = 0,
-                )
-            )
-
-            val spielerTyp = multiplayer.spielerTyp
-            val mensch = Spieler(
-                kristalle = 0.0,
-                minen = 0,
-                startpunkt = startPunkt(spielerTyp),
-                farbe = spielerFarbe(spielerTyp),
-                spielerTyp = spielerTyp,
-                upgrades = SpielerUpgrades(
-                    angriffspunkte = 20,
-                    verteidiegungspunkte = 10,
-                    schadensUpgrade = 0,
-                    panzerungsUprade = 0
-                )
-            )
-
-            spiel = Spiel(mensch, gegner, multiplayer = multiplayer)
-
-            launch(App::class.java)
-        }
-
-        private fun spielerFarbe(spielerTyp: SpielerTyp) =
-            if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) Color.RED else Color.BLUE
-
-        private fun startPunkt(spielerTyp: SpielerTyp) =
-            if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer)
-                Punkt(x = 900.0, y = 115.0) else Punkt(x = 900.0, y = 905.0)
-
-
-    }
 }
 
 fun einheitenBild(): Circle {
     return Circle(20.toDouble())
 }
 
-private fun leseMultiplayerModus(args: Array<String>): Multiplayer {
-    var server: Server? = null
-    var client: Client? = null
-    if (args.getOrNull(0) == "server") {
-        server = Server()
-    } else if (args.getOrNull(0) == "client") {
-        client = Client(args[1])
-    }
-    return Multiplayer(client, server)
-}
 
 fun kommandoAnzeigeEntfernen(kommando: EinheitenKommando) {
     if (kommando.zielpunktLinie != null) {

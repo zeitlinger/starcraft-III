@@ -120,6 +120,8 @@ data class EinheitenTyp constructor(
     val zivileEinheit: Boolean = false,
     val produktionsZeit: ZeitInSec = 5.0,
     val spielerTyp: SpielerTyp = SpielerTyp.mensch,
+    @Transient
+    val bild: String? = null,
 ) {
     init {
         if (spielerTyp == SpielerTyp.mensch) {
@@ -369,7 +371,8 @@ val späher = EinheitenTyp(
     hotkey = "g",
     einheitenArt = EinheitenArt.biologisch,
     durchschlag = 0.0,
-    yamatokanone = 300
+    yamatokanone = 300,
+    bild = "frigatep1"
 )
 val sonde = EinheitenTyp(
     name = "Sonde",
