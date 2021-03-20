@@ -224,7 +224,8 @@ val infantrie = EinheitenTyp(
     gebäudeTyp = kaserne,
     hotkey = "q",
     einheitenArt = EinheitenArt.biologisch,
-    durchschlag = 0.0
+    durchschlag = 0.0,
+    bild = "factoryp1"
 )
 val eliteInfantrie = EinheitenTyp(
     name = "Elite-Infantrie",
@@ -288,7 +289,8 @@ val panzer = EinheitenTyp(
     hotkey = "t",
     einheitenArt = EinheitenArt.mechanisch,
     flächenschaden = 25.0,
-    durchschlag = 0.0
+    durchschlag = 0.0,
+    bild = "factoryp2"
 )
 
 val jäger = EinheitenTyp(
@@ -322,7 +324,8 @@ val sanitäter = EinheitenTyp(
     hotkey = "s",
     einheitenArt = EinheitenArt.biologisch,
     zivileEinheit = true,
-    durchschlag = 0.0
+    durchschlag = 0.0,
+    bild = "factoryp3"
 )
 val kampfschiff = EinheitenTyp(
     name = "Kampfschiff",
@@ -355,7 +358,8 @@ val arbeiter = EinheitenTyp(
     hotkey = "f",
     einheitenArt = EinheitenArt.biologisch,
     zivileEinheit = true,
-    durchschlag = 0.0
+    durchschlag = 0.0,
+    bild = "frigatep2"
 )
 val späher = EinheitenTyp(
     name = "Späher",
