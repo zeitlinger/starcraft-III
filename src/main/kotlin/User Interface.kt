@@ -520,7 +520,7 @@ class App : Application() {
                 Bewegen(punkt)
             }
             else -> {
-                Patrolieren(letzterPunkt, punkt, punkt)
+                Patrolieren(mutableListOf(letzterPunkt, punkt), punkt, 1, true)
             }
         }
         neuesKommando(einheit, kommando, schiftcommand)
@@ -554,11 +554,7 @@ class App : Application() {
         zielpunktUndKreisHinzufügen(einheit, kommando, letztesKommando)
     }
 
-    private fun zielpunktUndKreisHinzufügen(
-        einheit: Einheit,
-        kommando: EinheitenKommando,
-        letztesKommando: EinheitenKommando?
-    ) {
+    private fun zielpunktUndKreisHinzufügen(einheit: Einheit, kommando: EinheitenKommando, letztesKommando: EinheitenKommando?) {
         val zielPunkt = kommandoPosition(kommando, einheit)
         kommando.zielpunktkreis = kreis(zielPunkt, radius = 5.0).apply {
             karte.add(this)

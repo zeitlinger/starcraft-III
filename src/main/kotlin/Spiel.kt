@@ -247,10 +247,24 @@ class Spiel(
                     if (einheit.kommandoQueue.size > 1) {
                         kommandoEntfernen(einheit, kommando)
                     } else {
-                        kommando.nächsterPunkt = if (kommando.nächsterPunkt == kommando.punkt1) {
-                            kommando.punkt2
+                        val nächsterPunktNummer = kommando.nächsterPunktNumer + 1
+                        val letzterPunktNummer = kommando.nächsterPunktNumer - 1
+                        if (kommando.vorwärtsGehen) {
+                            kommando.nächsterPunkt = if (nächsterPunktNummer < kommando.punkte.size) {
+                                kommando.nächsterPunktNumer += 1
+                                kommando.punkte[nächsterPunktNummer]
+                            } else {
+                                kommando.vorwärtsGehen = false
+                                kommando.punkte[letzterPunktNummer]
+                            }
                         } else {
-                            kommando.punkt1
+                            kommando.nächsterPunkt = if (letzterPunktNummer >= 0) {
+                                kommando.nächsterPunktNumer -= 1
+                                kommando.punkte[letzterPunktNummer]
+                            } else {
+                                kommando.vorwärtsGehen = true
+                                kommando.punkte[nächsterPunktNummer]
+                            }
                         }
                     }
                 }
@@ -606,7 +620,6 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //wenn man mit zwei Einheiten unterschiedliche Kommandos ausführt und dann beide auswählt und mit shift ein neues Kommando gibt, werden die alten kommandos nicht vollständig angezeigt
 //bei Patrolieren wird nur ein Zielpunktkreis gemalt
 //wenn man zwei Einheiten ausgewählt hat werden die Zielpunkte der Einheiten nicht angezeigt (auch wenn alle den gleichen Zielpunkt haben)
-//wenn man eine Einheit mit Zielpunklinie abwählt und dann wieder auswählt wird die Zielpunktlinie nicht mehr aktualisiert
 
 //Features:
 //wenn man nichts mit einem Auswahlrechteck auswählt sollen die ausgewählten Einheiten nicht abgewählt werden (außer wenn man shift drückt)
@@ -647,9 +660,9 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //Terraner:
 //Mechs, Infantrie
 //Psilons:
-//psionische Einheiten; Templer; Helden-Einheiten; Mana für Zaubersprüche; Archiv um Zaubersprüche um für die Templer zu erlernen; XP für Einheiten;
-//unerfahrene Einheiten können nur einfache; Entscheidungen über tech tree für Upgrades
+//psionische Einheiten; Templer; Helden-Einheiten; Mana für Zaubersprüche; Archiv um Zaubersprüche um für die Templer zu erlernen; XP für Helden-Einheiten;
+//unerfahrene Einheiten können nur einfache; Entscheidungen über tech tree für Upgrades; Unterstützungseinheiten
 //Alkari:
 //Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen; kostenineffiziente Einheiten
 //meklars (KI):
-//
+//robotische Einheiten
