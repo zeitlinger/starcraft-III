@@ -13,6 +13,8 @@ plugins {
     id("org.openjfx.javafxplugin") version "0.0.9"
 }
 
+//project.ext.assetsDir = File("assets");
+
 tasks.withType<Test> {
    useJUnitPlatform()
 }
@@ -26,7 +28,7 @@ tasks.withType<Test> {
 //}
 
 dependencies {
-//    val gdxVersion = "1.9.9"
+    val gdxVersion = "1.9.9"
     val ktorVersion = "1.5.2"
     val logbackVersion = "1.2.3"
     val kotlinSerialization = "1.1.0"
@@ -51,11 +53,11 @@ dependencies {
 
 
 
-//    implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
-//    implementation("com.badlogicgames.gdx:gdx-box2d:$gdxVersion")
-//    implementation("com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion")
-//    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
-//    implementation("com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop")
+    implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
+    implementation("com.badlogicgames.gdx:gdx-box2d:$gdxVersion")
+    implementation("com.badlogicgames.gdx:gdx-backend-lwjgl:$gdxVersion")
+    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop")
+    implementation("com.badlogicgames.gdx:gdx-box2d-platform:$gdxVersion:natives-desktop")
 
 }
 
