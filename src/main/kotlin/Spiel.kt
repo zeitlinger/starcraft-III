@@ -15,6 +15,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.sign
 import kotlin.math.sqrt
 
 class Spiel(
@@ -480,26 +481,6 @@ class Spiel(
         return null
     }
 
-    private fun einheitenMittelpunkt(einheiten: List<Einheit>): Punkt {
-        var x = 0.0
-        var y = 0.0
-        val anzahl = einheiten.size
-        einheiten.forEach {
-            x += it.punkt.x
-            y += it.punkt.y
-        }
-        x /= anzahl
-        y /= anzahl
-        return Punkt(x, y)
-    }
-
-    private fun gegenüberliegendenPunktFinden(punkt1: Punkt, punkt2: Punkt, länge: Double): Punkt {
-        val c = (punkt1.x - punkt2.x).absoluteValue
-        val d = (punkt1.y - punkt2.y).absoluteValue
-        val b = sqrt(länge * länge / (c * c / d * d + 1))
-        val a = c / d * b
-        return Punkt(punkt1.x + a, punkt1.y + d)
-    }
 
     private fun `nächste Einheit zum Heilen`(einheit: Einheit): Einheit? {
         val spieler = einheit.spieler
@@ -627,6 +608,28 @@ class Spiel(
 
 fun `ist in Reichweite`(einheit: Einheit, ziel: Einheit): Boolean {
     return entfernung(einheit, ziel) <= einheit.typ.reichweite
+}
+
+fun einheitenMittelpunkt(einheiten: List<Einheit>): Punkt {
+    var x = 0.0
+    var y = 0.0
+    val anzahl = einheiten.size
+    einheiten.forEach {
+        x += it.punkt.x
+        y += it.punkt.y
+    }
+    x /= anzahl
+    y /= anzahl
+    return Punkt(x, y)
+}
+
+
+fun gegenüberliegendenPunktFinden(punkt1: Punkt, punkt2: Punkt, länge: Double): Punkt {
+    val c = (punkt1.x - punkt2.x)
+    val d = (punkt1.y - punkt2.y)
+    val b = sqrt(länge * länge / (c * c / d * d + 1))
+    val a = c / d * b
+    return Punkt(punkt1.x + a * c.sign, punkt1.y + b * d.sign)
 }
 
 fun entfernung(einheit: Einheit, ziel: Einheit): Double {

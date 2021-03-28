@@ -6,6 +6,7 @@ import io.kotest.matchers.doubles.shouldBeGreaterThan
 import io.kotest.matchers.doubles.shouldBeLessThan
 import io.kotest.matchers.shouldBe
 import javafx.scene.paint.Color
+import kotlin.math.sqrt
 
 class SpielTest : FreeSpec({
 
@@ -656,6 +657,51 @@ class SpielTest : FreeSpec({
         spielen(spiel)
 
         spiel.mensch.einheiten[1].leben shouldBe 80.0
+    }
+
+    "gegenüberliegenden punkt finden" - {
+        data class TestFall(val einheit: Punkt, val gegner: Punkt, val entfernung: Double, val ergebnis: Punkt)
+
+        forAll(
+            TestFall(
+                einheit = Punkt(x = 0.0, y = 0.0), gegner = Punkt(x = 1.0, y = 1.0),
+                entfernung = sqrt(2.0), ergebnis = Punkt(-1.0, -1.0)
+            ),
+            TestFall(
+                einheit = Punkt(x = 1.0, y = 1.0), gegner = Punkt(x = 0.0, y = 0.0),
+                entfernung = sqrt(2.0), ergebnis = Punkt(2.0, 2.0)
+            ),
+            TestFall(
+                einheit = Punkt(x = 1.0, y = 1.0), gegner = Punkt(x = 0.0, y = 0.0),
+                entfernung = 2 * sqrt(2.0), ergebnis = Punkt(3.0, 3.0)
+            ),
+        ) { testFall ->
+
+            gegenüberliegendenPunktFinden(
+                testFall.einheit,
+                testFall.gegner,
+                testFall.entfernung
+            ) shouldBe testFall.ergebnis
+        }
+    }
+
+    "Einheiten Mittelpunkt finden" - {
+        data class TestFall(val einheiten: List<Punkt>, val ergebnis: Punkt)
+
+        forAll(
+            TestFall(
+                einheiten = listOf(Punkt(0.0, 0.0), Punkt(2.0, 2.0), Punkt(2.0, 0.0)),
+                ergebnis = Punkt(4.0 / 3.0, 2.0 / 3.0),
+            ),
+        ) { testFall ->
+            val spiel = neuesSpiel()
+
+            val einheiten = spiel.gegner.run {
+                testFall.einheiten.map { neueEinheit(it, einheitenTyp = panzer) }
+            }
+
+            einheitenMittelpunkt(einheiten) shouldBe testFall.ergebnis
+        }
     }
 
 })
