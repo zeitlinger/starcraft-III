@@ -46,7 +46,7 @@ class Spiel(
         gegner.kristalle += 1.0 + 0.2 * gegner.minen
         mensch.kristalle += 1.0 + 0.2 * mensch.minen
         if (gegner.spielerTyp == SpielerTyp.computer) {
-            computerProduziert(spieler = gegner, einheitenProduzierenKI())
+            computerProduziert(spieler = gegner, einheitenProduzierenKI(gegner))
         }
 
         mensch.gebäude.values.filter { it.produktionsQueue.isNotEmpty() }.forEach { gebäude ->
@@ -180,7 +180,11 @@ class Spiel(
     }
 
     private fun spellsAusführen(einheit: Einheit, ziel: Einheit) {
-        if (einheit.typ.yamatokanone!! >= entfernung(einheit, ziel) && !einheit.hatSichBewegt && einheit.`yamatokane cooldown` <= 0.0) {
+        if (einheit.typ.yamatokanone!! >= entfernung(
+                einheit,
+                ziel
+            ) && !einheit.hatSichBewegt && einheit.`yamatokane cooldown` <= 0.0
+        ) {
             ziel.leben -= 800
             val kommando = einheit.kommandoQueue[0]
             kommandoEntfernen(einheit, kommando)
@@ -233,7 +237,7 @@ class Spiel(
             return
         }
 
-        val ziel = zielauswaehlenBewegen(gegner, einheit)
+        val ziel = zielauswählenBewegen(gegner, einheit)
         if (ziel == null) {
             if (kommando is Attackmove) {
                 bewege(einheit, kommando.zielPunkt, laufweite)
@@ -241,7 +245,7 @@ class Spiel(
                     kommandoEntfernen(einheit, kommando)
                 }
             }
-            if (kommando is Patrolieren) {
+            if (kommando is Patroullieren) {
                 bewege(einheit, kommando.nächsterPunkt, laufweite)
                 if (kommando.nächsterPunkt == einheit.punkt) {
                     if (einheit.kommandoQueue.size > 1) {
@@ -254,19 +258,37 @@ class Spiel(
                                 kommando.nächsterPunktNumer += 1
                                 kommando.punkte[nächsterPunktNummer]
                             } else {
-                                kommando.vorwärtsGehen = false
-                                kommando.punkte[letzterPunktNummer]
+                                if (kommando.imKreisGehen) {
+                                    kommando.nächsterPunktNumer = 0
+                                    kommando.punkte[0]
+                                } else {
+                                    kommando.vorwärtsGehen = false
+                                    kommando.nächsterPunktNumer -= 1
+                                    kommando.punkte[letzterPunktNummer]
+                                }
                             }
                         } else {
                             kommando.nächsterPunkt = if (letzterPunktNummer >= 0) {
                                 kommando.nächsterPunktNumer -= 1
                                 kommando.punkte[letzterPunktNummer]
                             } else {
-                                kommando.vorwärtsGehen = true
-                                kommando.punkte[nächsterPunktNummer]
+                                if (kommando.imKreisGehen) {
+                                    kommando.nächsterPunktNumer = kommando.punkte.size
+                                    kommando.punkte[kommando.punkte.size]
+                                } else {
+                                    kommando.vorwärtsGehen = true
+                                    kommando.nächsterPunktNumer += 1
+                                    kommando.punkte[nächsterPunktNummer]
+                                }
                             }
                         }
                     }
+                }
+            }
+            if (kommando == null) {
+                val wegrennen = wegrennen(gegner, einheit)
+                if (wegrennen != null) {
+                    bewege(einheit, wegrennen, laufweite)
                 }
             }
             return
@@ -336,7 +358,10 @@ class Spiel(
     }
 
     private fun angriffspriorität(einheit: Einheit, ziel: Einheit): Int {
-        if (kannAngreifen(ziel, einheit) && (kannAngreifen(einheit, ziel) || (ziel.typ.reichweite < einheit.typ.reichweite && `ist in Reichweite`(einheit, ziel)))
+        if (kannAngreifen(ziel, einheit) && (kannAngreifen(
+                einheit,
+                ziel
+            ) || (ziel.typ.reichweite < einheit.typ.reichweite && `ist in Reichweite`(einheit, ziel)))
             && !ziel.typ.zivileEinheit
         ) {
             return 1
@@ -354,7 +379,13 @@ class Spiel(
             }
         }
         l.forEach {
-            if (kannAngreifen(ziel, it) && (`ist in Reichweite`(ziel, it) || (ziel.typ.reichweite < it.typ.reichweite && `ist in Reichweite`(it, ziel)) && !ziel.typ.zivileEinheit)
+            if (kannAngreifen(ziel, it) && (`ist in Reichweite`(
+                    ziel,
+                    it
+                ) || (ziel.typ.reichweite < it.typ.reichweite && `ist in Reichweite`(
+                    it,
+                    ziel
+                )) && !ziel.typ.zivileEinheit)
             ) {
                 return 2
             }
@@ -374,7 +405,7 @@ class Spiel(
         return null
     }
 
-    private fun zielauswaehlenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
+    private fun zielauswählenBewegen(gegner: Spieler, einheit: Einheit): Einheit? {
         val kommando = einheit.kommandoQueue.getOrNull(0)
         if (kommando is Angriff) {
             return kommando.ziel
@@ -426,23 +457,60 @@ class Spiel(
         }
 
         return bestesZiel(liste, einheit)
-
     }
 
     private fun bestesZiel(liste: Collection<Einheit>, einheit: Einheit) =
-        liste.minWithOrNull(compareBy({ angriffspriorität(einheit, it) }, { entfernung(einheit, it) }))
+        liste.minWithOrNull(
+            compareBy(
+                { angriffspriorität(einheit, it) },
+                { if (einheit.letzterAngriff == it && einheit.firstShotCooldown <= einheit.typ.firstShotDelay) 0 else 1 },
+                { entfernung(einheit, it) })
+        )
 
+    private fun wegrennen(gegner: Spieler, einheit: Einheit): Punkt? {
+        val liste = mutableListOf<Einheit>()
+        gegner.einheiten.forEach {
+            if ((`ist in Reichweite`(it, einheit) && kannAngreifen(it, einheit) && !kannAngreifen(einheit, it)) || (it.firstShotCooldown <= 0 && it.letzterAngriff == einheit) && !kannSehen(einheit, it)) {
+                liste.add(it)
+            }
+        }
+        if (liste.isNotEmpty()) {
+                gegenüberliegendenPunktFinden(einheit.punkt ,einheitenMittelpunkt(liste), 100.0)
+        }
+        return null
+    }
+
+    private fun einheitenMittelpunkt(einheiten: List<Einheit>): Punkt {
+        var x = 0.0
+        var y = 0.0
+        val anzahl = einheiten.size
+        einheiten.forEach {
+            x += it.punkt.x
+            y += it.punkt.y
+        }
+        x /= anzahl
+        y /= anzahl
+        return Punkt(x, y)
+    }
+
+    private fun gegenüberliegendenPunktFinden(punkt1: Punkt, punkt2: Punkt, länge: Double): Punkt {
+        val c = (punkt1.x - punkt2.x).absoluteValue
+        val d = (punkt1.y - punkt2.y).absoluteValue
+        val b = sqrt(länge * länge / (c * c / d * d + 1))
+        val a = c / d * b
+        return Punkt(punkt1.x + a, punkt1.y + d)
+    }
 
     private fun `nächste Einheit zum Heilen`(einheit: Einheit): Einheit? {
         val spieler = einheit.spieler
         val ziel = spieler.einheiten
             .filter {
                 it.leben < it.typ.leben &&
-                    entfernung(einheit, it) <= 300 &&
-                    einheit != it &&
-                    (it.heiler == null || it.heiler == einheit) &&
-                    (it.typ.einheitenArt == EinheitenArt.biologisch || !spieler.upgrades.vertärkteHeilmittel) &&
-                    (it.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
+                        entfernung(einheit, it) <= 300 &&
+                        einheit != it &&
+                        (it.heiler == null || it.heiler == einheit) &&
+                        (it.typ.einheitenArt == EinheitenArt.biologisch || !spieler.upgrades.vertärkteHeilmittel) &&
+                        (it.zuletztGetroffen > 1 || spieler.upgrades.strahlungsheilung)
             }
             .minByOrNull { entfernung(einheit, it) }
         if (ziel != null) {
@@ -562,19 +630,28 @@ fun `ist in Reichweite`(einheit: Einheit, ziel: Einheit): Boolean {
 }
 
 fun entfernung(einheit: Einheit, ziel: Einheit): Double {
-    if (!kannAngreifen(einheit, ziel)) {
-        return 7000000000000000000.0
+    if (!kannAngreifen(einheit, ziel) || einheit.typ.zivileEinheit) {
+        return Double.MAX_VALUE
     }
-
     return entfernung(einheit, ziel.punkt)
 }
 
 fun kannAngreifen(einheit: Einheit, ziel: Einheit) =
-    !(ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden)
+    !((ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden) || einheit.typ.zivileEinheit)
+
+fun kannSehen(einheit: Einheit, ziel: Einheit) =
+    true
 
 fun entfernung(einheit: Einheit, ziel: Punkt): Double {
     val a = ziel.y - einheit.punkt.y
     val b = ziel.x - einheit.punkt.x
+
+    return sqrt(a.pow(2) + b.pow(2))
+}
+
+fun entfernung(punkt1: Punkt, punkt2: Punkt): Double {
+    val a = punkt1.y - punkt2.y
+    val b = punkt1.x - punkt2.x
 
     return sqrt(a.pow(2) + b.pow(2))
 }
@@ -625,9 +702,8 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //wenn man nichts mit einem Auswahlrechteck auswählt sollen die ausgewählten Einheiten nicht abgewählt werden (außer wenn man shift drückt)
 //Wenn man shift drückt und Einheiten auswählt sollen die alten Einheiten nicht abewählt werden
 //wenn man mit shift Einheiten auswähl, die schon ausgewählt sind sollen diese abgewählt werden
-//Einheiten sollen von angriffen wegrennen wenn sie nicht zurück angreifen können
 //Wenn eine Einheit ein automatisches Ziel hat und man mit shift ein anderes Ziel gibt soll das automatische Ziel zuerst ausgeführt werden
-//Chat
+//ingame Chat
 //Kriegsnebel
 //Sichtweite für Einheiten
 //Minnimap
@@ -665,4 +741,4 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //Alkari:
 //Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen; kostenineffiziente Einheiten
 //meklars (KI):
-//robotische Einheiten
+//robotische Einheiten; Systeme für Einheiten zuweisen (z.B. mehr Reichweite)

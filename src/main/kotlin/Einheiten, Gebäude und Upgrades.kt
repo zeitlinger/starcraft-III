@@ -52,7 +52,7 @@ val basis = GebäudeTyp(
 val kaserne = GebäudeTyp(name = "Kaserne", kuerzel = "KAS", kristalle = 1500)
 val fabrik = GebäudeTyp(name = "Fabrik", kuerzel = "FAB", kristalle = 2000)
 val raumhafen = GebäudeTyp(name = "Raumhafen", kuerzel = "RAU", kristalle = 2500)
-val brutstätte = GebäudeTyp(name = "Brutstätte", kuerzel = "BRU", kristalle = 2500)
+val brutkolonie = GebäudeTyp(name = "Brutstätte", kuerzel = "BRU", kristalle = 2500)
 val labor = GebäudeTyp(name = "Labor", kuerzel = "LAB", kristalle = 2800)
 
 @Serializable
@@ -70,9 +70,9 @@ val techgebäude = mutableListOf<TechGebäude>()
 
 val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, gebäudeTyp = kaserne)
 val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, gebäudeTyp = raumhafen)
-val akademie = TechGebäude(name = "Akademie", kristalle = 2500, gebäudeTyp = kaserne)
+val weltraumAkademie = TechGebäude(name = "Akademie", kristalle = 2500, gebäudeTyp = kaserne)
 val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000, gebäudeTyp = fabrik)
-val vipernbau = TechGebäude(name = "Vipernbau", kristalle = 2000, gebäudeTyp = brutstätte)
+val vipernbau = TechGebäude(name = "Vipernbau", kristalle = 2000, gebäudeTyp = brutkolonie)
 
 enum class KannAngreifen {
     alles, boden, luft, heilen
@@ -176,11 +176,9 @@ typealias DoubleObserver = (Double) -> Unit
 @Serializable
 sealed class EinheitenKommando(
     @Transient
-    var zielpunktLinie: Line? = null,
+    var zielpunktLinie: List<Line> = emptyList(),
     @Transient
-    var zielpunktkreis: Arc? = null,
-    @Transient
-    var zielpunktkreis2: Arc? = null
+    var zielpunktkreis: List<Arc> = emptyList(),
 )
 
 @Serializable
@@ -193,7 +191,7 @@ class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
 class Angriff(val ziel: Einheit) : EinheitenKommando()
 
 @Serializable
-class Patrolieren(val punkte: MutableList<Punkt>, var nächsterPunkt: Punkt, var nächsterPunktNumer: Int, var vorwärtsGehen: Boolean) : EinheitenKommando()
+class Patroullieren(val punkte: MutableList<Punkt>, var nächsterPunkt: Punkt, var nächsterPunktNumer: Int, var vorwärtsGehen: Boolean, var imKreisGehen: Boolean) : EinheitenKommando()
 
 @Serializable
 class HoldPosition : EinheitenKommando()
@@ -235,7 +233,7 @@ val eliteInfantrie = EinheitenTyp(
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.alles,
     gebäudeTyp = kaserne,
-    techGebäude = akademie,
+    techGebäude = weltraumAkademie,
     hotkey = "w",
     einheitenArt = EinheitenArt.biologisch,
     durchschlag = 0.0
@@ -316,7 +314,7 @@ val sanitäter = EinheitenTyp(
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.heilen,
     gebäudeTyp = kaserne,
-    techGebäude = akademie,
+    techGebäude = weltraumAkademie,
     hotkey = "s",
     einheitenArt = EinheitenArt.biologisch,
     zivileEinheit = true,
@@ -368,8 +366,8 @@ val späher = EinheitenTyp(
     gebäudeTyp = kaserne,
     hotkey = "g",
     einheitenArt = EinheitenArt.biologisch,
-    durchschlag = 0.0,
-    yamatokanone = 300
+    zivileEinheit = true,
+    durchschlag = 0.0
 )
 val sonde = EinheitenTyp(
     name = "Sonde",
@@ -446,7 +444,7 @@ val viper = EinheitenTyp(
     kuerzel = "VIP",
     panzerung = 0.0,
     kannAngreifen = KannAngreifen.boden,
-    gebäudeTyp = brutstätte,
+    gebäudeTyp = brutkolonie,
     techGebäude = vipernbau,
     hotkey = "b",
     einheitenArt = EinheitenArt.mechanisch,
@@ -607,5 +605,3 @@ val upgrades: List<Upgrade> = listOf(
         })
     )
 )
-
-

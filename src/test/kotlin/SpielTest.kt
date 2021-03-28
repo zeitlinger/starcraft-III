@@ -20,7 +20,7 @@ class SpielTest : FreeSpec({
         panzerung = 0.0,
         kannAngreifen = KannAngreifen.heilen,
         gebäudeTyp = kaserne,
-        techGebäude = akademie,
+        techGebäude = weltraumAkademie,
         hotkey = "s",
         einheitenArt = EinheitenArt.biologisch,
         zivileEinheit = true,

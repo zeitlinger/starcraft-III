@@ -469,7 +469,7 @@ class App : Application() {
 
                 produktionsUpdate = {
                     kommandoAnzeige.text = gebäude.produktionsQueue.joinToString { it.name } +
-                        if (gebäude.produktionsZeit > 0) " ${gebäude.produktionsZeit}" else ""
+                            if (gebäude.produktionsZeit > 0) " ${gebäude.produktionsZeit}" else ""
                 }.also {
                     it()
                     spiel.rundeVorbei.add(it)
@@ -506,10 +506,11 @@ class App : Application() {
     }
 
     private fun laufBefehl(einheit: Einheit, laufbefehl: Laufbefehl, schiftcommand: Boolean, punkt: Punkt) {
+        val last = einheit.kommandoQueue.lastOrNull()
         val letzterPunkt = if (!schiftcommand || einheit.kommandoQueue.isEmpty()) {
             einheit.punkt
         } else {
-            einheit.punkt
+            kommandoPosition(last, einheit)
         }
 
         val kommando = when (laufbefehl) {
@@ -520,11 +521,34 @@ class App : Application() {
                 Bewegen(punkt)
             }
             else -> {
-                Patrolieren(mutableListOf(letzterPunkt, punkt), punkt, 1, true)
+                Patroullieren(mutableListOf(letzterPunkt, punkt), punkt, 1, true, false)
             }
         }
-        neuesKommando(einheit, kommando, schiftcommand)
-        zielpunktKreisUndLinieHinzufügen(kommando, einheit)
+
+        if (kommando is Patroullieren && last is Patroullieren) {
+            if ((entfernung(punkt, last.punkte.first()) <= 15 && last.vorwärtsGehen) || (entfernung(
+                    punkt,
+                    last.punkte.last()
+                ) <= 15 && !last.vorwärtsGehen)) {
+                last.imKreisGehen = true
+            } else if ((entfernung(punkt, last.punkte.first()) <= 15 && !last.vorwärtsGehen) || (entfernung(
+                    punkt,
+                    last.punkte.last()
+                ) <= 15 && last.vorwärtsGehen)
+            ) {
+                //wenn der Bereich für Patroullieren zu klein ist soll nichts passieren
+            } else {
+                last.imKreisGehen = false
+                if (kommando.vorwärtsGehen) {
+                    last.punkte.add(punkt)
+                } else {
+                    last.punkte.add(0, punkt)
+                }
+            }
+        } else {
+            neuesKommando(einheit, kommando, schiftcommand)
+            zielpunktKreisUndLinieHinzufügen(kommando, einheit)
+        }
     }
 
     val MouseEvent.punkt: Punkt
@@ -554,11 +578,15 @@ class App : Application() {
         zielpunktUndKreisHinzufügen(einheit, kommando, letztesKommando)
     }
 
-    private fun zielpunktUndKreisHinzufügen(einheit: Einheit, kommando: EinheitenKommando, letztesKommando: EinheitenKommando?) {
+    private fun zielpunktUndKreisHinzufügen(
+        einheit: Einheit,
+        kommando: EinheitenKommando,
+        letztesKommando: EinheitenKommando?
+    ) {
         val zielPunkt = kommandoPosition(kommando, einheit)
-        kommando.zielpunktkreis = kreis(zielPunkt, radius = 5.0).apply {
+        kommando.zielpunktkreis = listOf(kreis(zielPunkt, radius = 5.0).apply {
             karte.add(this)
-        }
+        })
 
         if (einheit.kommandoQueue.size < 2) {
             return
@@ -574,13 +602,13 @@ class App : Application() {
     }
 
     private fun linieHinzufügen(kommando: EinheitenKommando, startPunkt: Punkt, zielPunkt: Punkt) {
-        kommando.zielpunktLinie = Line().apply {
+        kommando.zielpunktLinie = listOf(Line().apply {
             startX = startPunkt.x
             startY = startPunkt.y
             endX = zielPunkt.x
             endY = zielPunkt.y
             karte.add(this)
-        }
+        })
     }
 
     private fun kommandoPosition(letztesKommando: EinheitenKommando?, einheit: Einheit) = when (letztesKommando) {
@@ -588,7 +616,7 @@ class App : Application() {
         is Angriff -> letztesKommando.ziel.punkt
         is Bewegen -> letztesKommando.zielPunkt
         is Attackmove -> letztesKommando.zielPunkt
-        is Patrolieren -> letztesKommando.nächsterPunkt
+        is Patroullieren -> if (letztesKommando.vorwärtsGehen) letztesKommando.punkte.last() else letztesKommando.punkte.first()
         is HoldPosition -> einheit.punkt
         is Stopp -> einheit.punkt
         is Yamatokanone -> letztesKommando.ziel.punkt
@@ -705,9 +733,9 @@ class App : Application() {
 
         val queue = einheit.kommandoQueue
         if (queue.size >= 1) {
-            queue[0].zielpunktLinie?.apply {
-                startX = einheit.punkt.x
-                startY = einheit.punkt.y
+            queue[0].zielpunktLinie.forEach {
+                it.startX = einheit.punkt.x
+                it.startY = einheit.punkt.y
             }
         }
 
@@ -715,35 +743,35 @@ class App : Application() {
             if (kommando is Angriff) {
                 val ziel = kommando.ziel
 
-                kommando.zielpunktLinie?.apply {
-                    endX = ziel.punkt.x
-                    endY = ziel.punkt.y
+                kommando.zielpunktLinie.forEach {
+                    it.endX = ziel.punkt.x
+                    it.endY = ziel.punkt.y
                 }
                 if (index < queue.size - 1) {
-                    queue[index + 1].zielpunktLinie?.apply {
-                        startX = ziel.punkt.x
-                        startY = ziel.punkt.y
+                    queue[index + 1].zielpunktLinie.forEach {
+                        it.startX = ziel.punkt.x
+                        it.startY = ziel.punkt.y
                     }
                 }
-                kommando.zielpunktkreis?.apply {
-                    punkt = ziel.punkt
+                kommando.zielpunktkreis.forEach {
+                    it.punkt = ziel.punkt
                 }
             }
             if (kommando is Yamatokanone) {
                 val ziel = kommando.ziel
 
-                kommando.zielpunktLinie?.apply {
-                    endX = ziel.punkt.x
-                    endY = ziel.punkt.y
+                kommando.zielpunktLinie.forEach {
+                    it.endX = ziel.punkt.x
+                    it.endY = ziel.punkt.y
                 }
                 if (index < queue.size - 1) {
-                    queue[index + 1].zielpunktLinie?.apply {
-                        startX = ziel.punkt.x
-                        startY = ziel.punkt.y
+                    queue[index + 1].zielpunktLinie.forEach {
+                        it.startX = ziel.punkt.x
+                        it.startY = ziel.punkt.y
                     }
                 }
-                kommando.zielpunktkreis?.apply {
-                    punkt = ziel.punkt
+                kommando.zielpunktkreis.forEach {
+                    it.punkt = ziel.punkt
                 }
             }
         }
@@ -818,11 +846,10 @@ private fun leseMultiplayerModus(args: Array<String>): Multiplayer {
 fun kommandoAnzeigeEntfernen(kommando: EinheitenKommando) {
     if (kommando.zielpunktLinie != null) {
         karte.remove(kommando.zielpunktLinie)
-        kommando.zielpunktLinie = null
+        kommando.zielpunktLinie = emptyList()
     }
     if (kommando.zielpunktkreis != null) {
         karte.remove(kommando.zielpunktkreis)
-        kommando.zielpunktkreis = null
+        kommando.zielpunktkreis = emptyList()
     }
 }
-
