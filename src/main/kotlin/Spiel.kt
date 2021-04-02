@@ -47,7 +47,18 @@ class Spiel(
         gegner.kristalle += 1.0 + 0.2 * gegner.minen
         mensch.kristalle += 1.0 + 0.2 * mensch.minen
         if (gegner.spielerTyp == SpielerTyp.computer) {
-            computerProduziert(spieler = gegner, einheitenProduzierenKI(gegner))
+            val produzieren = produzierenKI(gegner, mensch)
+            if (produzieren.first != null) {
+                computerProduziert(gegner, produzieren.first!!)
+            } else if (produzieren.first == null && produzieren.second == null) {
+                kaufen(2000 + gegner.minen * 400, gegner) {
+                    gegner.minen += 1
+                }
+            } else {
+                kaufen(produzieren.second!!.kristalle, gegner) {
+                    neuesGebäude(gegner, produzieren.second!!, emptyList(), gegner.startpunkt)
+                }
+            }
         }
 
         mensch.gebäude.values.filter { it.produktionsQueue.isNotEmpty() }.forEach { gebäude ->
@@ -213,7 +224,7 @@ class Spiel(
         val einheit = neueEinheit(spieler, spieler.gebäudeEinheitenTyp(gebäudeTyp), punkt)
         val sammelpunkt = punkt.copy(y = punkt.y + 70 * nachVorne(spieler.spielerTyp))
 
-        val gebäude = Gebäude(einheit, buttons, kreis(sammelpunkt, radius = 5.0))
+        val gebäude = Gebäude(gebäudeTyp, einheit, buttons, kreis(sammelpunkt, radius = 5.0))
         spieler.gebäude[einheit.nummer] = gebäude
         return gebäude
     }
@@ -240,6 +251,9 @@ class Spiel(
 
         val ziel = zielauswählenBewegen(gegner, einheit)
         if (ziel == null) {
+            if (gegner.spielerTyp == SpielerTyp.mensch && zielAuswählenKI(gegner(gegner), einheit, gegner) != null) {
+                bewege(einheit, zielAuswählenKI(gegner(gegner), einheit, gegner)!!, laufweite)
+            }
             if (kommando is Attackmove) {
                 bewege(einheit, kommando.zielPunkt, laufweite)
                 if (kommando.zielPunkt == einheit.punkt) {
@@ -416,12 +430,6 @@ class Spiel(
             return kommando.ziel
         }
 
-        if (einheit.spieler.spielerTyp == SpielerTyp.computer) {
-            if (zielAuswählenKI(einheit.spieler, gegner, einheit) != null) {
-                return zielAuswählenKI(einheit.spieler, gegner, einheit)
-            }
-        }
-
         if (einheit.typ.kannAngreifen == KannAngreifen.heilen) {
             return `nächste Einheit zum Heilen`(einheit)
         }
@@ -456,7 +464,6 @@ class Spiel(
                 }
             }
         }
-
         return bestesZiel(liste, einheit)
     }
 
@@ -696,6 +703,14 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
     return if (spielerTyp == SpielerTyp.client || spielerTyp == SpielerTyp.computer) 1 else -1
 }
 
+fun einheitenAnzahl(spieler: Spieler, einheitenTyp: EinheitenTyp): Int {
+    return spieler.einheiten.count { it.typ == einheitenTyp}
+}
+
+fun gebäudeAnzahl(spieler: Spieler, gebäudeTyp: GebäudeTyp): Int {
+    return spieler.gebäude.values.count { it.typ == gebäudeTyp }
+}
+
 //Bugs:
 //wenn man mit zwei Einheiten unterschiedliche Kommandos ausführt und dann beide auswählt und mit shift ein neues Kommando gibt, werden die alten kommandos nicht vollständig angezeigt
 //bei Patrolieren wird nur ein Zielpunktkreis gemalt
@@ -706,7 +721,7 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //Wenn man shift drückt und Einheiten auswählt sollen die alten Einheiten nicht abewählt werden
 //wenn man mit shift Einheiten auswähl, die schon ausgewählt sind sollen diese abgewählt werden
 //Wenn eine Einheit ein automatisches Ziel hat und man mit shift ein anderes Ziel gibt soll das automatische Ziel zuerst ausgeführt werden
-//ingame Chat
+//Chat
 //Kriegsnebel
 //Sichtweite für Einheiten
 //Minnimap
@@ -715,20 +730,22 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //lebensanzeige(lebensbalken)
 //recourssen auf der Karte (wissenschafts-und produktionsressoursen)
 //arbeiter und wissenschafter können ressoursen abbauen bzw. erforschen und zu außenposten bringen
-//Einheitengröße anpassen
+//vershiedene Einheitengrößen
 //Physik-Angin
-//Wasser + Schiffe
 //bessere Grafik mit 3D-Moddelen und Animationen
 //tooltips
 //sound
 //Hintergrundmusik
 //totorial
-//verbessertes Multiplayer
+//verbessertes Multiplayer (beide Spieler starten unten und die Komandos werden gespiegelt)
+//Mapeditor
+//Missionseditor
 //kampagne
 //Einheiteneditor
 //mehr Einheiten + Upgrades
+//Menü
 //balance
-//KI
+//bessere KI
 //Punkte auf der Karte die von Spielern besetzt werden können (z.B. verlassene Minen die repariert werden können)
 //programm-optiemierung
 
@@ -744,4 +761,4 @@ fun nachVorne(spielerTyp: SpielerTyp): Int {
 //Alkari:
 //Nur biologische Einheiten; Larven; Billige Einheiten; nur eine Ressource (biomasse); können statt Forschung spezialeinheiten bauen; genmutationen; kostenineffiziente Einheiten
 //meklars (KI):
-//robotische Einheiten; Systeme für Einheiten zuweisen (z.B. mehr Reichweite)
+//robotische Einheiten; Systeme für Einheiten zuweisen die die Rolle der Einheit angibt und boni bringt (z.B. mehr leben)

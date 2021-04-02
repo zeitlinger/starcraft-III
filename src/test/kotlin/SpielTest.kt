@@ -626,6 +626,15 @@ class SpielTest : FreeSpec({
         spiel.gegner.einheiten.map { it.leben } shouldBe listOf(0.0, 80.0, 180.25, 200.0, 100.0)
     }
 
+    "gebäudeBauenKI" {
+        val spiel = neuesSpiel()
+
+        spiel.gegner.apply { kristalle = 1500.0 }
+
+        spielen(spiel)
+        spiel.gegner.gebäude.values.single().typ shouldBe fabrik
+    }
+
     "zu Einheit mit höchste Priorität laufen" {
         val spiel = neuesSpiel()
 
@@ -703,7 +712,6 @@ class SpielTest : FreeSpec({
             einheitenMittelpunkt(einheiten) shouldBe testFall.ergebnis
         }
     }
-
 })
 
 private fun spielen(spiel: Spiel) {
@@ -728,7 +736,7 @@ private fun neuesSpiel(): Spiel {
     }
 
     val mensch = Spieler(
-        kristalle = 10000000000000000000.0,
+        kristalle = 0.0,
         minen = 0,
         startpunkt = Punkt(x = 900.0, y = 905.0),
         farbe = Color.BLUE,

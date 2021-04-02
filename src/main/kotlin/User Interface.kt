@@ -105,6 +105,7 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
 }
 
 data class Gebäude(
+    val typ: GebäudeTyp,
     val einheit: Einheit,
     val buttons: List<Button>,
     val sammelpunkt: Arc,
@@ -123,7 +124,7 @@ class App : Application() {
     lateinit var buttonLeiste: ObservableList<Node>
     var sammelpunkt: Arc? = null
     var produktionsUpdate: (() -> Unit)? = null
-    val kristalleText: Label = Label().apply { minWidth = 100.0 }
+    val kristalleText: Label = Label().apply { minWidth = 1100.0 }
     val minenText: Label = Label().apply { minWidth = 100.0 }
     val kommandoAnzeige: Label = Label().apply { minWidth = 200.0 }
 
@@ -554,7 +555,7 @@ class App : Application() {
     val MouseEvent.punkt: Punkt
         get() = Punkt(x, y)
 
-    private fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, shift: Boolean) {
+    fun neuesKommando(einheit: Einheit, kommando: EinheitenKommando, shift: Boolean) {
         einheit.kommandoQueue.toList().forEach {
             if (!shift || it is HoldPosition || it is Stopp) {
                 spiel.kommandoEntfernen(einheit, it)
