@@ -640,8 +640,15 @@ fun gegenüberliegendenPunktFinden(punkt1: Punkt, punkt2: Punkt, länge: Double)
 }
 
 fun entfernung(einheit: Einheit, ziel: Einheit): Double {
-    if (!kannAngreifen(einheit, ziel) || einheit.typ.zivileEinheit) {
-        return Double.MAX_VALUE
+    when {
+        einheit.typ.kannAngreifen == KannAngreifen.heilen -> {
+            if (einheit.spieler != ziel.spieler) {
+                return Double.MAX_VALUE
+            }
+        }
+        !kannAngreifen(einheit, ziel) || einheit.typ.zivileEinheit -> {
+            return Double.MAX_VALUE
+        }
     }
     return entfernung(einheit, ziel.punkt)
 }
