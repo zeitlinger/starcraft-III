@@ -623,7 +623,7 @@ class SpielTest : FreeSpec({
         spiel.mensch.einheiten[1].letzterAngriff = spiel.gegner.einheiten[1]
         spielen(spiel)
 
-        spiel.gegner.einheiten.map { it.leben } shouldBe listOf(0.0, 80.0, 180.25, 200.0, 100.0)
+        spiel.gegner.einheiten.map { it.leben } shouldBe listOf(3000.0, 80.0, 182.0, 200.0, 100.0)
     }
 
     "gebäudeBauenKI" {
@@ -635,7 +635,7 @@ class SpielTest : FreeSpec({
         spiel.gegner.gebäude.values.single().typ shouldBe fabrik
     }
 
-    "zu Einheit mit höchste Priorität laufen" {
+    "zu Einheit mit höchster Priorität laufen" {
         val spiel = neuesSpiel()
 
         spiel.gegner.apply {

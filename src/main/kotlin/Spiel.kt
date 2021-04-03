@@ -373,12 +373,7 @@ class Spiel(
     }
 
     private fun angriffspriorität(einheit: Einheit, ziel: Einheit): Int {
-        if (kannAngreifen(ziel, einheit) && (kannAngreifen(
-                einheit,
-                ziel
-            ) || (ziel.typ.reichweite < einheit.typ.reichweite && `ist in Reichweite`(einheit, ziel)))
-            && !ziel.typ.zivileEinheit
-        ) {
+        if (kannAngreifen(ziel, einheit) && kannBedrohungGefahrlosAngreifen(einheit, ziel) && !ziel.typ.zivileEinheit) {
             return 1
         }
         if (ziel.typ.zivileEinheit) {
@@ -394,19 +389,19 @@ class Spiel(
             }
         }
         l.forEach {
-            if (kannAngreifen(ziel, it) && (`ist in Reichweite`(
-                    ziel,
-                    it
-                ) || (ziel.typ.reichweite < it.typ.reichweite && `ist in Reichweite`(
-                    it,
-                    ziel
-                )) && !ziel.typ.zivileEinheit)
+            if (kannAngreifen(ziel, it) && (`ist in Reichweite`(ziel, it) || (ziel.typ.reichweite < it.typ.reichweite && `ist in Reichweite`(it, ziel)) && !ziel.typ.zivileEinheit)
             ) {
                 return 2
             }
         }
         return 3
     }
+
+    private fun kannBedrohungGefahrlosAngreifen(einheit: Einheit, ziel: Einheit) =
+        `ist in Reichweite`(ziel, einheit) || (ziel.typ.reichweite < einheit.typ.reichweite && `ist in Reichweite`(
+            einheit,
+            ziel
+        ))
 
     private fun heilen(einheit: Einheit): Einheit? {
         val naechsteEinheit = `nächste Einheit zum Heilen`(einheit)
@@ -455,11 +450,8 @@ class Spiel(
         val liste = mutableListOf<Einheit>()
         l.forEach {
             gegner.einheiten.forEach { gEinheit ->
-                if ((`ist in Reichweite`(gEinheit, it) || entfernung(gEinheit, it) <= 300) && kannAngreifen(
-                        einheit,
-                        gEinheit
-                    )
-                ) {
+                if ((`ist in Reichweite`(gEinheit, it) || entfernung(gEinheit.punkt, it.punkt) <= 300) &&
+                    kannAngreifen(einheit, gEinheit)) {
                     liste.add(gEinheit)
                 }
             }
@@ -641,20 +633,21 @@ fun gegenüberliegendenPunktFinden(punkt1: Punkt, punkt2: Punkt, länge: Double)
 
 fun entfernung(einheit: Einheit, ziel: Einheit): Double {
     when {
-        einheit.typ.kannAngreifen == KannAngreifen.heilen -> {
-            if (einheit.spieler != ziel.spieler) {
-                return Double.MAX_VALUE
-            }
-        }
-        !kannAngreifen(einheit, ziel) || einheit.typ.zivileEinheit -> {
+        einheit.typ.kannAngreifen == KannAngreifen.heilen -> if (einheit.spieler != ziel.spieler) {
             return Double.MAX_VALUE
         }
+        !kannAngreifen(einheit, ziel) -> return Double.MAX_VALUE
     }
     return entfernung(einheit, ziel.punkt)
 }
 
 fun kannAngreifen(einheit: Einheit, ziel: Einheit) =
-    !((ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden) || einheit.typ.zivileEinheit)
+    kannLuftOderBodenErreichen(ziel, einheit) &&
+        !einheit.typ.zivileEinheit &&
+        einheit.typ.einheitenArt != EinheitenArt.struktur
+
+private fun kannLuftOderBodenErreichen(ziel: Einheit, einheit: Einheit) =
+    !(ziel.typ.luftBoden == LuftBoden.luft && einheit.typ.kannAngreifen == KannAngreifen.boden)
 
 fun kannSehen(einheit: Einheit, ziel: Einheit) =
     true
