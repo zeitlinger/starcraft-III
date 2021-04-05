@@ -273,8 +273,10 @@ class App : Application() {
                     auswahlStart = Punkt(event.x, event.y)
                 }
             }
-            scene.cursor = Cursor.DEFAULT
-            kommandoWählen = null
+            if (!event.isShiftDown) {
+                scene.cursor = Cursor.DEFAULT
+                kommandoWählen = null
+            }
         }
         kartenPane.mausTaste(MouseButton.PRIMARY, MouseEvent.MOUSE_DRAGGED) {
             auswahlStart?.let { s ->
@@ -470,7 +472,7 @@ class App : Application() {
 
                 produktionsUpdate = {
                     kommandoAnzeige.text = gebäude.produktionsQueue.joinToString { it.name } +
-                            if (gebäude.produktionsZeit > 0) " ${gebäude.produktionsZeit}" else ""
+                        if (gebäude.produktionsZeit > 0) " ${gebäude.produktionsZeit}" else ""
                 }.also {
                     it()
                     spiel.rundeVorbei.add(it)
@@ -527,23 +529,34 @@ class App : Application() {
         }
 
         if (kommando is Patroullieren && last is Patroullieren) {
-            if ((entfernung(punkt, last.punkte.first()) <= 15 && last.vorwärtsGehen) || (entfernung(
+            val punkte = last.punkte
+            if ((entfernung(punkt, punkte.first()) <= 15 && last.vorwärtsGehen) || (entfernung(
                     punkt,
-                    last.punkte.last()
-                ) <= 15 && !last.vorwärtsGehen)) {
+                    punkte.last()
+                ) <= 15 && !last.vorwärtsGehen)
+            ) {
                 last.imKreisGehen = true
-            } else if ((entfernung(punkt, last.punkte.first()) <= 15 && !last.vorwärtsGehen) || (entfernung(
+                linieHinzufügen(last, punkte.first(), punkte.last())
+            } else if ((entfernung(punkt, punkte.first()) <= 15 && !last.vorwärtsGehen) || (entfernung(
                     punkt,
-                    last.punkte.last()
+                    punkte.last()
                 ) <= 15 && last.vorwärtsGehen)
             ) {
                 //wenn der Bereich für Patroullieren zu klein ist soll nichts passieren
             } else {
+                if (last.imKreisGehen) {
+                    last.zielpunktLinie.last().let {
+                        karte.remove(it)
+                        last.zielpunktLinie.remove(it)
+                    }
+                }
                 last.imKreisGehen = false
+
                 if (kommando.vorwärtsGehen) {
-                    last.punkte.add(punkt)
+                    zielpunktUndKreisHinzufügen(einheit, last, punkte.last(), punkt)
+                    punkte.add(punkt)
                 } else {
-                    last.punkte.add(0, punkt)
+                    punkte.add(0, punkt)
                 }
             }
         } else {
@@ -584,26 +597,46 @@ class App : Application() {
         kommando: EinheitenKommando,
         letztesKommando: EinheitenKommando?
     ) {
-        val zielPunkt = kommandoPosition(kommando, einheit)
-        kommando.zielpunktkreis = listOf(kreis(zielPunkt, radius = 5.0).apply {
-            karte.add(this)
-        })
-
-        if (einheit.kommandoQueue.size < 2) {
-            return
-        }
-
         val startPunkt = kommandoPosition(letztesKommando, einheit)
+        val zielPunkt = kommandoPosition(kommando, einheit)
 
-        if (einheit.kommandoQueue.size == 2) {
-            linieHinzufügen(einheit.kommandoQueue.first(), einheit.punkt, startPunkt)
+        zielpunktUndKreisHinzufügen(einheit, kommando, startPunkt, zielPunkt)
+    }
+
+    private fun zielpunktUndKreisHinzufügen(
+        einheit: Einheit,
+        kommando: EinheitenKommando,
+        startPunkt: Punkt,
+        zielPunkt: Punkt
+    ) {
+        if (kommando is Patroullieren) {
+            if (kommando.zielpunktkreis.isEmpty()) {
+                zielpunktHinzufügen(kommando, startPunkt)
+            }
+            zielpunktHinzufügen(kommando, zielPunkt)
+        } else {
+            zielpunktHinzufügen(kommando, zielPunkt)
+
+            if (einheit.kommandoQueue.size < 2) {
+                return
+            }
+
+            if (einheit.kommandoQueue.size == 2) {
+                linieHinzufügen(einheit.kommandoQueue.first(), einheit.punkt, startPunkt)
+            }
         }
 
         linieHinzufügen(kommando, startPunkt, zielPunkt)
     }
 
+    private fun zielpunktHinzufügen(kommando: EinheitenKommando, zielPunkt: Punkt) {
+        kommando.zielpunktkreis.add(kreis(zielPunkt, radius = 5.0).apply {
+            karte.add(this)
+        })
+    }
+
     private fun linieHinzufügen(kommando: EinheitenKommando, startPunkt: Punkt, zielPunkt: Punkt) {
-        kommando.zielpunktLinie = listOf(Line().apply {
+        kommando.zielpunktLinie.add(Line().apply {
             startX = startPunkt.x
             startY = startPunkt.y
             endX = zielPunkt.x
@@ -659,8 +692,10 @@ class App : Application() {
     private fun einheitMouseHandler(spieler: Spieler, imageView: Node, einheit: Einheit) {
         imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Attackmove }) {
             `angriffsziel auswählen`(einheit, schiftcommand = it.isShiftDown)
-            scene.cursor = Cursor.DEFAULT
-            kommandoWählen = null
+            if (!it.isShiftDown) {
+                scene.cursor = Cursor.DEFAULT
+                kommandoWählen = null
+            }
         }
 
         imageView.mausTaste(MouseButton.PRIMARY, filter = { kommandoWählen == KommandoWählen.Yamatokanone }) {
@@ -689,9 +724,12 @@ class App : Application() {
         }
     }
 
-    private fun kommandoMitZielpunktKreis(it: Einheit, kommando: EinheitenKommando, schiftcommand: Boolean) {
-        neuesKommando(einheit = it, kommando = kommando, shift = schiftcommand)
+    private fun kommandoMitZielpunktKreis(it: Einheit, kommando: EinheitenKommando, shiftCommand: Boolean) {
+        neuesKommando(einheit = it, kommando = kommando, shift = shiftCommand)
         zielpunktKreisUndLinieHinzufügen(kommando, it)
+        if (shiftCommand) {
+            return
+        }
         scene.cursor = Cursor.DEFAULT
         kommandoWählen = null
     }
@@ -734,7 +772,7 @@ class App : Application() {
 
         val queue = einheit.kommandoQueue
         if (queue.size >= 1) {
-            queue[0].zielpunktLinie.forEach {
+            queue[0].takeUnless { it is Patroullieren }?.zielpunktLinie?.forEach {
                 it.startX = einheit.punkt.x
                 it.startY = einheit.punkt.y
             }
@@ -845,12 +883,12 @@ private fun leseMultiplayerModus(args: Array<String>): Multiplayer {
 }
 
 fun kommandoAnzeigeEntfernen(kommando: EinheitenKommando) {
-    if (kommando.zielpunktLinie != null) {
-        karte.remove(kommando.zielpunktLinie)
-        kommando.zielpunktLinie = emptyList()
+    kommando.zielpunktLinie.forEach {
+        karte.remove(it)
     }
-    if (kommando.zielpunktkreis != null) {
-        karte.remove(kommando.zielpunktkreis)
-        kommando.zielpunktkreis = emptyList()
+    kommando.zielpunktLinie.clear()
+    kommando.zielpunktkreis.forEach {
+        karte.remove(it)
     }
+    kommando.zielpunktkreis.clear()
 }

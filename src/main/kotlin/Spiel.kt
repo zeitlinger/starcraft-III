@@ -289,7 +289,7 @@ class Spiel(
                             } else {
                                 if (kommando.imKreisGehen) {
                                     kommando.nächsterPunktNumer = kommando.punkte.size
-                                    kommando.punkte[kommando.punkte.size]
+                                    kommando.punkte.last()
                                 } else {
                                     kommando.vorwärtsGehen = true
                                     kommando.nächsterPunktNumer += 1

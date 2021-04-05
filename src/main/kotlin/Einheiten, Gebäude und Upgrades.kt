@@ -176,9 +176,9 @@ typealias DoubleObserver = (Double) -> Unit
 @Serializable
 sealed class EinheitenKommando(
     @Transient
-    var zielpunktLinie: List<Line> = emptyList(),
+    val zielpunktLinie: MutableList<Line> = mutableListOf(),
     @Transient
-    var zielpunktkreis: List<Arc> = emptyList(),
+    val zielpunktkreis: MutableList<Arc> = mutableListOf(),
 )
 
 @Serializable
