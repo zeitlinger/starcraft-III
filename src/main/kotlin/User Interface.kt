@@ -480,7 +480,9 @@ class App : Application() {
 
                 zeigeSammelpunkt(gebäude)
             }
+        }
 
+        ausgewaehlt.forEach { einheit ->
             einheit.kommandoQueue.forEachIndexed { index, kommando ->
                 zielpunktUndKreisHinzufügen(einheit, kommando, einheit.kommandoQueue.getOrNull(index - 1))
             }

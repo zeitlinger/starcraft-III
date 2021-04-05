@@ -711,11 +711,6 @@ fun gebäudeAnzahl(spieler: Spieler, gebäudeTyp: GebäudeTyp): Int {
     return spieler.gebäude.values.count { it.typ == gebäudeTyp }
 }
 
-//Bugs:
-//wenn man mit zwei Einheiten unterschiedliche Kommandos ausführt und dann beide auswählt und mit shift ein neues Kommando gibt, werden die alten kommandos nicht vollständig angezeigt
-//bei Patrolieren wird nur ein Zielpunktkreis gemalt
-//wenn man zwei Einheiten ausgewählt hat werden die Zielpunkte der Einheiten nicht angezeigt (auch wenn alle den gleichen Zielpunkt haben)
-
 //Features:
 //wenn man nichts mit einem Auswahlrechteck auswählt sollen die ausgewählten Einheiten nicht abgewählt werden (außer wenn man shift drückt)
 //Wenn man shift drückt und Einheiten auswählt sollen die alten Einheiten nicht abewählt werden
