@@ -111,7 +111,14 @@ data class Gebäude(
     val sammelpunkt: Arc,
     val produktionsQueue: MutableList<EinheitenTyp> = mutableListOf(),
     var produktionsZeit: ZeitInSec = 0.0
-)
+) {
+    fun `Einheit in Auftrag geben`(typ: EinheitenTyp) {
+        if (produktionsQueue.isEmpty()) {
+            produktionsZeit = typ.produktionsZeit
+        }
+        produktionsQueue.add(typ)
+    }
+}
 
 @Suppress("SpellCheckingInspection")
 class App : Application() {
@@ -421,10 +428,7 @@ class App : Application() {
         }
         kaufbareEinheiten.filter { it.gebäudeTyp == gebäudeTyp }.forEach { typ ->
             val button = kaufButton(buttons, typ.name, typ.kristalle) {
-                if (gebäude.produktionsQueue.isEmpty()) {
-                    gebäude.produktionsZeit = typ.produktionsZeit
-                }
-                gebäude.produktionsQueue.add(typ)
+                gebäude.`Einheit in Auftrag geben`(typ)
                 produktionsUpdate!!()
             }
             if (typ.techGebäude != null) {
