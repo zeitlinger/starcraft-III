@@ -207,7 +207,9 @@ class Spiel(
     fun computerProduziert(spieler: Spieler, neutraleTyp: EinheitenTyp) {
         val einheitenTyp = spieler.einheitenTypen.getValue(neutraleTyp.name)
         kaufen(einheitenTyp.kristalle, spieler) {
-            neueEinheit(spieler, einheitenTyp)
+            spieler.gebäude.values.filter {
+                it.typ == einheitenTyp.gebäudeTyp
+            }.first().`Einheit in Auftrag geben`(einheitenTyp)
         }
     }
 
@@ -710,6 +712,11 @@ fun einheitenAnzahl(spieler: Spieler, einheitenTyp: EinheitenTyp): Int {
 fun gebäudeAnzahl(spieler: Spieler, gebäudeTyp: GebäudeTyp): Int {
     return spieler.gebäude.values.count { it.typ == gebäudeTyp }
 }
+
+//Bugs:
+//man kann eine Einheit auch bauen wenn man das techgebäude dafür nicht gebaut hat
+//man kann keine strukturen oder zivilie einheiten angreifen
+//KI produziert keine Einheiten
 
 //Features:
 //wenn man nichts mit einem Auswahlrechteck auswählt sollen die ausgewählten Einheiten nicht abgewählt werden (außer wenn man shift drückt)
