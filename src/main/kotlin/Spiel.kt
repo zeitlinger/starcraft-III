@@ -677,23 +677,6 @@ fun kaufen(kristalle: Int, spieler: Spieler, bezahlen: Boolean = true, aktion: (
     }
 }
 
-fun Spieler.neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {
-    return neueEinheit(Punkt(x, y), einheitenTyp, nummer)
-}
-
-fun Spieler.neueEinheit(punkt: Punkt, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {
-    val spielerTyp = einheitenTypen.getValue(einheitenTyp.name)
-    return Einheit(
-        spieler = this,
-        leben = spielerTyp.leben,
-        punkt = punkt,
-        panzerung = spielerTyp.panzerung,
-        typ = spielerTyp,
-        nummer = nummer ?: einheitenNummer.getOrDefault(this.spielerTyp, 0)
-            .also { einheitenNummer[this.spielerTyp] = it + 1 }
-    ).also { einheiten.add(it) }
-}
-
 fun smaller(a: Double, b: Double): Double {
     if (a.absoluteValue <= b.absoluteValue) {
         return a

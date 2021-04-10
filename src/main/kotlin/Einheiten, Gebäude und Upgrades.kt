@@ -59,7 +59,7 @@ val labor = GebäudeTyp(name = "Labor", kuerzel = "LAB", kristalle = 2800)
 data class TechGebäude(
     val name: String,
     val kristalle: Int,
-    val gebäudeTyp: GebäudeTyp
+    val vorraussetzung: GebäudeTyp
 ) {
     init {
         techgebäude.add(this)
@@ -68,11 +68,11 @@ data class TechGebäude(
 
 val techgebäude = mutableListOf<TechGebäude>()
 
-val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, gebäudeTyp = kaserne)
-val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, gebäudeTyp = raumhafen)
-val weltraumAkademie = TechGebäude(name = "Akademie", kristalle = 2500, gebäudeTyp = kaserne)
-val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000, gebäudeTyp = fabrik)
-val vipernbau = TechGebäude(name = "Vipernbau", kristalle = 2000, gebäudeTyp = brutkolonie)
+val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, vorraussetzung = kaserne)
+val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, vorraussetzung = raumhafen)
+val weltraumAkademie = TechGebäude(name = "Akademie", kristalle = 2500, vorraussetzung = kaserne)
+val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000, vorraussetzung = fabrik)
+val vipernbau = TechGebäude(name = "Vipernbau", kristalle = 2000, vorraussetzung = brutkolonie)
 
 enum class KannAngreifen {
     alles, boden, luft, heilen
@@ -191,7 +191,13 @@ class Attackmove(val zielPunkt: Punkt) : EinheitenKommando()
 class Angriff(val ziel: Einheit) : EinheitenKommando()
 
 @Serializable
-class Patroullieren(val punkte: MutableList<Punkt>, var nächsterPunkt: Punkt, var nächsterPunktNumer: Int, var vorwärtsGehen: Boolean, var imKreisGehen: Boolean) : EinheitenKommando()
+class Patroullieren(
+    val punkte: MutableList<Punkt>,
+    var nächsterPunkt: Punkt,
+    var nächsterPunktNumer: Int,
+    var vorwärtsGehen: Boolean,
+    var imKreisGehen: Boolean
+) : EinheitenKommando()
 
 @Serializable
 class HoldPosition : EinheitenKommando()
@@ -504,6 +510,25 @@ class Spieler(
 
     override fun toString(): String {
         return "Spieler(typ=$spielerTyp)"
+    }
+
+    fun neueEinheit(x: Double, y: Double, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {
+        return neueEinheit(Punkt(x, y), einheitenTyp, nummer)
+    }
+
+    fun neueEinheit(punkt: Punkt, einheitenTyp: EinheitenTyp, nummer: Int? = null): Einheit {
+        val spielerTyp = einheitenTypen.getValue(einheitenTyp.name)
+        return Einheit(
+            spieler = this,
+            leben = spielerTyp.leben,
+            punkt = punkt,
+            panzerung = spielerTyp.panzerung,
+            typ = spielerTyp,
+            nummer = nummer ?: einheitenNummer.getOrDefault(this.spielerTyp, 0)
+                .also { einheitenNummer[this.spielerTyp] = it + 1 }
+        ).also { einheit ->
+            einheiten.add(einheit)
+        }
     }
 }
 

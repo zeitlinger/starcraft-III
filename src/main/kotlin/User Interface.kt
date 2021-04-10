@@ -142,7 +142,12 @@ class App : Application() {
         }
     }
 
-    fun kaufButton(leiste: MutableList<Button>, name: String, kritalle: Int, aktion: (Button) -> Unit): Button =
+    fun einfacherKaufButton(
+        leiste: MutableList<Button>,
+        name: String,
+        kritalle: Int,
+        aktion: (Button) -> Unit
+    ): Button =
         kaufButton(leiste, { name }, { kritalle }, aktion = aktion)
 
     fun kaufButton(
@@ -150,7 +155,8 @@ class App : Application() {
         name: () -> String,
         kritalle: () -> Int,
         bezahlen: Boolean = true,
-        aktion: (Button) -> Unit,
+        registriereAktiviert: (((Boolean) -> Unit) -> Unit)? = null,
+        aktion: (Button) -> Unit
     ): Button =
         button(name()) {
             kaufen(kritalle(), mensch, bezahlen = bezahlen) {
@@ -158,14 +164,33 @@ class App : Application() {
                 it.text = name()
             }
         }.apply {
+            var aktiviert = true
+            if (registriereAktiviert != null) {
+                registriereAktiviert { neu: Boolean ->
+                    aktiviert = neu
+
+                    if (neu) {
+                        if (mensch.kristalle >= kritalle()) {
+                            this.isDisable = false
+                        }
+                    } else {
+                        this.isDisable = true
+                    }
+                }
+            }
+
             mensch.addKristallObserver {
-                this.isDisable = it < kritalle()
+                if (it < kritalle()) {
+                    this.isDisable = true
+                } else if (aktiviert) {
+                    this.isDefaultButton = false
+                }
             }
             leiste.add(this)
         }
 
     fun einmalKaufen(leiste: MutableList<Button>, name: String, kritalle: Int, aktion: () -> Unit): Button =
-        kaufButton(leiste, name, kritalle) {
+        einfacherKaufButton(leiste, name, kritalle) {
             aktion()
             entfernen(leiste, it)
         }
@@ -410,24 +435,34 @@ class App : Application() {
         val gebäude = spiel.neuesGebäude(spieler, gebäudeTyp, buttons, punkt)
 
         if (gebäudeTyp == basis) {
-            kaufButton(buttons, "Mine", 2000 + 400 * mensch.minen) {
+            einfacherKaufButton(buttons, "Mine", 2000 + 400 * mensch.minen) {
                 mensch.minen += 1
             }
             gebäudeTypen.filter { it != basis }.forEach { typ ->
-                kaufButton(buttons, { typ.name }, { typ.kristalle }, bezahlen = false) {
+                kaufButton(buttons, { typ.name }, { typ.kristalle }, bezahlen = false, null) {
                     kommandoWählen = GebäudePlazieren(typ)
                     scene.cursor = Cursor.HAND
                 }
             }
         }
 
-        techgebäude.filter { it.gebäudeTyp == gebäudeTyp }.forEach { techGebäude ->
+        val kannGebautWerden: MutableMap<TechGebäude, MutableList<(Boolean) -> Unit>> = mutableMapOf()
+        techgebäude.filter { it.vorraussetzung == gebäudeTyp }.forEach { techGebäude ->
             einmalKaufen(buttons, techGebäude.name, techGebäude.kristalle) {
-                kaufbareEinheiten.filter { it.techGebäude == techGebäude }.forEach { it.button!!.isDisable = false }
+                kannGebautWerden[techGebäude]?.forEach { it(true) }
             }
         }
         kaufbareEinheiten.filter { it.gebäudeTyp == gebäudeTyp }.forEach { typ ->
-            val button = kaufButton(buttons, typ.name, typ.kristalle) {
+            fun registriereAktiviert(l: (Boolean) -> Unit) {
+                if (typ.techGebäude != null) {
+                    kannGebautWerden.computeIfAbsent(typ.techGebäude) { mutableListOf() }.add(l)
+                } else {
+                    l(true)
+                }
+            }
+
+            val button = kaufButton(buttons, { typ.name }, { typ.kristalle },
+                registriereAktiviert = ::registriereAktiviert) {
                 gebäude.`Einheit in Auftrag geben`(typ)
                 produktionsUpdate!!()
             }
