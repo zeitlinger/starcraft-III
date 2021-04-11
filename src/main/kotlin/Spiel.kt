@@ -8,7 +8,6 @@
     "SpellCheckingInspection", "FunctionName", "LocalVariableName", "FunctionName",
 )
 
-import javafx.scene.control.Button
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import kotlin.math.absoluteValue
@@ -56,7 +55,7 @@ class Spiel(
                 }
             } else {
                 kaufen(produzieren.second!!.kristalle, gegner) {
-                    neuesGebäude(gegner, produzieren.second!!, emptyList(), gegner.startpunkt)
+                    neuesGebäude(gegner, produzieren.second!!, gegner.startpunkt)
                 }
             }
         }
@@ -222,13 +221,8 @@ class Spiel(
             einheitProduziert(it)
         }
 
-    fun neuesGebäude(spieler: Spieler, gebäudeTyp: GebäudeTyp, buttons: List<Button>, punkt: Punkt): Gebäude {
-        val einheit = neueEinheit(spieler, spieler.gebäudeEinheitenTyp(gebäudeTyp), punkt)
-        val sammelpunkt = punkt.copy(y = punkt.y + 70 * nachVorne(spieler.spielerTyp))
-
-        val gebäude = Gebäude(gebäudeTyp, einheit, buttons, kreis(sammelpunkt, radius = 5.0))
-        spieler.gebäude[einheit.nummer] = gebäude
-        return gebäude
+    fun neuesGebäude(spieler: Spieler, gebäudeTyp: GebäudeTyp, punkt: Punkt): Gebäude {
+        return neueEinheit(spieler, spieler.gebäudeEinheitenTyp(gebäudeTyp), punkt).gebäude!!
     }
 
     fun bewegeSpieler(spieler: Spieler, gegner: Spieler) {

@@ -58,21 +58,22 @@ val labor = GebäudeTyp(name = "Labor", kuerzel = "LAB", kristalle = 2800)
 @Serializable
 data class TechGebäude(
     val name: String,
+    val kuerzel: String,
     val kristalle: Int,
-    val vorraussetzung: GebäudeTyp
+    val vorraussetzung: GebäudeTyp,
 ) {
     init {
-        techgebäude.add(this)
+        techgebäude[this] = GebäudeTyp(name, kuerzel, kristalle)
     }
 }
 
-val techgebäude = mutableListOf<TechGebäude>()
+val techgebäude = mutableMapOf<TechGebäude, GebäudeTyp>()
 
-val schmiede = TechGebäude(name = "Schmiede", kristalle = 2000, vorraussetzung = kaserne)
-val fusionskern = TechGebäude(name = "Fusionskern", kristalle = 3000, vorraussetzung = raumhafen)
-val weltraumAkademie = TechGebäude(name = "Akademie", kristalle = 2500, vorraussetzung = kaserne)
-val reaktor = TechGebäude(name = "Reaktor", kristalle = 2000, vorraussetzung = fabrik)
-val vipernbau = TechGebäude(name = "Vipernbau", kristalle = 2000, vorraussetzung = brutkolonie)
+val schmiede = TechGebäude(name = "Schmiede", kuerzel = "SMD", kristalle = 2000, vorraussetzung = kaserne)
+val fusionskern = TechGebäude(name = "Fusionskern", kuerzel = "FSK", kristalle = 3000, vorraussetzung = raumhafen)
+val weltraumAkademie = TechGebäude(name = "Akademie", kuerzel = "AKA", kristalle = 2500, vorraussetzung = kaserne)
+val reaktor = TechGebäude(name = "Reaktor", kuerzel = "REA", kristalle = 2000, vorraussetzung = fabrik)
+val vipernbau = TechGebäude(name = "Vipernbau", kuerzel = "VIP", kristalle = 2000, vorraussetzung = brutkolonie)
 
 enum class KannAngreifen {
     alles, boden, luft, heilen
@@ -171,6 +172,8 @@ data class Punkt(
 
 
 typealias DoubleObserver = (Double) -> Unit
+
+typealias EinheitenBauObserver = (Einheit) -> Unit
 
 
 @Serializable
@@ -480,6 +483,13 @@ class Spieler(
     val einheiten: MutableList<Einheit> = mutableListOf(),
     val gebäude: MutableMap<Int, Gebäude> = mutableMapOf(),
     private val kristallObservers: MutableList<DoubleObserver> = mutableListOf(),
+    private val einheitenObservers: MutableList<EinheitenBauObserver> = mutableListOf({ einheit ->
+        gebäudeTypen.filter { it.name == einheit.typ.name && gebäude[einheit.nummer] == null }.forEach { typ ->
+            val punkt = einheit.punkt
+            val sammelpunkt = punkt.copy(y = punkt.y + 70 * nachVorne(spielerTyp))
+            gebäude[einheit.nummer] = Gebäude(typ, einheit, sammelpunkt = kreis(sammelpunkt, radius = 5.0))
+        }
+    }),
     kristalle: Double,
     var upgrades: SpielerUpgrades,
     var minen: Int,
@@ -496,6 +506,10 @@ class Spieler(
     fun addKristallObserver(o: DoubleObserver) {
         this.kristallObservers.add(o)
         o(kristalle)
+    }
+
+    fun addEinheitenObserver(o: EinheitenBauObserver) {
+        this.einheitenObservers.add(o)
     }
 
     fun einheit(nummer: Int): Einheit {
@@ -528,6 +542,7 @@ class Spieler(
                 .also { einheitenNummer[this.spielerTyp] = it + 1 }
         ).also { einheit ->
             einheiten.add(einheit)
+            einheitenObservers.forEach { it(einheit) }
         }
     }
 }

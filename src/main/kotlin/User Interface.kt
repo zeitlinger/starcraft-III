@@ -107,7 +107,7 @@ enum class Laufbefehl(val wählen: KommandoWählen) {
 data class Gebäude(
     val typ: GebäudeTyp,
     val einheit: Einheit,
-    val buttons: List<Button>,
+    val buttons: MutableList<Button> = mutableListOf(),
     val sammelpunkt: Arc,
     val produktionsQueue: MutableList<EinheitenTyp> = mutableListOf(),
     var produktionsZeit: ZeitInSec = 0.0
@@ -131,7 +131,7 @@ class App : Application() {
     lateinit var buttonLeiste: ObservableList<Node>
     var sammelpunkt: Arc? = null
     var produktionsUpdate: (() -> Unit)? = null
-    val kristalleText: Label = Label().apply { minWidth = 1100.0 }
+    val kristalleText: Label = Label().apply { minWidth = 100.0 }
     val minenText: Label = Label().apply { minWidth = 100.0 }
     val kommandoAnzeige: Label = Label().apply { minWidth = 200.0 }
 
@@ -164,36 +164,27 @@ class App : Application() {
                 it.text = name()
             }
         }.apply {
-            var aktiviert = true
-            if (registriereAktiviert != null) {
-                registriereAktiviert { neu: Boolean ->
-                    aktiviert = neu
-
-                    if (neu) {
-                        if (mensch.kristalle >= kritalle()) {
-                            this.isDisable = false
-                        }
-                    } else {
-                        this.isDisable = true
-                    }
-                }
+            alleBedingungen(name(),
+                listOfNotNull({ l -> mensch.addKristallObserver { l(it >= kritalle()) } }, registriereAktiviert)) {
+                this.isDisable = !it
             }
-
-            mensch.addKristallObserver {
-                if (it < kritalle()) {
-                    this.isDisable = true
-                } else if (aktiviert) {
-                    this.isDefaultButton = false
-                }
-            }
+            this.isDefaultButton = false
             leiste.add(this)
         }
 
-    fun einmalKaufen(leiste: MutableList<Button>, name: String, kritalle: Int, aktion: () -> Unit): Button =
-        einfacherKaufButton(leiste, name, kritalle) {
-            aktion()
-            entfernen(leiste, it)
-        }
+    fun alleBedingungen(name: String, registriereAktiviert: List<(((Boolean) -> Unit) -> Unit)>, aktiviert: (Boolean) -> Unit) {
+        val list = registriereAktiviert.map { false }.toMutableList()
+        var last = false
+
+        registriereAktiviert.forEachIndexed { index, reg -> reg { aktiv ->
+            list[index] = aktiv
+            val all = list.all { it }
+            if (all != last) {
+                last = all
+                aktiviert(all)
+            }
+        } }
+    }
 
     private fun entfernen(leiste: MutableList<Button>, button: Button) {
         (button.parent as Pane).children.remove(button)
@@ -431,38 +422,39 @@ class App : Application() {
     }
 
     private fun plaziereGebäude(gebäudeTyp: GebäudeTyp, punkt: Punkt, spieler: Spieler) {
-        val buttons = mutableListOf<Button>()
-        val gebäude = spiel.neuesGebäude(spieler, gebäudeTyp, buttons, punkt)
+        val gebäude = spiel.neuesGebäude(spieler, gebäudeTyp, punkt)
+        val buttons = gebäude.buttons
 
         if (gebäudeTyp == basis) {
             einfacherKaufButton(buttons, "Mine", 2000 + 400 * mensch.minen) {
                 mensch.minen += 1
             }
             gebäudeTypen.filter { it != basis }.forEach { typ ->
-                kaufButton(buttons, { typ.name }, { typ.kristalle }, bezahlen = false, null) {
-                    kommandoWählen = GebäudePlazieren(typ)
-                    scene.cursor = Cursor.HAND
-                }
+                gebäudeKaufenMitPlazieren(buttons, typ)
             }
         }
 
-        val kannGebautWerden: MutableMap<TechGebäude, MutableList<(Boolean) -> Unit>> = mutableMapOf()
-        techgebäude.filter { it.vorraussetzung == gebäudeTyp }.forEach { techGebäude ->
-            einmalKaufen(buttons, techGebäude.name, techGebäude.kristalle) {
-                kannGebautWerden[techGebäude]?.forEach { it(true) }
-            }
+        techgebäude.filter { it.key.vorraussetzung == gebäudeTyp }.forEach { techGebäude ->
+            gebäudeKaufenMitPlazieren(buttons, techGebäude.value)
         }
         kaufbareEinheiten.filter { it.gebäudeTyp == gebäudeTyp }.forEach { typ ->
             fun registriereAktiviert(l: (Boolean) -> Unit) {
-                if (typ.techGebäude != null) {
-                    kannGebautWerden.computeIfAbsent(typ.techGebäude) { mutableListOf() }.add(l)
+                val g = typ.techGebäude
+                if (g != null) {
+                    l(false)
+                    spieler.addEinheitenObserver {
+                        if (it.typ.name == g.name) {
+                            l(true)
+                        }
+                    }
                 } else {
                     l(true)
                 }
             }
 
             val button = kaufButton(buttons, { typ.name }, { typ.kristalle },
-                registriereAktiviert = ::registriereAktiviert) {
+                registriereAktiviert = ::registriereAktiviert
+            ) {
                 gebäude.`Einheit in Auftrag geben`(typ)
                 produktionsUpdate!!()
             }
@@ -488,6 +480,13 @@ class App : Application() {
                     entfernen(buttons, it)
                 }
             }
+        }
+    }
+
+    private fun gebäudeKaufenMitPlazieren(buttons: MutableList<Button>, typ: GebäudeTyp) {
+        kaufButton(buttons, { typ.name }, { typ.kristalle }, bezahlen = false, null) {
+            kommandoWählen = GebäudePlazieren(typ)
+            scene.cursor = Cursor.HAND
         }
     }
 
@@ -879,7 +878,7 @@ class App : Application() {
 
             val spielerTyp = multiplayer.spielerTyp
             val mensch = Spieler(
-                kristalle = 0.0,
+                kristalle = System.getenv("kristalle")?.toDouble() ?: 0.0,
                 minen = 0,
                 startpunkt = startPunkt(spielerTyp),
                 farbe = spielerFarbe(spielerTyp),
