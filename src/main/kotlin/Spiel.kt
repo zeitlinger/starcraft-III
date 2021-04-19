@@ -691,7 +691,6 @@ fun gebäudeAnzahl(spieler: Spieler, gebäudeTyp: GebäudeTyp): Int {
 }
 
 //Bugs:
-//man kann eine Einheit auch bauen wenn man das techgebäude dafür nicht gebaut hat
 //man kann keine strukturen oder zivilie einheiten angreifen
 //KI produziert keine Einheiten
 
